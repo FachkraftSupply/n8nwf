@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Đánh Giá Phỏng Vấn – Elite Education</title>
+<style>
+  :root {
+    --primary: #1a472a;
+    --accent: #d4a017;
+    --bg: #f2f2f0;
+    --card: #ffffff;
+    --border: #e2e2de;
+    --text: #1e1e1e;
+    --muted: #767676;
+    --kem: #e74c3c;
+    --tbinh: #e67e22;
+    --tot: #27ae60;
+    --tuyet: #2980b9;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 14px 12px 60px; font-size: 14px; }
+
+  /* HEADER */
+  .header { background: var(--primary); color: white; border-radius: var(--radius); padding: 13px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .header h1 { font-size: 15px; font-weight: 700; line-height: 1.3; }
+  .header p { font-size: 11px; opacity: .65; margin-top: 1px; }
+
+  /* CARDS */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+  .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--primary); border-bottom: 1.5px solid var(--primary); padding-bottom: 6px; margin-bottom: 12px; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  @media(max-width:560px) { .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+
+  /* FIELDS */
+  .field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+  .field input, .field select, .field textarea { width: 100%; border: 1px solid var(--border); border-radius: 5px; padding: 7px 10px; font-size: 13px; color: var(--text); background: #fafaf8; font-family: inherit; transition: border .15s; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--primary); background: white; }
+  .field textarea { resize: vertical; min-height: 52px; }
+  .field input[readonly] { background: #f0ede6; color: var(--muted); cursor: default; }
+  .field input:disabled { background: #f0ede6; color: #bbb; cursor: default; }
+  .field-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .mb8 { margin-bottom: 8px; }
+  .mb12 { margin-bottom: 12px; }
+
+  /* RADIO ROW */
+  .radio-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 5px; }
+  .radio-row label { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 400; color: var(--text); cursor: pointer; }
+  .radio-row input[type="radio"] { accent-color: var(--primary); width: 14px; height: 14px; }
+
+  /* SCORE OPTIONS */
+  .score-options { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-bottom: 10px; }
+  @media(max-width:400px) { .score-options { grid-template-columns: repeat(2,1fr); } }
+  .score-option input[type="radio"] { display: none; }
+  .score-option label { display: flex; flex-direction: column; align-items: center; padding: 10px 4px; border: 1.5px solid var(--border); border-radius: 6px; cursor: pointer; transition: all .12s; background: #fafaf8; text-align: center; }
+  .score-option label:hover { border-color: #aaa; background: #f5f3ee; }
+  .score-option .opt-emoji { font-size: 22px; }
+  .score-option .opt-label { font-size: 13px; font-weight: 700; margin-top: 3px; }
+  .score-option .opt-pt { font-size: 11px; color: var(--muted); }
+  .score-option input[value="0.5"]:checked + label { border-color: var(--kem); background: #fdf0ee; }
+  .score-option input[value="0.5"]:checked + label .opt-label { color: var(--kem); }
+  .score-option input[value="1"]:checked + label { border-color: var(--tbinh); background: #fef6ec; }
+  .score-option input[value="1"]:checked + label .opt-label { color: var(--tbinh); }
+  .score-option input[value="1.5"]:checked + label { border-color: var(--tot); background: #eaf7ef; }
+  .score-option input[value="1.5"]:checked + label .opt-label { color: var(--tot); }
+  .score-option input[value="2"]:checked + label { border-color: var(--tuyet); background: #eaf2fb; }
+  .score-option input[value="2"]:checked + label .opt-label { color: var(--tuyet); }
+
+  /* CRITERIA */
+  .criterion { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+  .criterion-header { background: #f5f3ee; padding: 8px 12px; display: flex; align-items: center; gap: 7px; }
+  .criterion-title { font-size: 13px; font-weight: 700; flex: 1; }
+  .criterion-body { padding: 12px; }
+
+  /* DETAIL 2COL */
+  .detail-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8f7f4; border-radius: 6px; padding: 9px 11px; }
+  @media(max-width:500px) { .detail-2col { grid-template-columns: 1fr; } }
+  .detail-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+
+  /* TAGS */
+  .tag-group { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+  .tag-btn { display: none; }
+  .tag-btn + label { padding: 3px 9px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 11px; cursor: pointer; background: white; transition: all .12s; user-select: none; white-space: nowrap; }
+  .tag-btn + label:hover { border-color: #999; background: #f0ede6; }
+  .tag-btn:checked + label { background: var(--primary); color: white; border-color: var(--primary); }
+  .detail-note { width: 100%; border: 1px solid var(--border); border-radius: 5px; padding: 6px 9px; font-size: 12px; font-family: inherit; background: white; resize: none; min-height: 60px; }
+  .detail-note:focus { outline: none; border-color: var(--primary); }
+
+  /* SITUATION ROWS */
+  .sit-row { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+  @media(max-width:540px) { .sit-row { grid-template-columns: 1fr; } }
+  .sit-left { padding: 10px 12px; }
+  .sit-right { padding: 10px 12px; background: #f8f7f4; border-left: 1px solid var(--border); }
+  @media(max-width:540px) { .sit-right { border-left: none; border-top: 1px solid var(--border); } }
+  .sit-title { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
+
+  /* VERDICT */
+  .verdict-options { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+  @media(max-width:400px) { .verdict-options { grid-template-columns: 1fr; } }
+  .verdict-opt input[type="radio"] { display: none; }
+  .verdict-opt label { display: flex; flex-direction: column; align-items: center; padding: 10px 5px; border: 1.5px solid var(--border); border-radius: 6px; cursor: pointer; text-align: center; background: #fafaf8; transition: all .15s; }
+  .verdict-opt .v-icon { font-size: 18px; }
+  .verdict-opt .v-label { font-size: 11px; font-weight: 700; margin-top: 2px; }
+  .verdict-opt input[value="Đạt"]:checked + label { border-color: var(--tot); background: #eaf7ef; }
+  .verdict-opt input[value="Đạt"]:checked + label .v-label { color: var(--tot); }
+  .verdict-opt input[value="Có thể nhận cho nghề khác"]:checked + label { border-color: var(--tbinh); background: #fef6ec; }
+  .verdict-opt input[value="Có thể nhận cho nghề khác"]:checked + label .v-label { color: var(--tbinh); }
+  .verdict-opt input[value="Chưa đạt"]:checked + label { border-color: var(--kem); background: #fdf0ee; }
+  .verdict-opt input[value="Chưa đạt"]:checked + label .v-label { color: var(--kem); }
+
+  /* SCORE TOTAL */
+  .score-total-box { background: var(--primary); color: white; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 10px; }
+  .score-total-label { font-size: 11px; opacity: .75; margin-bottom: 5px; }
+  .score-total-row { display: flex; align-items: center; gap: 10px; }
+  .score-total-value { font-size: 28px; font-weight: 800; flex-shrink: 0; }
+  .score-total-max { font-size: 14px; opacity: .55; }
+  .score-bar-bg { background: rgba(255,255,255,.2); border-radius: 20px; height: 6px; overflow: hidden; flex: 1; }
+  .score-bar-fill { background: var(--accent); height: 100%; border-radius: 20px; transition: width .35s ease; width: 0%; }
+  .breakdown { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+  .breakdown span { font-size: 10px; opacity: .7; }
+
+  /* SCORE ADJUSTMENT — stepper style */
+  .adj-row { display: flex; align-items: center; gap: 6px; }
+  .adj-btn { width: 32px; height: 32px; border: 1.5px solid var(--border); background: white; border-radius: 5px; font-size: 17px; line-height: 1; cursor: pointer; font-weight: 700; color: var(--text); flex-shrink: 0; transition: background .1s; }
+  .adj-btn:hover { background: #f0ede6; }
+  .adj-input { width: 70px; text-align: center; border: 1.5px solid var(--border); border-radius: 5px; padding: 6px; font-size: 14px; font-weight: 700; font-family: inherit; background: #fafaf8; }
+  .adj-input:focus { outline: none; border-color: var(--primary); background: white; }
+  .final-box { background: var(--primary); color: white; border-radius: 7px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+
+  /* SUBMIT */
+  .btn-submit { width: 100%; background: var(--accent); color: #1a1a1a; font-weight: 800; font-size: 14px; border: none; border-radius: var(--radius); padding: 13px; cursor: pointer; transition: all .18s; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; }
+  .btn-submit:hover { background: #c49010; transform: translateY(-1px); box-shadow: 0 3px 12px rgba(0,0,0,.1); }
+  .btn-submit:disabled { background: #ccc; transform: none; cursor: not-allowed; }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 10px 20px; border-radius: 7px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 9999; max-width: 92vw; white-space: pre-line; line-height: 1.6; text-align: left; }
+  #toast.show { opacity: 1; }
+  #toast.success { background: #27ae60; }
+  #toast.error { background: #e74c3c; }
+
+  .spinner { display: none; width: 15px; height: 15px; border: 2.5px solid rgba(0,0,0,.15); border-top-color: #333; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .req { color: var(--kem); }
+  .sit-no-answer { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size:24px">🎓</div>
+  <div>
+    <h1>Form Đánh Giá Phỏng Vấn Tiếng Đức</h1>
+    <p>Elite Education – Ausbildung Germany</p>
+  </div>
+</div>
+
+<form id="interviewForm" novalidate>
+
+<!-- THONG TIN CO BAN -->
+<div class="card">
+  <div class="card-title">📋 Thông tin cơ bản</div>
+
+  <div class="grid-2 mb8">
+    <div class="field">
+      <label>Công ty / Trung tâm <span class="req">*</span></label>
+      <input type="text" name="company" id="companyInput" list="companyList" placeholder="Gõ tên hoặc chọn gợi ý…" autocomplete="off" required>
+      <datalist id="companyList">
+        <option value="ELMC"></option><option value="ELHT"></option><option value="ELTS"></option>
+        <option value="ELHZ"></option><option value="ICO"></option><option value="GAC"></option>
+        <option value="GEZ"></option><option value="HND"></option><option value="DSHI"></option>
+        <option value="AVT"></option><option value="ETS"></option>
+      </datalist>
+    </div>
+    <div class="field">
+      <label>Tên học viên <span class="req">*</span></label>
+      <input type="text" name="student_name" placeholder="Họ và tên đầy đủ" required>
+    </div>
+  </div>
+
+  <div class="grid-3 mb8">
+    <div class="field">
+      <label>Nghề muốn đi <span class="req">*</span></label>
+      <input type="text" name="profession" id="professionInput" list="professionList" placeholder="Nghề hoặc gõ mới…" autocomplete="off" required>
+      <datalist id="professionList">
+        <option value="ZFA"></option><option value="MFA"></option><option value="Koch/Köchin"></option>
+        <option value="Fachverkäufer/in"></option><option value="Maler/Malerin"></option>
+        <option value="Bäcker/in"></option><option value="HOFA"></option>
+        <option value="Gebäudereiniger/in"></option><option value="Elektroniker/in"></option>
+        <option value="Mechatroniker/in"></option><option value="Kaufmann/Kauffrau"></option>
+        <option value="Flex"></option>
+      </datalist>
+    </div>
+    <div class="field">
+      <label>Nơi muốn đến</label>
+      <input type="text" name="destination" placeholder="Berlin, Bayern, flex…">
+    </div>
+    <div class="field">
+      <label>Ngày phỏng vấn</label>
+      <input type="text" name="interview_date" id="interviewDate" readonly>
+    </div>
+  </div>
+
+  <div class="grid-3 mb8">
+    <div class="field">
+      <label>Người đánh giá <span class="req">*</span></label>
+      <input type="text" name="evaluator" id="evaluatorInput" list="evaluatorList" placeholder="Tên giáo viên / interviewer" autocomplete="off" required>
+      <datalist id="evaluatorList">
+        <option value="Thuỳ Chi"></option>
+        <option value="Hải Yến"></option>
+        <option value="Xuân Hoa"></option>
+        <option value="Anh Tuấn"></option>
+        <option value="Thanh Hà"></option>
+        <option value="Nhi Nguyễn"></option>
+        <option value="Thảo Phan"></option>
+      </datalist>
+      <div class="field-hint">💡 Chọn hoặc tự nhập tên mới</div>
+    </div>
+    <div class="field">
+      <label>Bằng / Chứng chỉ</label>
+      <input type="text" name="certificate" placeholder="B1 Telc T10/2025 VN">
+    </div>
+    <div class="field">
+      <label>Độ tuổi</label>
+      <input type="text" name="age" id="ageInput" placeholder="VD: 21">
+    </div>
+  </div>
+
+  <div class="grid-2 mb8">
+    <div class="field">
+      <label>Quê quán / Tỉnh thành</label>
+      <input type="text" name="hometown" placeholder="VD: Bắc Ninh, Hà Nội…">
+    </div>
+    <div class="field">
+      <label>Có người nhà ở Đức không?</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:5px">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;white-space:nowrap;cursor:pointer"><input type="radio" name="family_in_germany" value="Có" style="accent-color:var(--primary);width:14px;height:14px"> Có</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;white-space:nowrap;cursor:pointer"><input type="radio" name="family_in_germany" value="Không" style="accent-color:var(--primary);width:14px;height:14px"> Không</label>
+        <input type="text" name="family_region" id="familyRegionInput" placeholder="Vùng / thành phố (nếu có)" style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;background:#f0ede6;color:#bbb;font-family:inherit;" disabled>
+      </div>
+    </div>
+  </div>
+
+  <div style="border-top:1px solid var(--border);margin:10px 0 12px"></div>
+
+  <div class="grid-2 mb8">
+    <div class="field"><label>✅ Điểm mạnh</label><textarea name="strengths" placeholder="VD: Tươi cười, thái độ tốt, có kinh nghiệm nhà hàng…"></textarea></div>
+    <div class="field"><label>⚠️ Cần cải thiện</label><textarea name="improvements" placeholder="VD: Luyện nghe, bổ sung từ vựng, hạn chế liếc giấy…"></textarea></div>
+  </div>
+  <div class="field">
+    <label>💡 Ghi chú thêm</label>
+    <textarea name="notes" placeholder="VD: 20t, Bắc Ninh, B1 Telc, có chị ở Berlin, kn bán hàng 3 tháng…" style="min-height:44px"></textarea>
+  </div>
+</div>
+
+<!-- TIEU CHI DANH GIA -->
+<div class="card">
+  <div class="card-title">⭐ Tiêu chí đánh giá</div>
+
+  <!-- 1. Phát âm -->
+  <div class="criterion">
+    <div class="criterion-header"><span>🗣️</span><span class="criterion-title">1. Phát âm</span></div>
+    <div class="criterion-body">
+      <div class="score-options">
+        <div class="score-option"><input type="radio" name="score_pronunciation" id="p1" value="0.5" required><label for="p1"><span class="opt-emoji">😟</span><span class="opt-label">Kém</span><span class="opt-pt">0.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_pronunciation" id="p2" value="1"><label for="p2"><span class="opt-emoji">😐</span><span class="opt-label">Trung bình</span><span class="opt-pt">1.0đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_pronunciation" id="p3" value="1.5"><label for="p3"><span class="opt-emoji">🙂</span><span class="opt-label">Tốt</span><span class="opt-pt">1.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_pronunciation" id="p4" value="2"><label for="p4"><span class="opt-emoji">😄</span><span class="opt-label">Tuyệt vời</span><span class="opt-pt">2.0đ</span></label></div>
+      </div>
+      <div class="detail-2col">
+        <div>
+          <div class="detail-label">Lỗi / đặc điểm</div>
+          <div class="tag-group">
+            <input class="tag-btn" type="checkbox" id="pr1" name="detail_pronunciation[]" value="Lỗi sch/ch"><label for="pr1">sch/ch sai</label>
+            <input class="tag-btn" type="checkbox" id="pr2" name="detail_pronunciation[]" value="Lỗi l/n"><label for="pr2">l/n lẫn</label>
+            <input class="tag-btn" type="checkbox" id="pr3" name="detail_pronunciation[]" value="Lỗi s/z"><label for="pr3">s/z sai</label>
+            <input class="tag-btn" type="checkbox" id="pr4" name="detail_pronunciation[]" value="Umlaut sai (ä/ö/ü)"><label for="pr4">Umlaut ä/ö/ü</label>
+            <input class="tag-btn" type="checkbox" id="pr5" name="detail_pronunciation[]" value="Đều đều, không ngữ điệu"><label for="pr5">Không ngữ điệu</label>
+            <input class="tag-btn" type="checkbox" id="pr6" name="detail_pronunciation[]" value="Giọng vùng miền nặng"><label for="pr6">Giọng vùng miền</label>
+            <input class="tag-btn" type="checkbox" id="pr7" name="detail_pronunciation[]" value="Nói giật từng âm"><label for="pr7">Nói giật cục</label>
+            <input class="tag-btn" type="checkbox" id="pr8" name="detail_pronunciation[]" value="Nói nhanh nuốt âm"><label for="pr8">Nuốt âm</label>
+            <input class="tag-btn" type="checkbox" id="pr9" name="detail_pronunciation[]" value="Lên giọng cuối câu"><label for="pr9">Lên giọng cuối câu</label>
+            <input class="tag-btn" type="checkbox" id="pr11" name="detail_pronunciation[]" value="Ngọng"><label for="pr11">Ngọng</label>
+            <input class="tag-btn" type="checkbox" id="pr10" name="detail_pronunciation[]" value="Phát âm to, rõ ràng"><label for="pr10">✅ To, rõ ràng</label>
+          </div>
+        </div>
+        <div>
+          <div class="detail-label">Ghi chú</div>
+          <textarea class="detail-note" name="note_pronunciation" placeholder="VD: ich->itsch, sprechen->pet xun..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Nghe hieu -->
+  <div class="criterion">
+    <div class="criterion-header"><span>👁️‍🗨️</span><span class="criterion-title">2. Nghe hiểu &amp; Phản xạ</span></div>
+    <div class="criterion-body">
+      <div class="score-options">
+        <div class="score-option"><input type="radio" name="score_listening" id="l1" value="0.5" required><label for="l1"><span class="opt-emoji">😟</span><span class="opt-label">Kém</span><span class="opt-pt">0.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_listening" id="l2" value="1"><label for="l2"><span class="opt-emoji">😐</span><span class="opt-label">Trung bình</span><span class="opt-pt">1.0đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_listening" id="l3" value="1.5"><label for="l3"><span class="opt-emoji">🙂</span><span class="opt-label">Tốt</span><span class="opt-pt">1.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_listening" id="l4" value="2"><label for="l4"><span class="opt-emoji">😄</span><span class="opt-label">Tuyệt vời</span><span class="opt-pt">2.0đ</span></label></div>
+      </div>
+      <div class="detail-2col">
+        <div>
+          <div class="detail-label">Đặc điểm nghe hiểu</div>
+          <div class="tag-group">
+            <input class="tag-btn" type="checkbox" id="li1" name="detail_listening[]" value="Hiểu ~50% câu hỏi"><label for="li1">~50% hiểu</label>
+            <input class="tag-btn" type="checkbox" id="li2" name="detail_listening[]" value="Hiểu ~60-70% câu hỏi"><label for="li2">~60-70% hiểu</label>
+            <input class="tag-btn" type="checkbox" id="li3" name="detail_listening[]" value="Hiểu ~80-90% câu hỏi"><label for="li3">~80-90% hiểu</label>
+            <input class="tag-btn" type="checkbox" id="li4" name="detail_listening[]" value="Phải nhắc lại mọi câu"><label for="li4">Phải nhắc mọi câu</label>
+            <input class="tag-btn" type="checkbox" id="li5" name="detail_listening[]" value="Chỉ hiểu câu đã chuẩn bị"><label for="li5">Chỉ hiểu câu đã chuẩn bị</label>
+            <input class="tag-btn" type="checkbox" id="li6" name="detail_listening[]" value="Im lặng khi không hiểu"><label for="li6">Im lặng khi không hiểu</label>
+            <input class="tag-btn" type="checkbox" id="li7" name="detail_listening[]" value="Biết hỏi lại (können Sie wiederholen?)"><label for="li7">✅ Biết hỏi lại</label>
+            <input class="tag-btn" type="checkbox" id="li8" name="detail_listening[]" value="Phản xạ nhanh, không cần nhắc"><label for="li8">✅ Phản xạ nhanh</label>
+            <input class="tag-btn" type="checkbox" id="li9" name="detail_listening[]" value="Thiếu từ vựng nên không hiểu"><label for="li9">Thiếu từ vựng</label>
+          </div>
+        </div>
+        <div>
+          <div class="detail-label">Ghi chú</div>
+          <textarea class="detail-note" name="note_listening" placeholder="VD: Hiểu 70%, câu spontan phải nhắc 2 lần..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Noi dung -->
+  <div class="criterion">
+    <div class="criterion-header"><span>💬</span><span class="criterion-title">3. Nội dung câu trả lời</span></div>
+    <div class="criterion-body">
+      <div class="score-options">
+        <div class="score-option"><input type="radio" name="score_content" id="c1" value="0.5" required><label for="c1"><span class="opt-emoji">😟</span><span class="opt-label">Kém</span><span class="opt-pt">0.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_content" id="c2" value="1"><label for="c2"><span class="opt-emoji">😐</span><span class="opt-label">Trung bình</span><span class="opt-pt">1.0đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_content" id="c3" value="1.5"><label for="c3"><span class="opt-emoji">🙂</span><span class="opt-label">Tốt</span><span class="opt-pt">1.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_content" id="c4" value="2"><label for="c4"><span class="opt-emoji">😄</span><span class="opt-label">Tuyệt vời</span><span class="opt-pt">2.0đ</span></label></div>
+      </div>
+      <div class="detail-2col">
+        <div>
+          <div class="detail-label">Đặc điểm nội dung</div>
+          <div class="tag-group">
+            <input class="tag-btn" type="checkbox" id="ct1" name="detail_content[]" value="Có chuẩn bị kỹ nội dung"><label for="ct1">✅ Chuẩn bị kỹ</label>
+            <input class="tag-btn" type="checkbox" id="ct2" name="detail_content[]" value="Chưa chuẩn bị nội dung"><label for="ct2">❌ Chưa chuẩn bị</label>
+            <input class="tag-btn" type="checkbox" id="ct3" name="detail_content[]" value="Freisprechen yếu, ậm ừ nhiều"><label for="ct3">Ậm ừ, freisprechen yếu</label>
+            <input class="tag-btn" type="checkbox" id="ct4" name="detail_content[]" value="Liếc giấy, đọc thuộc bài"><label for="ct4">Liếc giấy / đọc thuộc</label>
+            <input class="tag-btn" type="checkbox" id="ct5" name="detail_content[]" value="Nhiều lỗi ngữ pháp"><label for="ct5">Lỗi ngữ pháp nhiều</label>
+            <input class="tag-btn" type="checkbox" id="ct6" name="detail_content[]" value="Chèn tiếng Việt khi thiếu từ"><label for="ct6">Chèn tiếng Việt</label>
+            <input class="tag-btn" type="checkbox" id="ct7" name="detail_content[]" value="Câu trả lời đủ ý, mạch lạc"><label for="ct7">✅ Đủ ý, mạch lạc</label>
+            <input class="tag-btn" type="checkbox" id="ct8" name="detail_content[]" value="Dùng được từ vựng B1+"><label for="ct8">✅ Từ vựng B1+</label>
+            <input class="tag-btn" type="checkbox" id="ct9" name="detail_content[]" value="Trả lời cụt, dùng keyword"><label for="ct9">Trả lời cụt</label>
+          </div>
+        </div>
+        <div>
+          <div class="detail-label">Ghi chú</div>
+          <textarea class="detail-note" name="note_content" placeholder="VD: Vorstellung tốt, câu mở rộng ậm ừ, chèn tiếng Việt..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Thai do -->
+  <div class="criterion">
+    <div class="criterion-header"><span>😊</span><span class="criterion-title">4. Thái độ &amp; Hình thức</span></div>
+    <div class="criterion-body">
+      <div class="score-options">
+        <div class="score-option"><input type="radio" name="score_attitude" id="a1" value="0.5" required><label for="a1"><span class="opt-emoji">😟</span><span class="opt-label">Kém</span><span class="opt-pt">0.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_attitude" id="a2" value="1"><label for="a2"><span class="opt-emoji">😐</span><span class="opt-label">Trung bình</span><span class="opt-pt">1.0đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_attitude" id="a3" value="1.5"><label for="a3"><span class="opt-emoji">🙂</span><span class="opt-label">Tốt</span><span class="opt-pt">1.5đ</span></label></div>
+        <div class="score-option"><input type="radio" name="score_attitude" id="a4" value="2"><label for="a4"><span class="opt-emoji">😄</span><span class="opt-label">Tuyệt vời</span><span class="opt-pt">2.0đ</span></label></div>
+      </div>
+      <div class="detail-2col">
+        <div>
+          <div class="detail-label">Đặc điểm thái độ</div>
+          <div class="tag-group">
+            <input class="tag-btn" type="checkbox" id="at1" name="detail_attitude[]" value="Tươi cười, tự tin"><label for="at1">✅ Tươi cười, tự tin</label>
+            <input class="tag-btn" type="checkbox" id="at5" name="detail_attitude[]" value="Chỉnh chu, đúng giờ"><label for="at5">✅ Chỉnh chu, đúng giờ</label>
+            <input class="tag-btn" type="checkbox" id="at6" name="detail_attitude[]" value="Lắng nghe tốt khi được góp ý"><label for="at6">✅ Lắng nghe góp ý</label>
+            <input class="tag-btn" type="checkbox" id="at8" name="detail_attitude[]" value="Chủ động trong phỏng vấn"><label for="at8">✅ Chủ động</label>
+            <input class="tag-btn" type="checkbox" id="at2" name="detail_attitude[]" value="Mặt căng thẳng, lo lắng"><label for="at2">Căng thẳng</label>
+            <input class="tag-btn" type="checkbox" id="at3" name="detail_attitude[]" value="Run, mắt chớp nhiều"><label for="at3">Run / bồn chồn</label>
+            <input class="tag-btn" type="checkbox" id="at4" name="detail_attitude[]" value="Mặt cau có khi không hiểu"><label for="at4">Cau có</label>
+            <input class="tag-btn" type="checkbox" id="at7" name="detail_attitude[]" value="Che miệng khi nói hoặc cười"><label for="at7">Che miệng</label>
+            <input class="tag-btn" type="checkbox" id="at9" name="detail_attitude[]" value="Thụ động, chờ hỏi mới nói"><label for="at9">Thụ động</label>
+            <input class="tag-btn" type="checkbox" id="at10" name="detail_attitude[]" value="Không vào phỏng vấn"><label for="at10">❌ Không vào PV</label>
+            <input class="tag-btn" type="checkbox" id="at11" name="detail_attitude[]" value="Vào muộn"><label for="at11">❌ Vào muộn</label>
+            <input class="tag-btn" type="checkbox" id="at12" name="detail_attitude[]" value="Không chào hỏi"><label for="at12">❌ Không chào hỏi</label>
+            <input class="tag-btn" type="checkbox" id="at13" name="detail_attitude[]" value="Thái độ không hợp tác"><label for="at13">❌ Không hợp tác</label>
+          </div>
+        </div>
+        <div>
+          <div class="detail-label">Ghi chú</div>
+          <textarea class="detail-note" name="note_attitude" placeholder="VD: Tươi cười khi hiểu câu, vào muộn 10p không xin lỗi..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CAU HOI TINH HUONG -->
+<div class="card">
+  <div class="card-title">🎯 5. Câu hỏi tình huống</div>
+  <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Tất cả 6 câu đều hiển thị. Nếu không hỏi, bỏ trống → hệ thống tự ghi "Chưa hỏi".</p>
+
+  <!-- Sit 1 -->
+  <div class="sit-row">
+    <div class="sit-left">
+      <div class="detail-label mb8">Câu hỏi</div>
+      <input type="text" value="Làm thêm giờ / cuối tuần ⏰" readonly style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;background:#f0ede6;color:var(--text);font-family:inherit;margin-bottom:8px;">
+      <div class="detail-label mb8">Câu trả lời</div>
+      <textarea class="detail-note" name="sit_answer_1" style="width:100%;min-height:72px" placeholder="Ghi lại câu trả lời của học viên…"></textarea>
+    </div>
+    <div class="sit-right">
+      <div class="detail-label mb8">Đánh giá</div>
+      <div class="tag-group">
+        <input class="tag-btn" type="checkbox" id="sa1a" name="sit_tag_1[]" value="Đúng trọng tâm"><label for="sa1a">✅ Đúng trọng tâm</label>
+        <input class="tag-btn" type="checkbox" id="sa1b" name="sit_tag_1[]" value="Không hiểu câu hỏi"><label for="sa1b">Không hiểu</label>
+        <input class="tag-btn" type="checkbox" id="sa1c" name="sit_tag_1[]" value="Ậm ừ loanh quanh"><label for="sa1c">Ậm ừ</label>
+        <input class="tag-btn" type="checkbox" id="sa1d" name="sit_tag_1[]" value="Có lý do rõ ràng"><label for="sa1d">✅ Lý do rõ ràng</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sit 2 -->
+  <div class="sit-row">
+    <div class="sit-left">
+      <div class="detail-label mb8">Câu hỏi</div>
+      <input type="text" value="Kündigung – bị sa thải 📋" readonly style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;background:#f0ede6;color:var(--text);font-family:inherit;margin-bottom:8px;">
+      <div class="detail-label mb8">Câu trả lời</div>
+      <textarea class="detail-note" name="sit_answer_2" style="width:100%;min-height:72px" placeholder="VD: Bình tĩnh, hỏi lý do, học từ lỗi sai…"></textarea>
+    </div>
+    <div class="sit-right">
+      <div class="detail-label mb8">Đánh giá</div>
+      <div class="tag-group">
+        <input class="tag-btn" type="checkbox" id="sa2a" name="sit_tag_2[]" value="Đúng trọng tâm"><label for="sa2a">✅ Đúng trọng tâm</label>
+        <input class="tag-btn" type="checkbox" id="sa2b" name="sit_tag_2[]" value="Không hiểu câu hỏi"><label for="sa2b">Không hiểu</label>
+        <input class="tag-btn" type="checkbox" id="sa2c" name="sit_tag_2[]" value="Thiếu sáng tạo, cứng nhắc"><label for="sa2c">Thiếu sáng tạo</label>
+        <input class="tag-btn" type="checkbox" id="sa2d" name="sit_tag_2[]" value="Tư duy tích cực, trưởng thành"><label for="sa2d">✅ Tư duy tích cực</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sit 3 -->
+  <div class="sit-row">
+    <div class="sit-left">
+      <div class="detail-label mb8">Câu hỏi</div>
+      <input type="text" value="Đồng nghiệp không tốt / Mobbing 👥" readonly style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;background:#f0ede6;color:var(--text);font-family:inherit;margin-bottom:8px;">
+      <div class="detail-label mb8">Câu trả lời</div>
+      <textarea class="detail-note" name="sit_answer_3" style="width:100%;min-height:72px" placeholder="VD: Giữ bình tĩnh, nói chuyện trực tiếp, báo quản lý…"></textarea>
+    </div>
+    <div class="sit-right">
+      <div class="detail-label mb8">Đánh giá</div>
+      <div class="tag-group">
+        <input class="tag-btn" type="checkbox" id="sa3a" name="sit_tag_3[]" value="Đúng trọng tâm"><label for="sa3a">✅ Đúng trọng tâm</label>
+        <input class="tag-btn" type="checkbox" id="sa3b" name="sit_tag_3[]" value="Không hiểu câu hỏi"><label for="sa3b">Không hiểu</label>
+        <input class="tag-btn" type="checkbox" id="sa3c" name="sit_tag_3[]" value="Trả lời sáo rỗng"><label for="sa3c">Sáo rỗng</label>
+        <input class="tag-btn" type="checkbox" id="sa3d" name="sit_tag_3[]" value="Kể được kinh nghiệm thực tế"><label for="sa3d">✅ Kinh nghiệm thực tế</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sit 4 -->
+  <div class="sit-row">
+    <div class="sit-left">
+      <div class="detail-label mb8">Câu hỏi</div>
+      <input type="text" value="Mâu thuẫn với đồng nghiệp (Konflikt) 🔥" readonly style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;background:#f0ede6;color:var(--text);font-family:inherit;margin-bottom:8px;">
+      <div class="detail-label mb8">Câu trả lời</div>
+      <textarea class="detail-note" name="sit_answer_4" style="width:100%;min-height:72px" placeholder="VD: Tìm giải pháp, Kommunikation, giữ bình tĩnh…"></textarea>
+    </div>
+    <div class="sit-right">
+      <div class="detail-label mb8">Đánh giá</div>
+      <div class="tag-group">
+        <input class="tag-btn" type="checkbox" id="sa4a" name="sit_tag_4[]" value="Đúng trọng tâm"><label for="sa4a">✅ Đúng trọng tâm</label>
+        <input class="tag-btn" type="checkbox" id="sa4b" name="sit_tag_4[]" value="Không hiểu câu hỏi"><label for="sa4b">Không hiểu</label>
+        <input class="tag-btn" type="checkbox" id="sa4c" name="sit_tag_4[]" value="Nhấn mạnh Kommunikation"><label for="sa4c">✅ Kommunikation</label>
+        <input class="tag-btn" type="checkbox" id="sa4d" name="sit_tag_4[]" value="Trả lời chung chung, thiếu cụ thể"><label for="sa4d">Chung chung</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sit 5 -->
+  <div class="sit-row">
+    <div class="sit-left">
+      <div class="detail-label mb8">Câu hỏi</div>
+      <input type="text" value="Môi trường làm việc căng thẳng 😰" readonly style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;background:#f0ede6;color:var(--text);font-family:inherit;margin-bottom:8px;">
+      <div class="detail-label mb8">Câu trả lời</div>
+      <textarea class="detail-note" name="sit_answer_5" style="width:100%;min-height:72px" placeholder="VD: Đã có kinh nghiệm áp lực, biết quản lý thời gian…"></textarea>
+    </div>
+    <div class="sit-right">
+      <div class="detail-label mb8">Đánh giá</div>
+      <div class="tag-group">
+        <input class="tag-btn" type="checkbox" id="sa5a" name="sit_tag_5[]" value="Đúng trọng tâm"><label for="sa5a">✅ Đúng trọng tâm</label>
+        <input class="tag-btn" type="checkbox" id="sa5b" name="sit_tag_5[]" value="Không hiểu câu hỏi"><label for="sa5b">Không hiểu</label>
+        <input class="tag-btn" type="checkbox" id="sa5c" name="sit_tag_5[]" value="Dẫn chứng kinh nghiệm thực tế"><label for="sa5c">✅ Dẫn chứng thực tế</label>
+        <input class="tag-btn" type="checkbox" id="sa5d" name="sit_tag_5[]" value="Lý thuyết suông"><label for="sa5d">Lý thuyết suông</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sit 6 -->
+  <div class="sit-row" style="margin-bottom:10px">
+    <div class="sit-left">
+      <div class="detail-label mb8">Câu hỏi</div>
+      <input type="text" value="Khách hàng khó tính 😤" readonly style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;background:#f0ede6;color:var(--text);font-family:inherit;margin-bottom:8px;">
+      <div class="detail-label mb8">Câu trả lời</div>
+      <textarea class="detail-note" name="sit_answer_6" style="width:100%;min-height:72px" placeholder="VD: Lắng nghe, không cãi lại, tìm giải pháp…"></textarea>
+    </div>
+    <div class="sit-right">
+      <div class="detail-label mb8">Đánh giá</div>
+      <div class="tag-group">
+        <input class="tag-btn" type="checkbox" id="sa6a" name="sit_tag_6[]" value="Đúng trọng tâm"><label for="sa6a">✅ Đúng trọng tâm</label>
+        <input class="tag-btn" type="checkbox" id="sa6b" name="sit_tag_6[]" value="Không hiểu câu hỏi"><label for="sa6b">Không hiểu</label>
+        <input class="tag-btn" type="checkbox" id="sa6c" name="sit_tag_6[]" value="Thể hiện sự kiên nhẫn, chuyên nghiệp"><label for="sa6c">✅ Chuyên nghiệp</label>
+        <input class="tag-btn" type="checkbox" id="sa6d" name="sit_tag_6[]" value="Thiếu kinh nghiệm xử lý"><label for="sa6d">Thiếu kinh nghiệm</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom situations -->
+  <div id="customSitContainer"></div>
+  <button type="button" id="addSitBtn" style="background:white;border:2px dashed var(--border);border-radius:6px;padding:9px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;width:100%;transition:all .2s;font-family:inherit;margin-bottom:12px;">
+    ➕ Thêm câu hỏi tình huống tuỳ chỉnh
+  </button>
+
+  <!-- Diem tinh huong -->
+  <div style="background:#f5f3ee;border-radius:6px;padding:11px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px">Điểm tổng phần câu hỏi tình huống <span class="req">*</span></div>
+    <div class="score-options">
+      <div class="score-option"><input type="radio" name="score_situation" id="s1" value="0.5" required><label for="s1"><span class="opt-emoji">😟</span><span class="opt-label">Kém</span><span class="opt-pt">0.5đ</span></label></div>
+      <div class="score-option"><input type="radio" name="score_situation" id="s2" value="1"><label for="s2"><span class="opt-emoji">😐</span><span class="opt-label">Trung bình</span><span class="opt-pt">1.0đ</span></label></div>
+      <div class="score-option"><input type="radio" name="score_situation" id="s3" value="1.5"><label for="s3"><span class="opt-emoji">🙂</span><span class="opt-label">Tốt</span><span class="opt-pt">1.5đ</span></label></div>
+      <div class="score-option"><input type="radio" name="score_situation" id="s4" value="2"><label for="s4"><span class="opt-emoji">😄</span><span class="opt-label">Tuyệt vời</span><span class="opt-pt">2.0đ</span></label></div>
+    </div>
+  </div>
+</div>
+
+<!-- NHAN XET & KET LUAN -->
+<div class="card">
+  <div class="card-title">📝 Kết luận</div>
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">Kết luận <span class="req">*</span></div>
+  <div class="verdict-options">
+    <div class="verdict-opt"><input type="radio" name="verdict" id="v1" value="Đạt" required><label for="v1"><span class="v-icon">✅</span><span class="v-label">ĐẠT – Nhận hồ sơ</span></label></div>
+    <div class="verdict-opt"><input type="radio" name="verdict" id="v2" value="Có thể nhận cho nghề khác"><label for="v2"><span class="v-icon">🔄</span><span class="v-label">Có thể nhận nghề khác</span></label></div>
+    <div class="verdict-opt"><input type="radio" name="verdict" id="v3" value="Chưa đạt"><label for="v3"><span class="v-icon">❌</span><span class="v-label">Chưa đạt</span></label></div>
+  </div>
+</div>
+
+<!-- TONG DIEM -->
+<div class="score-total-box">
+  <div class="score-total-label">Tổng điểm tự động</div>
+  <div class="score-total-row">
+    <div>
+      <span class="score-total-value" id="scoreDisplay">0</span>
+      <span class="score-total-max">/10</span>
+    </div>
+    <div class="score-bar-bg"><div class="score-bar-fill" id="scoreBar"></div></div>
+  </div>
+  <div class="breakdown" id="breakdown">
+    <span>Phát âm: –</span><span>Nghe: –</span><span>Nội dung: –</span><span>Tình huống: –</span><span>Thái độ: –</span>
+  </div>
+</div>
+
+<!-- DIEU CHINH DIEM -->
+<div class="card" style="border-left:3px solid var(--accent)">
+  <div class="card-title">⚖️ Điều chỉnh điểm (tuỳ chọn)</div>
+  <div class="grid-2 mb8">
+    <div class="field">
+      <label>Điều chỉnh (+/-)</label>
+      <div class="adj-row" style="margin-top:3px">
+        <button type="button" class="adj-btn" id="adjMinus">−</button>
+        <input type="number" name="score_adjustment" id="scoreAdjustment" class="adj-input" step="0.5" min="-5" max="5" value="0" oninput="updateFinalScore()">
+        <button type="button" class="adj-btn" id="adjPlus">＋</button>
+        <span style="font-size:11px;color:var(--muted);align-self:center">bước 0.5</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Lý do điều chỉnh</label>
+      <textarea name="adjustment_reason" placeholder="VD: Có kinh nghiệm thực tế ZFA 3 tháng, cộng thêm 0.5…" style="min-height:52px"></textarea>
+    </div>
+  </div>
+  <div class="final-box">
+    <div>
+      <div style="font-size:11px;opacity:.75">Điểm sau điều chỉnh</div>
+      <div style="font-size:10px;opacity:.55" id="adjustBreakdown">0 + 0 = 0</div>
+    </div>
+    <div>
+      <span style="font-size:32px;font-weight:800" id="finalScoreDisplay">0.0</span>
+      <span style="font-size:13px;opacity:.55">/10</span>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;gap:8px;margin-bottom:0">
+  <button type="submit" class="btn-submit" id="submitBtn" style="flex:1">
+    <span>🤖 Tổng hợp AI → Telegram + ClickUp</span>
+    <div class="spinner" id="spinner"></div>
+  </button>
+  <button type="button" id="copyJsonBtn" title="Copy payload JSON" style="background:white;border:1.5px solid var(--border);border-radius:var(--radius);padding:0 13px;font-size:18px;cursor:pointer;flex-shrink:0;transition:background .15s;" onclick="copyPayloadJson()">📋</button>
+</div>
+
+<!-- New evaluation button (hidden until after submit) -->
+<div id="newEvalWrapper" style="display:none;margin-top:10px">
+  <button type="button" id="newEvalBtn" onclick="resetForm()" style="width:100%;background:#1a472a;color:white;font-weight:700;font-size:14px;border:none;border-radius:var(--radius);padding:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+    ✏️ Đánh giá học viên mới
+  </button>
+</div>
+
+<!-- Draft indicator -->
+<div id="draftBar" style="display:none;margin-top:8px;background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:7px 12px;font-size:11px;color:#795548;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+  <span>💾 Có draft đang lưu</span>
+  <button type="button" onclick="clearDraft()" style="background:none;border:1px solid #bbb;border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit;color:#555;">Xoá draft</button>
+</div>
+
+</form>
+<div id="toast"></div>
+
+<div style="text-align:center;padding:18px 0 8px;font-size:11px;color:#aaa;letter-spacing:.5px;">
+  v4.3 · Elite Education Interview Form · 07/03/2026
+</div>
+
+<script>
+// Init date
+(function() {
+  var d = new Date();
+  document.getElementById('interviewDate').value =
+    String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+})();
+
+// Family region toggle
+document.querySelectorAll('input[name="family_in_germany"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    var reg = document.getElementById('familyRegionInput');
+    reg.disabled = this.value !== 'Có';
+    if (this.value !== 'Có') reg.value = '';
+  });
+});
+
+// Score
+var scoreNames = ['pronunciation','listening','content','situation','attitude'];
+var scoreLabels = ['Phát âm','Nghe','Nội dung','Tình huống','Thái độ'];
+
+function updateScore() {
+  var total = 0;
+  var parts = scoreNames.map(function(f, i) {
+    var el = document.querySelector('input[name="score_'+f+'"]:checked');
+    var v = el ? parseFloat(el.value) : 0;
+    total += v;
+    return scoreLabels[i]+': '+(el ? v+'đ' : '–');
+  });
+  document.getElementById('scoreDisplay').textContent = total.toFixed(1);
+  document.getElementById('scoreBar').style.width = (total/10*100)+'%';
+  document.getElementById('breakdown').innerHTML = parts.map(function(p){ return '<span>'+p+'</span>'; }).join('');
+  updateFinalScore();
+}
+
+function updateFinalScore() {
+  var base = scoreNames.reduce(function(s,f){
+    var el = document.querySelector('input[name="score_'+f+'"]:checked');
+    return s + (el ? parseFloat(el.value) : 0);
+  }, 0);
+  var adj = parseFloat(document.getElementById('scoreAdjustment').value) || 0;
+  var final = Math.min(10, Math.max(0, base + adj));
+  document.getElementById('finalScoreDisplay').textContent = final.toFixed(1);
+  var sign = adj >= 0 ? '+' : '';
+  document.getElementById('adjustBreakdown').textContent = base.toFixed(1)+' '+sign+adj+' = '+final.toFixed(1);
+}
+
+document.querySelectorAll('input[type="radio"]').forEach(function(r){ r.addEventListener('change', updateScore); });
+
+// Score stepper buttons
+document.getElementById('adjMinus').addEventListener('click', function() {
+  var el = document.getElementById('scoreAdjustment');
+  var v = (parseFloat(el.value) || 0) - 0.5;
+  el.value = Math.max(-5, v);
+  updateFinalScore();
+});
+document.getElementById('adjPlus').addEventListener('click', function() {
+  var el = document.getElementById('scoreAdjustment');
+  var v = (parseFloat(el.value) || 0) + 0.5;
+  el.value = Math.min(5, v);
+  updateFinalScore();
+});
+
+// Custom situation
+var customSitCount = 0;
+document.getElementById('addSitBtn').addEventListener('click', function() {
+  customSitCount++;
+  var idx = 10 + customSitCount;
+  var container = document.getElementById('customSitContainer');
+  var div = document.createElement('div');
+  div.className = 'sit-row';
+  div.style.marginBottom = '8px';
+  div.id = 'customSit'+idx;
+  div.innerHTML =
+    '<div class="sit-left">'+
+      '<div class="detail-label mb8">Câu hỏi</div>'+
+      '<input type="text" id="csq'+idx+'" style="width:100%;border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:13px;font-weight:600;font-family:inherit;margin-bottom:8px;" placeholder="✏️ Nhập câu hỏi tình huống tự thêm…">'+
+      '<div class="detail-label mb8">Câu trả lời</div>'+
+      '<textarea class="detail-note" name="sit_answer_'+idx+'" style="width:100%;min-height:72px" placeholder="Ghi lại câu trả lời của học viên…"></textarea>'+
+    '</div>'+
+    '<div class="sit-right">'+
+      '<div class="detail-label mb8">Đánh giá</div>'+
+      '<div class="tag-group">'+
+        '<input class="tag-btn" type="checkbox" id="cst'+idx+'a" name="sit_tag_'+idx+'[]" value="Đúng trọng tâm"><label for="cst'+idx+'a">✅ Đúng trọng tâm</label>'+
+        '<input class="tag-btn" type="checkbox" id="cst'+idx+'b" name="sit_tag_'+idx+'[]" value="Không hiểu câu hỏi"><label for="cst'+idx+'b">Không hiểu</label>'+
+        '<input class="tag-btn" type="checkbox" id="cst'+idx+'c" name="sit_tag_'+idx+'[]" value="Ậm ừ loanh quanh"><label for="cst'+idx+'c">Ậm ừ</label>'+
+        '<input class="tag-btn" type="checkbox" id="cst'+idx+'d" name="sit_tag_'+idx+'[]" value="Có lý do rõ ràng"><label for="cst'+idx+'d">✅ Lý do rõ ràng</label>'+
+      '</div>'+
+      '<button type="button" onclick="this.closest(\'.sit-row\').remove()" style="margin-top:7px;background:none;border:1px solid #e74c3c;color:#e74c3c;border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;">🗑 Xoá</button>'+
+    '</div>';
+  container.appendChild(div);
+});
+
+// Submit
+// ─── AUTO-SAVE DRAFT ───────────────────────────────────────────
+var DRAFT_KEY = 'elite_interview_draft';
+
+function saveDraft() {
+  var form = document.getElementById('interviewForm');
+  var data = {};
+  var els = form.querySelectorAll('input[name]:not([type="radio"]):not([type="checkbox"]), textarea[name], select[name]');
+  els.forEach(function(el) { data[el.name] = el.value; });
+  // radios & checkboxes
+  form.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked').forEach(function(el) {
+    if (!data[el.name]) data[el.name] = [];
+    if (Array.isArray(data[el.name])) data[el.name].push(el.value);
+    else data[el.name] = el.value;
+  });
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); showDraftBar(true); } catch(e) {}
+}
+
+function restoreDraft() {
+  try {
+    var raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    var form = document.getElementById('interviewForm');
+    Object.keys(data).forEach(function(name) {
+      var val = data[name];
+      var els = form.querySelectorAll('[name="' + name + '"]');
+      els.forEach(function(el) {
+        if (el.type === 'radio') { if (el.value === val) el.checked = true; }
+        else if (el.type === 'checkbox') { if (Array.isArray(val) && val.indexOf(el.value) >= 0) el.checked = true; }
+        else if (!el.readOnly && !el.disabled) { el.value = val; }
+      });
+    });
+    // restore family region state
+    var famVal = form.querySelector('input[name="family_in_germany"]:checked');
+    if (famVal) {
+      var reg = document.getElementById('familyRegionInput');
+      reg.disabled = famVal.value !== 'Có';
+    }
+    updateScore();
+    showDraftBar(true);
+  } catch(e) {}
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+  showDraftBar(false);
+  showToast('🗑 Đã xoá draft', '', 2000);
+}
+
+function showDraftBar(show) {
+  document.getElementById('draftBar').style.display = show ? 'flex' : 'none';
+}
+
+// Save draft on any input change
+document.getElementById('interviewForm').addEventListener('input', saveDraft);
+document.getElementById('interviewForm').addEventListener('change', saveDraft);
+
+// Restore draft on page load
+restoreDraft();
+
+// ─── LOCK / UNLOCK FORM ────────────────────────────────────────
+function lockForm() {
+  document.querySelectorAll('#interviewForm input, #interviewForm textarea, #interviewForm button[type="submit"], #interviewForm button:not(#copyJsonBtn)').forEach(function(el) {
+    el.disabled = true;
+  });
+  document.getElementById('submitBtn').style.display = 'none';
+  document.getElementById('newEvalWrapper').style.display = 'block';
+}
+
+function resetForm() {
+  var form = document.getElementById('interviewForm');
+  // re-enable all
+  form.querySelectorAll('input, textarea, button').forEach(function(el) { el.disabled = false; });
+  form.reset();
+  document.getElementById('familyRegionInput').disabled = true;
+  document.getElementById('customSitContainer').innerHTML = '';
+  customSitCount = 0;
+  document.getElementById('scoreAdjustment').value = 0;
+  var d = new Date();
+  document.getElementById('interviewDate').value =
+    String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  updateScore();
+  document.getElementById('submitBtn').style.display = 'flex';
+  document.getElementById('newEvalWrapper').style.display = 'none';
+  clearDraft();
+  window.scrollTo(0, 0);
+}
+
+// ─── COPY JSON ─────────────────────────────────────────────────
+function copyPayloadJson() {
+  var btn = document.getElementById('copyJsonBtn');
+  try {
+    var p = buildPayload();
+    navigator.clipboard.writeText(JSON.stringify(p, null, 2)).then(function() {
+      btn.textContent = '✅';
+      setTimeout(function(){ btn.textContent = '📋'; }, 2000);
+    });
+  } catch(e) {
+    showToast('⚠️ Không thể copy: ' + e.message, 'error', 3000);
+  }
+}
+
+// ─── BUILD PAYLOAD (shared) ────────────────────────────────────
+function buildPayload() {
+  var fd = new FormData(document.getElementById('interviewForm'));
+  function getChecked(name) {
+    return [].slice.call(document.querySelectorAll('input[name="'+name+'"]:checked')).map(function(x){ return x.value; }).join(', ');
+  }
+  var baseScore = ['score_pronunciation','score_listening','score_content','score_situation','score_attitude']
+    .reduce(function(s,n){ return s + parseFloat(fd.get(n)||0); }, 0);
+  var adj = parseFloat(fd.get('score_adjustment')) || 0;
+  var finalScore = Math.min(10, Math.max(0, baseScore + adj)).toFixed(1);
+
+  var sitPayload = {};
+  var standardSits = [
+    { idx: 1, q: 'Làm thêm giờ / cuối tuần' },
+    { idx: 2, q: 'Kündigung – bị sa thải' },
+    { idx: 3, q: 'Đồng nghiệp không tốt / Mobbing' },
+    { idx: 4, q: 'Mâu thuẫn với đồng nghiệp (Konflikt)' },
+    { idx: 5, q: 'Môi trường làm việc căng thẳng' },
+    { idx: 6, q: 'Khách hàng khó tính' },
+  ];
+  standardSits.forEach(function(row) {
+    sitPayload['sit_'+row.idx+'_question'] = row.q;
+    var ans = (fd.get('sit_answer_'+row.idx) || '').trim();
+    sitPayload['sit_'+row.idx+'_answer'] = ans || 'Chưa hỏi / Không có câu trả lời';
+    sitPayload['sit_'+row.idx+'_tags'] = getChecked('sit_tag_'+row.idx+'[]');
+  });
+  for (var ci = 1; ci <= customSitCount; ci++) {
+    var cidx = 10 + ci;
+    var cqEl = document.getElementById('csq'+cidx);
+    if (cqEl && document.getElementById('customSit'+cidx)) {
+      sitPayload['sit_'+cidx+'_question'] = cqEl.value || '';
+      var cans = (fd.get('sit_answer_'+cidx) || '').trim();
+      sitPayload['sit_'+cidx+'_answer'] = cans || 'Chưa hỏi / Không có câu trả lời';
+      sitPayload['sit_'+cidx+'_tags'] = getChecked('sit_tag_'+cidx+'[]');
+    }
+  }
+
+  return Object.assign({
+    company: document.getElementById('companyInput').value.trim(),
+    student_name: fd.get('student_name'),
+    profession: document.getElementById('professionInput').value.trim(),
+    destination: fd.get('destination'),
+    interview_date: fd.get('interview_date'),
+    evaluator: fd.get('evaluator'),
+    certificate: fd.get('certificate'),
+    age: fd.get('age') || '',
+    hometown: fd.get('hometown'),
+    family_in_germany: fd.get('family_in_germany') || '',
+    family_region: fd.get('family_region') || '',
+    score_pronunciation: fd.get('score_pronunciation'),
+    score_listening: fd.get('score_listening'),
+    score_content: fd.get('score_content'),
+    score_situation: fd.get('score_situation'),
+    score_attitude: fd.get('score_attitude'),
+    score_adjustment: adj,
+    adjustment_reason: fd.get('adjustment_reason') || '',
+    total_score: baseScore.toFixed(1),
+    final_score: finalScore,
+    detail_pronunciation: getChecked('detail_pronunciation[]'),
+    detail_listening: getChecked('detail_listening[]'),
+    detail_content: getChecked('detail_content[]'),
+    detail_attitude: getChecked('detail_attitude[]'),
+    note_pronunciation: fd.get('note_pronunciation'),
+    note_listening: fd.get('note_listening'),
+    note_content: fd.get('note_content'),
+    note_attitude: fd.get('note_attitude'),
+    strengths: fd.get('strengths'),
+    improvements: fd.get('improvements'),
+    notes: fd.get('notes'),
+    verdict: fd.get('verdict'),
+  }, sitPayload);
+}
+
+// ─── SUBMIT ────────────────────────────────────────────────────
+document.getElementById('interviewForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  if (!document.getElementById('companyInput').value.trim()) {
+    showToast('⚠️ Vui lòng nhập tên Công ty / Trung tâm!', 'error'); return;
+  }
+  if (!document.getElementById('professionInput').value.trim()) {
+    showToast('⚠️ Vui lòng nhập Nghề muốn đi!', 'error'); return;
+  }
+
+  var scoreFields = [
+    { name: 'score_pronunciation', label: '1. Phát âm' },
+    { name: 'score_listening',     label: '2. Nghe hiểu & Phản xạ' },
+    { name: 'score_content',       label: '3. Nội dung câu trả lời' },
+    { name: 'score_situation',     label: '5. Câu hỏi tình huống' },
+    { name: 'score_attitude',      label: '4. Thái độ & Hình thức' },
+    { name: 'verdict',             label: 'Kết luận' },
+  ];
+  var missing = scoreFields.filter(function(f){ return !document.querySelector('input[name="'+f.name+'"]:checked'); });
+  if (missing.length > 0) {
+    var list = missing.map(function(f){ return '  • '+f.label; }).join('\n');
+    showToast('⚠️ Chưa đánh giá đủ tiêu chí:\n'+list, 'error', 6000);
+    return;
+  }
+
+  var payload = buildPayload();
+  var btn = document.getElementById('submitBtn');
+  var spinner = document.getElementById('spinner');
+  btn.disabled = true; spinner.style.display = 'block';
+
+  var N8N_WEBHOOK = 'https://n8n.toididuhoc.net/webhook/interview-evaluation';
+
+  try {
+    var res = await fetch(N8N_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      clearDraft();
+      showToast('✅ Đã gửi! '+payload.student_name+' – '+payload.final_score+'/10 – '+payload.verdict, 'success', 5000);
+      lockForm();
+    } else {
+      showToast('❌ Lỗi webhook: ' + res.status, 'error');
+      btn.disabled = false; spinner.style.display = 'none';
+    }
+  } catch(err) {
+    clearDraft();
+    showToast('✅ Demo: '+payload.student_name+' – '+payload.final_score+'/10 – '+payload.verdict, 'success', 5000);
+    console.log('Payload:', JSON.stringify(payload, null, 2));
+    lockForm();
+  } finally {
+    spinner.style.display = 'none';
+  }
+});
+
+function showToast(msg, type, dur) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show '+(type||'');
+  setTimeout(function(){ t.className = ''; }, dur||3500);
+}
+</script>
+
+</body>
+</html>
