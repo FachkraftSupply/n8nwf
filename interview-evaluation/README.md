@@ -68,10 +68,9 @@
 
 | File | Mô tả |
 |---|---|
-| `elite-interview-form-v4.3.html` | Form đánh giá chính (bản mới nhất) |
-| `interview-evaluation-workflow-v3-supabase.json` | Workflow n8n hoàn chỉnh (import vào n8n) |
-| `supabase-schema.sql` | SQL schema tham khảo (bảng đã tạo trên Supabase) |
-| `README-interview-evaluation-system.md` | File này |
+| [`elite-interview-form-v4.3.html`](./elite-interview-form-v4.3.html) | Form đánh giá chính (bản mới nhất) — mở trực tiếp trên trình duyệt hoặc host lên web server |
+| [`interview-evaluation-workflow-v3-supabase.json`](./interview-evaluation-workflow-v3-supabase.json) | Workflow n8n hoàn chỉnh (import vào n8n) |
+| `README.md` | File này |
 
 ---
 
