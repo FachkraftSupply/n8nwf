@@ -10,7 +10,7 @@ Kho lưu trữ các workflow n8n nội bộ của FS International (Elite Educat
 
 | Folder | Workflow | Mô tả | Trạng thái |
 |---|---|---|---|
-| [`interview-evaluation/`](./interview-evaluation/) | Interview Evaluation | Form đánh giá phỏng vấn tiếng Đức → AI tổng hợp → Telegram + ClickUp + Supabase | ✅ Production |
+| [`interview-evaluation/`](./interview-evaluation/) | Interview Evaluation | Form đánh giá phỏng vấn tiếng Đức → 1 LLM call → Telegram + ClickUp + Supabase (có debug branch) | ✅ Production |
 | [`interview-result-lookup/`](./interview-result-lookup/) | Interview Result Lookup | Bot Telegram `/ketqua` tra cứu kết quả phỏng vấn từ Supabase, fuzzy-match tên bằng AI Agent, chọn qua inline keyboard khi có nhiều kết quả trùng | ✅ Production |
 
 ---
