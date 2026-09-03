@@ -1,0 +1,1061 @@
+{
+  "name": "Tra cứu kết quả phỏng vấn /ketqua (final)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "368b8490-a5b7-47c6-9aa1-86bfe937b778",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        976
+      ],
+      "webhookId": "REPLACE_AUTO",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-is-callback",
+              "leftValue": "={{ $json.callback_query }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4500164b-494b-49a7-a793-e7ba95ff92d4",
+      "name": "Là callback_query?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cq = $json.callback_query;\nconst data = cq?.data || '';\nconst id = data.startsWith('sel:') ? data.slice(4) : null;\n\nreturn [\n  {\n    json: {\n      matched_id: id,\n      chat_id: cq?.message?.chat?.id,\n      callback_query_id: cq?.id,\n      query_student_name: '',\n    },\n  },\n];"
+      },
+      "id": "35a1215d-cbd2-4b9f-b9f8-af2fe752ef70",
+      "name": "Parse lựa chọn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        1664
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $json.callback_query_id }}",
+        "additionalFields": {}
+      },
+      "id": "95f98938-529e-4fe3-92c3-e82243f059e7",
+      "name": "Answer callback query",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3104,
+        1664
+      ],
+      "webhookId": "0ef8e404-cbd3-46d2-9617-7d779ef8f56e",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.message;\nconst text = (msg?.text || '').trim();\nconst chatId = msg?.chat?.id;\n\nconst prefix = '/ketqua';\nlet valid = false;\nlet company = '';\nlet student_name = '';\n\nif (text.toLowerCase().startsWith(prefix)) {\n  const rest = text.slice(prefix.length).trim();\n  if (rest) {\n    if (rest.includes('+')) {\n      // Cú pháp: /ketqua Công ty + Tên học sinh\n      const parts = rest.split('+').map((s) => s.trim()).filter(Boolean);\n      if (parts.length >= 2) {\n        company = parts[0];\n        student_name = parts.slice(1).join(' + ');\n        valid = true;\n      }\n    } else {\n      // Cú pháp: /ketqua Tên học sinh (tìm trên toàn bộ công ty)\n      student_name = rest;\n      company = '';\n      valid = true;\n    }\n  }\n}\n\nreturn [\n  {\n    json: {\n      valid,\n      company,\n      student_name,\n      chat_id: chatId,\n      raw_text: text,\n    },\n  },\n];"
+      },
+      "id": "5704d317-31f6-437d-aea4-f284deb23abb",
+      "name": "Parse lệnh /ketqua",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "89b870d0-79d6-4c5b-893a-95f9f8c35938",
+      "name": "Lệnh hợp lệ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-is-help",
+              "leftValue": "={{ $json.raw_text.toLowerCase() }}",
+              "rightValue": "/help",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d1a2b3c4-0001-4aaa-8888-000000000021",
+      "name": "Là lệnh /help?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=📖 *Hướng dẫn tra cứu kết quả phỏng vấn*\n\n*Cách 1 — Tìm theo tên học sinh:*\n`/ketqua Tên học sinh`\nVí dụ: `/ketqua Bùi Diệu Linh`\n(tìm trên toàn bộ công ty)\n\n*Cách 2 — Tìm theo công ty + tên:*\n`/ketqua Tên công ty + Tên học sinh`\nVí dụ: `/ketqua ICO + Bùi Diệu Linh`\n\n*Lưu ý:*\n• Gõ thiếu dấu bot vẫn tự nhận diện tên gần đúng\n• Nếu có 2-5 kết quả trùng, bot sẽ hiện nút để chọn\n• Nếu quá 5 kết quả, gõ tên đầy đủ hơn hoặc kèm tên công ty",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "d1a2b3c4-0002-4bbb-9999-000000000022",
+      "name": "Trả lời: Hướng dẫn",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2736,
+        672
+      ],
+      "webhookId": "d1a2b3c4-help-webhook-000000000122",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=Cú pháp không đúng.\nDùng: /ketqua Tên công ty + Tên học sinh  (ví dụ: /ketqua ICO + Bùi Diệu Linh)\nHoặc chỉ cần: /ketqua Tên học sinh  (tìm trên toàn bộ công ty, ví dụ: /ketqua Bùi Diệu Linh)\nGõ /help để xem hướng dẫn chi tiết.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "7dcd1f50-3de7-41d7-8d17-7adac2f7c8ff",
+      "name": "Trả lời: Sai cú pháp",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2736,
+        832
+      ],
+      "webhookId": "27bb0933-39d0-4234-904d-3ce3b0261dcb",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-has-company",
+              "leftValue": "={{ $json.company }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "196876c8-253c-43d6-b7b0-e9e922497843",
+      "name": "Có company không?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "interview_evaluations",
+        "limit": 30,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "company",
+              "condition": "ilike",
+              "keyValue": "={{ '%' + $json.company + '%' }}"
+            }
+          ]
+        }
+      },
+      "id": "61994285-41c7-45ab-9e13-c511eef13529",
+      "name": "Supabase: Tra cứu theo công ty",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        2736,
+        368
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cISqWlLc6VmWWp7A",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "interview_evaluations",
+        "limit": 30,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "student_name",
+              "condition": "ilike",
+              "keyValue": "={{ '%' + $json.student_name + '%' }}"
+            }
+          ]
+        }
+      },
+      "id": "59a85749-d69c-4c0b-9eff-6111ae65c8d3",
+      "name": "Supabase: Tra cứu theo tên học sinh",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [
+        2736,
+        528
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cISqWlLc6VmWWp7A",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rows = items.map((i) => i.json).filter((r) => r && r.id);\n\nconst candidates = rows.map((r) => ({\n  id: r.id,\n  student_name: r.student_name,\n  company: r.company,\n  interview_date: r.interview_date,\n  verdict: r.verdict,\n}));\n\nconst parsed = $('Parse lệnh /ketqua').first().json;\n\nreturn [\n  {\n    json: {\n      candidates,\n      count: candidates.length,\n      query_student_name: parsed.student_name,\n      query_company: parsed.company,\n      chat_id: parsed.chat_id,\n    },\n  },\n];"
+      },
+      "id": "49acbc88-b65e-4246-a96a-761884fb8e7f",
+      "name": "Rút gọn danh sách candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [
+        2960,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-count",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "37f5a2b7-4a87-4ad2-9d45-e3147023cab0",
+      "name": "Có kết quả nào không?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.query_company ? ('Không tìm thấy dữ liệu nào cho công ty \"' + $json.query_company + '\".') : ('Không tìm thấy học sinh nào tên \"' + $json.query_student_name + '\" trong dữ liệu.') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "45cd7bea-8975-47fd-8710-d2d1f3b8b327",
+      "name": "Trả lời: Không có kết quả",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3536,
+        800
+      ],
+      "webhookId": "d3001cd7-ecda-495f-a703-3abaa0080f1a",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tên cần tìm: {{ $json.query_student_name }}\n\nDanh sách ứng viên (JSON):\n{{ JSON.stringify($json.candidates) }}\n\nHãy liệt kê tất cả candidate khớp theo đúng quy tắc đã nêu.",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "Bạn là trợ lý tra cứu học sinh. Nhiệm vụ: từ danh sách ứng viên (candidates) được cung cấp, tìm TẤT CẢ candidate có student_name có khả năng khớp với tên cần tìm (chấp nhận sai dấu, thiếu dấu, viết tắt, gõ nhầm nhẹ, hoa/thường lẫn lộn). Liệt kê theo thứ tự khả năng khớp giảm dần.\n\nQuy tắc:\n- Chỉ liệt kê id có trong danh sách được cung cấp, không tự bịa.\n- Nếu tên cần tìm khác biệt hoàn toàn với mọi candidate, trả về mảng rỗng.\n- Không giải thích, không thêm chữ nào ngoài JSON kết quả.\n- có thể tham khảo bảng sau để lọc công ty \n\nELMC = Elite Mạnh Cường; ELHZ = Elite Hạnh Dơi; ELHT = Elite Huyền Trang ; ELTS = Chị Thảo Sún; ELTSHZ = THẢO SUN FT HẠNH; ELTS-HT = Thảo Sún ft Huyền trang; ELNB = Elite Nội Bộ; EL = Elite; EUES = EUES; ICO = ICO Euro; GEZ = GEZ; HND = HND; ATB = ATB; GAC = GAC; AKD = AKD; DAF = DAF; DEK = Deutsche Ecke; Mygrint = Mygrint; Rita = Rita\n\nĐịnh dạng bắt buộc: {\"matches\": [\"id1\", \"id2\", ...]}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3408,
+        192
+      ],
+      "id": "2cab3eb3-481c-4a42-85a8-873b7dc3b75d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        3424,
+        416
+      ],
+      "id": "9aed6a10-6b9d-4569-a18d-18219c6e6c41",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kiMfJ6ZPIwCfWt7p",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-flash",
+        "options": {
+          "maxTokens": 20000,
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        3552,
+        416
+      ],
+      "id": "f8d841a5-10c8-4edc-9635-6c40ec0f2c8b",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "veqXMKqH1o2Iw1p5",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $input.first().json;\n\nlet ids = [];\ntry {\n  const parsed = JSON.parse(out.output);\n  ids = Array.isArray(parsed.matches) ? parsed.matches : [];\n} catch (e) {\n  ids = [];\n}\n\nconst prev = $('Rút gọn danh sách candidate').first().json;\nconst candidateMap = new Map(prev.candidates.map((c) => [String(c.id), c]));\n\nconst matches = ids.map((id) => candidateMap.get(String(id))).filter(Boolean);\n\nreturn [\n  {\n    json: {\n      matches,\n      count: matches.length,\n      chat_id: prev.chat_id,\n      query_student_name: prev.query_student_name,\n    },\n  },\n];"
+      },
+      "id": "367e05a7-e6f2-4205-804b-3d908e7dd3b2",
+      "name": "Parse kết quả AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c0",
+                    "leftValue": "={{ $json.count }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "khong_co"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c1",
+                    "leftValue": "={{ $json.count }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "mot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c2a",
+                    "leftValue": "={{ $json.count }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    }
+                  },
+                  {
+                    "id": "c2b",
+                    "leftValue": "={{ $json.count }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "chon"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c3",
+                    "leftValue": "={{ $json.count }}",
+                    "rightValue": 5,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "qua_nhieu"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "43c2e533-4830-4f86-84d6-67c53c3052a8",
+      "name": "Phân loại theo số lượng khớp",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        4000,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ 'Không tìm thấy học sinh tên \"' + $json.query_student_name + '\" trong dữ liệu. Vui lòng kiểm tra lại tên.' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0c043ec5-e3c6-4a8e-a8c3-5ba9e20e361c",
+      "name": "Trả lời: Không tìm thấy học sinh",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4464,
+        208
+      ],
+      "webhookId": "82ae8525-5a54-40b3-8777-dd75c51ebc69",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const m = $json.matches[0];\nreturn [\n  {\n    json: {\n      matched_id: m.id,\n      chat_id: $json.chat_id,\n      query_student_name: $json.query_student_name,\n    },\n  },\n];"
+      },
+      "id": "f6c2f4d7-1d96-4d03-b307-d79978a387f5",
+      "name": "Chọn matched_id duy nhất",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4240,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json; // { matches, count, chat_id, query_student_name }\n\nconst inline_keyboard = item.matches.map((m) => ([\n  {\n    text: `${m.company} - ${m.student_name}${m.interview_date ? ' (' + m.interview_date + ')' : ''}`,\n    callback_data: `sel:${m.id}`\n  }\n]));\n\nreturn [{\n  json: {\n    chat_id: item.chat_id,\n    text: `Tìm thấy ${item.count} học sinh khớp với \"${item.query_student_name}\". Vui lòng chọn:`,\n    reply_markup: JSON.stringify({ inline_keyboard })\n  }\n}];"
+      },
+      "id": "b1e2c3d4-0001-4aaa-8888-000000000001",
+      "name": "Build inline keyboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4240,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot<TOKEN>/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.chat_id, text: $json.text, reply_markup: $json.reply_markup }) }}",
+        "options": {}
+      },
+      "id": "b1e2c3d4-0002-4bbb-9999-000000000002",
+      "name": "Gửi danh sách để chọn (HTTP)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4464,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ 'Tìm thấy ' + $json.count + ' học sinh khớp với \"' + $json.query_student_name + '\", quá nhiều để hiển thị. Vui lòng gửi lại với tên đầy đủ, chính xác hơn, hoặc kèm tên công ty (ví dụ: /ketqua ICO + ' + $json.query_student_name + ').' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "af58e0f6-5a8f-4392-bd49-5ac712fff5b7",
+      "name": "Yêu cầu thông tin chi tiết hơn",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4064,
+        1072
+      ],
+      "webhookId": "b1c2d3e4-0003-webhook-000000000103",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { matched_id: $json.matched_id, chat_id: $json.chat_id } }];"
+      },
+      "id": "778d35c5-b05c-4da4-87b3-0ddd0a576935",
+      "name": "Chuẩn bị lấy chi tiết",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4848,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "interview_evaluations",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.matched_id }}"
+            }
+          ]
+        }
+      },
+      "id": "e6a258d9-b820-41f1-be1f-8f93499c499a",
+      "name": "Supabase: Lấy chi tiết kết quả",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5072,
+        1152
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cISqWlLc6VmWWp7A",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst chatId = $('Chuẩn bị lấy chi tiết').first().json.chat_id;\n\nlet situations = [];\ntry { situations = JSON.parse(r.situations || '[]'); } catch (e) { situations = []; }\n\nconst situationLines = situations\n  .filter((s) => s.answer && !/Chưa hỏi/i.test(s.answer))\n  .map((s) => `• ${s.question}: ${s.answer}`)\n  .join('\\n') || 'Không có';\n\n// Các mã công ty trong specialCompanies: ngưỡng đạt 5, còn lại: ngưỡng đạt 6\nconst specialCompanies = ['elmc', 'el', 'elhz', 'elts', 'elht', 'elnb', 'elmb', 'eltshz', 'eltsht'];\nconst companyCode = String(r.company || '').trim().toLowerCase();\nconst threshold = specialCompanies.includes(companyCode) ? 5 : 6;\nconst finalScore = Number(r.final_score) || 0;\nconst verdict = finalScore >= threshold ? 'Đạt' : 'Chưa đạt';\n\nconst msg = [\n  '*Kết quả phỏng vấn*',\n  `Công ty: ${r.company}`,\n  `Học viên: ${r.student_name}`,\n  `Ngành: ${r.profession}`,\n  `Ngày PV: ${r.interview_date}`,\n  `Giám khảo: ${r.evaluator}`,\n  '',\n  `Điểm: Phát âm ${r.score_pronunciation} | Nghe ${r.score_listening} | Nội dung ${r.score_content} | Tình huống ${r.score_situation} | Thái độ ${r.score_attitude}`,\n  `Tổng điểm: *${r.total_score}* → Điểm cuối: *${r.final_score}*`,\n  `Kết luận: *${verdict}* (ngưỡng đạt: ${threshold})`,\n  '',\n  `Nhận xét phát âm: ${r.detail_pronunciation || '-'}`,\n  `Nhận xét nghe hiểu: ${r.detail_listening || '-'}`,\n  `Nhận xét nội dung: ${r.detail_content || '-'}`,\n  `Thái độ: ${r.detail_attitude || '-'}`,\n  '',\n  `Câu hỏi tình huống đã hỏi:\\n${situationLines}`,\n  '',\n  `Ghi chú: ${r.notes || '-'}`,\n].join('\\n');\n\nreturn [{ json: { chat_id: chatId, message: msg } }];"
+      },
+      "id": "919daae9-4ecb-4f32-ac26-a9fad4df1b76",
+      "name": "Format tin nhắn kết quả",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5296,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "523b9655-6a50-4577-b037-b5bb9c85460a",
+      "name": "Trả lời: Kết quả phỏng vấn",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5520,
+        1152
+      ],
+      "webhookId": "7cea07f6-29d5-4d62-81f0-32a97f4697e8",
+      "credentials": {
+        "telegramApi": {
+          "id": "fsG8yZbiw2BrCHiU",
+          "name": "CSFSINT"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Là callback_query?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Là callback_query?": {
+      "main": [
+        [
+          {
+            "node": "Parse lựa chọn",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse lệnh /ketqua",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse lựa chọn": {
+      "main": [
+        [
+          {
+            "node": "Answer callback query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chuẩn bị lấy chi tiết",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse lệnh /ketqua": {
+      "main": [
+        [
+          {
+            "node": "Lệnh hợp lệ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lệnh hợp lệ?": {
+      "main": [
+        [
+          {
+            "node": "Có company không?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Là lệnh /help?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Là lệnh /help?": {
+      "main": [
+        [
+          {
+            "node": "Trả lời: Hướng dẫn",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trả lời: Sai cú pháp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có company không?": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Tra cứu theo công ty",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase: Tra cứu theo tên học sinh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Tra cứu theo công ty": {
+      "main": [
+        [
+          {
+            "node": "Rút gọn danh sách candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Tra cứu theo tên học sinh": {
+      "main": [
+        [
+          {
+            "node": "Rút gọn danh sách candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rút gọn danh sách candidate": {
+      "main": [
+        [
+          {
+            "node": "Có kết quả nào không?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có kết quả nào không?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trả lời: Không có kết quả",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse kết quả AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parse kết quả AI": {
+      "main": [
+        [
+          {
+            "node": "Phân loại theo số lượng khớp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phân loại theo số lượng khớp": {
+      "main": [
+        [
+          {
+            "node": "Trả lời: Không tìm thấy học sinh",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chọn matched_id duy nhất",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build inline keyboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Yêu cầu thông tin chi tiết hơn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chọn matched_id duy nhất": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn bị lấy chi tiết",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build inline keyboard": {
+      "main": [
+        [
+          {
+            "node": "Gửi danh sách để chọn (HTTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuẩn bị lấy chi tiết": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Lấy chi tiết kết quả",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Lấy chi tiết kết quả": {
+      "main": [
+        [
+          {
+            "node": "Format tin nhắn kết quả",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format tin nhắn kết quả": {
+      "main": [
+        [
+          {
+            "node": "Trả lời: Kết quả phỏng vấn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2b49f53409a3ed3378cc690a6b246fc0cbdff151e55e280dd6a6b5116a527c04"
+  }
+}
