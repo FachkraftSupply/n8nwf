@@ -2,7 +2,7 @@
 
 > Form đánh giá phỏng vấn tiếng Đức cho học viên Ausbildung, tự động tổng hợp bằng AI và gửi kết quả đến Telegram + ClickUp + Supabase.
 
-**Phiên bản hiện tại:** Form v4.3 · Workflow v3 (Supabase) · Cập nhật 07/03/2026
+**Phiên bản hiện tại:** Form v4.3 · Workflow v4-final (1 LLM call gộp + debug branch) · Cập nhật 03/09/2026
 
 ---
 
@@ -24,43 +24,48 @@
          ▼                              ▼
 ┌─────────────────┐          ┌──────────────────────┐
 │   Aggregate1    │          │ Chuẩn bị dữ liệu      │
-│                 │          │ Supabase (Code node)  │
+│  (dữ liệu gốc)  │          │ Supabase (Code node)  │
 └────────┬────────┘          └──────────┬───────────┘
          ▼                              ▼
-┌─────────────────┐          ┌──────────────────────┐
-│ Basic LLM Chain │          │ Supabase - Lưu đánh giá│
-│ (Gemini 2.5     │          │ bảng:                 │
-│  Flash)         │          │ interview_evaluations │
-│ → HTML Telegram │          └──────────────────────┘
-└────────┬────────┘
+┌─────────────────────┐      ┌──────────────────────┐
+│ Combined LLM Chain   │      │ Supabase - Lưu đánh giá│
+│ (Gemini, 1 lần gọi)  │      │ bảng:                 │
+│ → JSON {telegram_html,│     │ interview_evaluations │
+│    clickup_markdown} │      └──────────────────────┘
+└────────┬─────────────┘
          ▼
-┌─────────────────┐
-│  Edit Fields    │
-└────────┬────────┘
+┌─────────────────────┐
+│  Parse LLM Output    │  (Code node — không throw lỗi,
+│  (Code)              │   trả về _parse_ok true/false)
+└────────┬─────────────┘
          ▼
-┌─────────────────┐
-│   AI Agent      │
-│ (Gemini 2.5     │
-│  Flash Lite)    │
-│ → Markdown      │
-│   ClickUp       │
-└────────┬────────┘
-         ▼
-┌─────────────────┐
-│ Create a task   │
-│   (ClickUp)     │
-└────────┬────────┘
-         ▼
-┌─────────────────┐
-│  Gửi Telegram   │
-│ (HTML + link    │
-│  task ClickUp)  │
-└─────────────────┘
+┌─────────────────────┐
+│ Check - Parse LLM OK?│  (IF node)
+└──┬────────────────┬──┘
+   │ true            │ false
+   ▼                 ▼
+┌─────────────┐  ┌──────────────────────┐
+│Create a task1│  │ Debug - Lỗi Parse LLM │
+│  (ClickUp)   │  │ (Telegram, raw output │
+└──────┬───────┘  │  đầy đủ để soi lỗi)   │
+       ▼          └──────────────────────┘
+┌─────────────┐
+│Gửi Telegram1│
+│(HTML + link │
+│ task ClickUp)│
+└─────────────┘
 
 ┌─────────────────┐          ┌──────────────────────┐
-│  Error Trigger  │─────────▶│ Error - Gửi Telegram  │
+│  Error Trigger  │─────────▶│ Error - Gửi Telegram1 │
+│ (lỗi hệ thống   │          │ (lỗi execution-level, │
+│  toàn workflow) │          │  không phải lỗi parse)│
 └─────────────────┘          └──────────────────────┘
 ```
+
+**Điểm quan trọng của kiến trúc mới:**
+- Chỉ **1 lần gọi LLM duy nhất** (`Combined LLM Chain`) — nhận dữ liệu gốc từ `Aggregate1`, xuất JSON chứa cả 2 định dạng (`telegram_html` + `clickup_markdown`) cùng lúc, thay vì 2 lần gọi tuần tự như bản cũ
+- `Parse LLM Output` **không throw lỗi** làm sập workflow — nếu LLM trả JSON hỏng, tách sang nhánh **Debug** gửi Telegram kèm **toàn bộ raw output** của LLM để dễ soi nguyên nhân, mà không ảnh hưởng đến nhánh Supabase (đã lưu xong ở nhánh song song, độc lập)
+- `Error Trigger` chỉ bắt lỗi **execution-level** (crash thực sự của node khác), tách biệt với lỗi parse JSON (được xử lý riêng qua nhánh Debug ở trên)
 
 ---
 
@@ -68,11 +73,9 @@
 
 | File | Mô tả |
 |---|---|
-| [`elite-interview-form-v4.3.html`](./elite-interview-form-v4.3.html) | Form đánh giá chính (bản mới nhất) — mở trực tiếp trên trình duyệt hoặc host lên web server |
-| [`interview-evaluation-workflow-v3-supabase.json`](./interview-evaluation-workflow-v3-supabase.json) | Workflow n8n hoàn chỉnh (import vào n8n) |
+| [`elite-interview-form-v4.3.html`](./elite-interview-form-v4.3.html) | Form đánh giá chính — mở trực tiếp trên trình duyệt hoặc host lên web server |
+| [`interview-evaluation-workflow-v4-final.json`](./interview-evaluation-workflow-v4-final.json) | Workflow n8n hoàn chỉnh, bản mới nhất (import vào n8n) |
 | `README.md` | File này |
-
----
 
 ## 📝 Form HTML v4.3
 
@@ -170,9 +173,9 @@ Content-Type: application/json
 
 ---
 
-## ⚙️ Workflow n8n v3
+## ⚙️ Workflow n8n v4-final
 
-**File:** `interview-evaluation-workflow-v3-supabase.json`
+**File:** `interview-evaluation-workflow-v4-final.json`
 **Instance:** `https://n8n.toididuhoc.net`
 
 ### Các node
@@ -180,24 +183,23 @@ Content-Type: application/json
 | Node | Chức năng |
 |---|---|
 | **Webhook - Nhan form** | Nhận POST từ form, path `interview-evaluation` |
-| **Aggregate1** | Gom `body` → field `chatInput` cho nhánh AI |
+| **Aggregate1** | Gom `body` → field `chatInput`, dữ liệu gốc dùng cho LLM |
 | **Chuẩn bị dữ liệu Supabase** (Code) | Transform payload đúng schema: gom sit_X thành JSONB, convert date, parse số |
-| **Supabase - Lưu đánh giá** | Insert vào bảng `interview_evaluations` (autoMapInputData) |
-| **Basic LLM Chain1** | Gemini 2.5 Flash — format dữ liệu thành HTML Telegram (chỉ format, không bình luận) |
-| **Edit Fields1** | Chuyển output LLM → `chatInput` |
-| **AI Agent1** | Gemini 2.5 Flash Lite — tạo mô tả Markdown cho ClickUp |
-| **Create a task1** | Tạo task ClickUp (list `901812218309`), status theo điểm |
-| **Gửi Telegram1** | Gửi HTML + link task đến group `-1002768213220`, thread `33` |
-| **Error Trigger + Error - Gửi Telegram1** | Bắt lỗi workflow, báo Telegram kèm execution link |
+| **Supabase - Lưu đánh giá** | Insert vào bảng `interview_evaluations` (autoMapInputData), chạy song song độc lập |
+| **Combined LLM Chain** | Gemini — 1 lần gọi duy nhất, nhận dữ liệu gốc, xuất JSON `{telegram_html, clickup_markdown}` |
+| **Parse LLM Output** (Code) | Parse JSON an toàn (không throw), tự strip code fence, trả `_parse_ok: true/false` |
+| **Check - Parse LLM OK?** (IF) | Rẽ nhánh theo `_parse_ok` |
+| **Debug - Lỗi Parse LLM** (Telegram) | Nhánh false: gửi raw LLM output đầy đủ để debug, không tạo task/Telegram kết quả |
+| **Create a task1** | Nhánh true: tạo task ClickUp (list `901812218309`), status theo điểm, dùng `clickup_markdown` |
+| **Gửi Telegram1** | Gửi HTML (`telegram_html`) + link task + Task ID đến group `-1002768213220`, thread `33` |
+| **Error Trigger + Error - Gửi Telegram1** | Bắt lỗi **execution-level** toàn workflow, báo Telegram kèm execution link |
 
-### Quy tắc prompt LLM (Telegram format)
+### Quy tắc prompt LLM (áp dụng cho cả 2 output cùng lúc)
 
 - **Chỉ format**, không thêm/bớt thông tin, không bình luận AI
-- **Không emoji** cho điểm thành phần
-- **Chỉ emoji cho điểm tổng cuối:** `>7` 🌸 · `6–7` 🌷 · `5–6` 🥀 · `4–5` 🍃 · `<4` 🍂
-- Hiển thị đủ 3 dòng điểm: điểm tự động → điều chỉnh (nếu ≠0) → điểm cuối
-- Field rỗng → bỏ dòng; câu tình huống hiển thị đủ 6 câu + custom
-- Parse mode: **HTML** (`<b>`, `<i>`, `<a href>`)
+- **telegram_html:** HTML tag Telegram (`<b>`, `<i>`, `<a>`), không emoji cho điểm thành phần, chỉ emoji cho điểm tổng cuối: `>7` 🌸 · `6–7` 🌷 · `5–6` 🥀 · `4–5` 🍃 · `<4` 🍂
+- **clickup_markdown:** `##` heading + emoji, `**bold**` cho nhãn/điểm/kết luận, `*italic*` cho ghi chú phụ, bullet list gọn cho mọi danh sách kể cả câu hỏi tình huống (1 dòng/câu, không blockquote, **không bảng markdown**)
+- Cả 2 field đọc từ cùng 1 nguồn dữ liệu gốc — đảm bảo nhất quán, không lệch thông tin giữa Telegram và ClickUp
 
 ### ClickUp config
 
@@ -209,8 +211,7 @@ Content-Type: application/json
 | List | `901812218309` |
 | Task name | `{company} {student_name} {profession} {destination} {total_score}` |
 | Status | `total_score < 3` → Closed, ngược lại → "chưa xử lý" |
-
----
+| markdown_content | `true` (bắt buộc để ClickUp render Markdown thay vì hiển thị raw text) |
 
 ## 🗄️ Supabase
 
@@ -271,7 +272,7 @@ where student_name = 'Nguyễn Văn A';
 
 ### Import workflow n8n
 1. Vào `https://n8n.toididuhoc.net` → Workflows → **Import from file**
-2. Chọn `interview-evaluation-workflow-v3-supabase.json`
+2. Chọn `interview-evaluation-workflow-v4-final.json`
 3. Kiểm tra 4 credentials được gán đúng:
    - OpenRouter account (2 node LLM)
    - ClickUp account (OAuth2)
@@ -303,6 +304,7 @@ where student_name = 'Nguyễn Văn A';
 | v4.2 | Lock sau submit, Copy JSON, Auto-save draft |
 | v4.3 | Chuyển Điểm mạnh/Cần cải thiện/Ghi chú lên Thông tin cơ bản, thêm Load JSON, hướng dẫn sử dụng |
 | Workflow v3 | Thêm nhánh Supabase song song + Code node transform dữ liệu |
+| Workflow v4-final | Gộp 2 LLM call thành 1 (đọc dữ liệu gốc, xuất JSON 2 field cùng lúc) + thêm nhánh Debug bắt lỗi parse JSON riêng biệt, không làm sập workflow |
 
 ---
 
