@@ -1,0 +1,462 @@
+{
+  "name": "Interview Evaluation - Elite Education (Supabase)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "interview-evaluation",
+        "options": {}
+      },
+      "id": "ae2dd4cb-54c1-42b1-ab85-25ffefa8cffb",
+      "name": "Webhook - Nhan form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        368
+      ],
+      "webhookId": "interview-evaluation"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        768
+      ],
+      "id": "948da2df-f5e5-4919-80ef-6b9dd5728d10",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Chuan bi du lieu cho Supabase - map dung schema bang interview_evaluations\nconst b = $input.first().json.body;\n\n// Gom cac cau hoi tinh huong (dang phang) thanh mang JSON cho cot situations (jsonb)\nconst situations = [];\nfor (const i of [1, 2, 3, 4, 5, 6, 11, 12, 13, 14, 15]) {\n  if (b['sit_' + i + '_question']) {\n    situations.push({\n      cau_hoi: b['sit_' + i + '_question'],\n      cau_tra_loi: b['sit_' + i + '_answer'] || 'Chưa hỏi / Không có câu trả lời',\n      danh_gia: b['sit_' + i + '_tags'] || ''\n    });\n  }\n}\n\n// Convert ngay dd/MM/yyyy -> yyyy-MM-dd (kieu date cua Postgres)\nlet interviewDate = null;\nif (b.interview_date) {\n  const p = String(b.interview_date).split('/');\n  if (p.length === 3) interviewDate = p[2] + '-' + p[1] + '-' + p[0];\n}\n\n// Parse so an toan (form gui string)\nfunction num(v) {\n  const n = parseFloat(v);\n  return isNaN(n) ? null : n;\n}\n\nreturn [{\n  json: {\n    company: b.company || null,\n    student_name: b.student_name || null,\n    profession: b.profession || null,\n    destination: b.destination || null,\n    interview_date: interviewDate,\n    evaluator: b.evaluator || null,\n    certificate: b.certificate || null,\n    age: b.age || null,\n    hometown: b.hometown || null,\n    family_in_germany: b.family_in_germany || null,\n    family_region: b.family_region || null,\n    score_pronunciation: num(b.score_pronunciation),\n    score_listening: num(b.score_listening),\n    score_content: num(b.score_content),\n    score_situation: num(b.score_situation),\n    score_attitude: num(b.score_attitude),\n    score_adjustment: num(b.score_adjustment) === null ? 0 : num(b.score_adjustment),\n    adjustment_reason: b.adjustment_reason || null,\n    total_score: num(b.total_score),\n    final_score: num(b.final_score),\n    detail_pronunciation: b.detail_pronunciation || null,\n    detail_listening: b.detail_listening || null,\n    detail_content: b.detail_content || null,\n    detail_attitude: b.detail_attitude || null,\n    note_pronunciation: b.note_pronunciation || null,\n    note_listening: b.note_listening || null,\n    note_content: b.note_content || null,\n    note_attitude: b.note_attitude || null,\n    strengths: b.strengths || null,\n    improvements: b.improvements || null,\n    notes: b.notes || null,\n    verdict: b.verdict || null,\n    situations: situations\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "5d9f0452-ce95-4821-9869-179fe187ac4d",
+      "name": "Chuan bi du lieu Supabase"
+    },
+    {
+      "parameters": {
+        "tableId": "interview_evaluations",
+        "dataToSend": "autoMapInputData"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        640,
+        0
+      ],
+      "id": "ff25ab6f-d74d-4a42-8839-d582eb3b7a84",
+      "name": "Supabase - Luu danh gia",
+      "credentials": {
+        "supabaseApi": {
+          "id": "LLZ2H3Sv9uyj5V1a",
+          "name": "Supabase account test tiếng"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "body",
+              "renameField": true,
+              "outputFieldName": "chatInput"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        400
+      ],
+      "id": "98f3637f-d9a2-489e-87c9-bdbf5cdf0d7e",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9018351620",
+        "space": "90183192291",
+        "folder": "90183835699",
+        "list": "901812218309",
+        "name": "={{ $('Aggregate1').item.json.chatInput[0].company }} {{ $('Aggregate1').item.json.chatInput[0].student_name }} {{ $('Aggregate1').item.json.chatInput[0].profession }} {{ $('Aggregate1').item.json.chatInput[0].destination }} {{ $('Aggregate1').item.json.chatInput[0].total_score }}",
+        "additionalFields": {
+          "content": "={{ $json.clickup_markdown }}",
+          "markdownContent": true,
+          "status": "={{ $('Aggregate1').item.json.chatInput[0].total_score < 3 ? 'Closed' : 'chưa xử lý' }}"
+        }
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        432
+      ],
+      "id": "646b272a-b779-49a3-95ae-61ff847a7302",
+      "name": "Create a task1",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "X1u3uxVrYMLf6HZz",
+          "name": "ClickUp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=-1002768213220",
+        "text": "={{ $('Parse LLM Output').item.json.telegram_html }}\n\n🔗 <a href=\"https://app.clickup.com/t/9018351620/{{ $json.id }}\">Mở task ClickUp</a> \nTask ID: {{ $json.id }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "message_thread_id": 33
+        }
+      },
+      "id": "085d5ab3-9350-470b-ad54-8019c84a1b96",
+      "name": "Gui Telegram1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2112,
+        432
+      ],
+      "webhookId": "9c7993fa-7d75-4941-8448-5feb3ad4d674",
+      "credentials": {
+        "telegramApi": {
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=-1002768213220",
+        "text": "=❌ <b>Workflow lỗi!</b>\n\n<b>Node:</b> {{ $json.execution.lastNodeExecuted }}\n<b>Lỗi:</b> {{ $json.error.message }}\n<b>Execution ID:</b> {{ $json.execution.id }}\n<b>Thời gian:</b> {{ $now.setZone('Asia/Ho_Chi_Minh').toFormat('dd/MM/yyyy HH:mm:ss') }}\n\n🔗 <a href=\"https://n8n.toididuhoc.net/execution/{{ $json.execution.id }}\">Xem chi tiết</a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "message_thread_id": 33
+        }
+      },
+      "id": "ae3957f1-9d15-42c1-8fe4-4068a24273d5",
+      "name": "Error - Gui Telegram1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        768
+      ],
+      "webhookId": "b7162e84-e7e9-4fa2-b96a-b273ef4d574b",
+      "credentials": {
+        "telegramApi": {
+          "id": "CyD40FlrijYDhqZx",
+          "name": "@elite_n8n_system_bot -> system noti bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        592,
+        688
+      ],
+      "id": "b9928bb6-9e74-4ef6-9f90-6a2ea078a369",
+      "name": "OpenRouter Chat Model (Combined)",
+      "credentials": {
+        "openRouterApi": {
+          "id": "BOzvluQs5DGXl9Yr",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Nhiệm vụ DUY NHẤT: chuyển dữ liệu thô bên dưới thành 2 bản định dạng khác nhau, xuất ra dưới dạng MỘT ĐỐI TƯỢNG JSON HỢP LỆ DUY NHẤT (không kèm markdown code fence ```json, không kèm text giải thích nào khác ngoài JSON).\n\nQUY TẮC CHUNG (áp dụng cho cả 2 bản):\n- KHÔNG thêm thông tin, KHÔNG bớt thông tin, KHÔNG nhận xét hay suy diễn của AI\n- Hiển thị TẤT CẢ field có dữ liệu, chỉ bỏ field thực sự rỗng\n- Câu hỏi tình huống: hiển thị đủ 6 câu cố định + câu custom (kể cả answer là \"Chưa hỏi / Không có câu trả lời\")\n\nDỮ LIỆU ĐẦU VÀO:\nCông ty: {{ $json.chatInput[0].company }}\nHọc viên: {{ $json.chatInput[0].student_name }}\nNghề: {{ $json.chatInput[0].profession }}\nNơi muốn đến: {{ $json.chatInput[0].destination }}\nNgày đánh giá: {{ $json.chatInput[0].interview_date }}\nNgười đánh giá: {{ $json.chatInput[0].evaluator }}\nQuê quán: {{ $json.chatInput[0].hometown }}\nBằng / Chứng chỉ: {{ $json.chatInput[0].certificate }}\nĐộ tuổi: {{ $json.chatInput[0].age }}\nNgười nhà ở Đức: {{ $json.chatInput[0].family_in_germany }}{{ $json.chatInput[0].family_region ? ' – ' + $json.chatInput[0].family_region : '' }}\n\nPhát âm: {{ $json.chatInput[0].score_pronunciation }}/2\nLỗi phát âm: {{ $json.chatInput[0].detail_pronunciation }}\nGhi chú phát âm: {{ $json.chatInput[0].note_pronunciation }}\n\nNghe hiểu: {{ $json.chatInput[0].score_listening }}/2\nĐặc điểm nghe: {{ $json.chatInput[0].detail_listening }}\nGhi chú nghe: {{ $json.chatInput[0].note_listening }}\n\nNội dung: {{ $json.chatInput[0].score_content }}/2\nĐặc điểm nội dung: {{ $json.chatInput[0].detail_content }}\nGhi chú nội dung: {{ $json.chatInput[0].note_content }}\n\nThái độ: {{ $json.chatInput[0].score_attitude }}/2\nĐặc điểm thái độ: {{ $json.chatInput[0].detail_attitude }}\nGhi chú thái độ: {{ $json.chatInput[0].note_attitude }}\n\nCâu hỏi tình huống (điểm tổng phần này): {{ $json.chatInput[0].score_situation }}/2\n{{ [1,2,3,4,5,6,11,12,13,14,15].filter(i => $json.chatInput[0]['sit_' + i + '_question']).map(i => {\n  const q = $json.chatInput[0]['sit_' + i + '_question'];\n  const a = $json.chatInput[0]['sit_' + i + '_answer'] || 'Chưa hỏi / Không có câu trả lời';\n  const t = $json.chatInput[0]['sit_' + i + '_tags'];\n  return (i <= 6 ? i + '. ' : '+ ') + q + ': ' + a + (t ? ' (' + t + ')' : '');\n}).join('\\n') }}\n\nĐiểm mạnh: {{ $json.chatInput[0].strengths }}\nCần cải thiện: {{ $json.chatInput[0].improvements }}\nGhi chú thêm: {{ $json.chatInput[0].notes }}\n\nĐiểm tự động (total_score): {{ $json.chatInput[0].total_score }}/10\nĐiều chỉnh: {{ $json.chatInput[0].score_adjustment }}{{ $json.chatInput[0].adjustment_reason ? ' – ' + $json.chatInput[0].adjustment_reason : '' }}\nĐiểm sau điều chỉnh (final_score): {{ $json.chatInput[0].final_score }}/10\nKết luận: {{ $json.chatInput[0].verdict }}\n\n════════════════════════════════════════════\nXUẤT RA JSON VỚI ĐÚNG 2 KEY: \"telegram_html\" và \"clickup_markdown\"\n════════════════════════════════════════════\n\n── Nội dung của key \"telegram_html\" (string, escape \\n cho xuống dòng) ──\nFormat Telegram: CHỈ dùng HTML tag (<b>, <i>, <a>), KHÔNG emoji cho điểm thành phần, CHỈ emoji cho điểm tổng cuối theo quy tắc: final_score > 7 → 🌸 | 6–7 → 🌷 | 5–6 → 🥀 | 4–5 → 🍃 | < 4 → 🍂\n\n[EMOJI_TONG] <b>[company] [student_name] – [profession] – [destination]</b>\n👤 [evaluator] | 📅 [interview_date]\n🏡 [hometown] | 📜 [certificate]{{ $json.chatInput[0].age ? ' | 🎂 ' + $json.chatInput[0].age + ' tuổi' : '' }}{{ $json.chatInput[0].family_in_germany && $json.chatInput[0].family_in_germany !== 'Không' ? '\\n👨‍👩‍👧 Người nhà ở Đức: ' + $json.chatInput[0].family_in_germany + ($json.chatInput[0].family_region ? ' – ' + $json.chatInput[0].family_region : '') : '' }}\n\n<b>1. Phát âm:</b> [score_pronunciation]/2\n[nếu detail_pronunciation không rỗng]   Lỗi: [detail_pronunciation]\n[nếu note_pronunciation không rỗng]   Ghi chú: [note_pronunciation]\n\n<b>2. Nghe hiểu &amp; Phản xạ:</b> [score_listening]/2\n[nếu detail_listening không rỗng]   Đặc điểm: [detail_listening]\n[nếu note_listening không rỗng]   Ghi chú: [note_listening]\n\n<b>3. Nội dung câu trả lời:</b> [score_content]/2\n[nếu detail_content không rỗng]   Đặc điểm: [detail_content]\n[nếu note_content không rỗng]   Ghi chú: [note_content]\n\n<b>4. Thái độ &amp; Hình thức:</b> [score_attitude]/2\n[nếu detail_attitude không rỗng]   Đặc điểm: [detail_attitude]\n[nếu note_attitude không rỗng]   Ghi chú: [note_attitude]\n\n<b>5. Câu hỏi tình huống:</b> [score_situation]/2\n• 1. [sit_1_question]: [sit_1_answer][ (sit_1_tags) nếu có]\n• 2. [sit_2_question]: [sit_2_answer][ (sit_2_tags) nếu có]\n• 3. [sit_3_question]: [sit_3_answer][ (sit_3_tags) nếu có]\n• 4. [sit_4_question]: [sit_4_answer][ (sit_4_tags) nếu có]\n• 5. [sit_5_question]: [sit_5_answer][ (sit_5_tags) nếu có]\n• 6. [sit_6_question]: [sit_6_answer][ (sit_6_tags) nếu có]\n[câu custom nếu có → • + [câu hỏi]: [câu trả lời][ (tags)]]\n\n[nếu strengths không rỗng] ✅ <b>Điểm mạnh:</b> [strengths]\n[nếu improvements không rỗng] ⚠️ <b>Cần cải thiện:</b> [improvements]\n[nếu notes không rỗng] 📝 <b>Ghi chú:</b> [notes]\n\n📊 Điểm tự động: [total_score]/10\n{{ $json.chatInput[0].score_adjustment != 0 ? '⚖️ Điều chỉnh: ' + $json.chatInput[0].score_adjustment + ($json.chatInput[0].adjustment_reason ? ' – ' + $json.chatInput[0].adjustment_reason : '') + '\\n' : '' }}<b>[EMOJI_TONG] Điểm cuối: [final_score]/10 – [verdict]</b>\n\n── Nội dung của key \"clickup_markdown\" (string, escape \\n cho xuống dòng) ──\nFormat ClickUp Markdown: dùng ## heading + emoji, **bold** cho nhãn/điểm/kết luận, *italic* cho ghi chú phụ, bullet list cho mọi danh sách kể cả câu hỏi tình huống (compact, 1 dòng/câu, KHÔNG blockquote, KHÔNG bảng markdown ở bất kỳ đâu), --- ngăn section.\n\n## 📋 Thông tin cơ bản\n- **Học viên:** [student_name] | **Tuổi:** [age]\n- **Công ty:** [company] | **Nghề:** [profession] | **Nơi đến:** [destination]\n- **Người đánh giá:** [evaluator] | **Ngày PV:** [interview_date]\n- **Bằng cấp:** [certificate]\n- **Quê quán:** [hometown]\n[nếu family_in_germany = \"Có\"] - **Người nhà ở Đức:** [family_region]\n\n---\n\n## ⭐ Điểm chi tiết\n- **Phát âm:** [score_pronunciation]/2 [– detail_pronunciation nếu có]\n[nếu note_pronunciation không rỗng]  *[note_pronunciation]*\n- **Nghe hiểu & Phản xạ:** [score_listening]/2 [– detail_listening nếu có]\n[nếu note_listening không rỗng]  *[note_listening]*\n- **Nội dung câu trả lời:** [score_content]/2 [– detail_content nếu có]\n[nếu note_content không rỗng]  *[note_content]*\n- **Thái độ & Hình thức:** [score_attitude]/2 [– detail_attitude nếu có]\n[nếu note_attitude không rỗng]  *[note_attitude]*\n- **Câu hỏi tình huống:** [score_situation]/2\n\n---\n\n## 🎯 Câu hỏi tình huống\n- **1. [sit_1_question]** → [sit_1_answer] [(sit_1_tags) nếu có]\n- **2. [sit_2_question]** → [sit_2_answer] [(sit_2_tags) nếu có]\n- **3. [sit_3_question]** → [sit_3_answer] [(sit_3_tags) nếu có]\n- **4. [sit_4_question]** → [sit_4_answer] [(sit_4_tags) nếu có]\n- **5. [sit_5_question]** → [sit_5_answer] [(sit_5_tags) nếu có]\n- **6. [sit_6_question]** → [sit_6_answer] [(sit_6_tags) nếu có]\n[câu custom nếu có → - **+ [câu hỏi]** → [câu trả lời] [(tags)]]\n\n---\n\n## 📝 Nhận xét\n[nếu strengths không rỗng] **✅ Điểm mạnh:** [strengths]\n[nếu improvements không rỗng] **⚠️ Cần cải thiện:** [improvements]\n[nếu notes không rỗng] **📌 Ghi chú thêm:** [notes]\n\n---\n\n## 📊 Kết quả\n- **Điểm tự động:** [total_score]/10\n[nếu score_adjustment != 0] - **Điều chỉnh:** [score_adjustment] *([adjustment_reason])*\n- **Điểm cuối cùng:** **[final_score]/10**\n- **Kết luận:** **[verdict]**\n\n════════════════════════════════════════════\nLƯU Ý QUAN TRỌNG: Output CHỈ là JSON hợp lệ dạng {\"telegram_html\": \"...\", \"clickup_markdown\": \"...\"} — không có ```json, không có text nào khác trước/sau. Escape đúng chuẩn JSON (dấu \\\" và \\n) bên trong 2 string."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        608,
+        432
+      ],
+      "id": "187de91c-4de9-4ebf-8d33-324fdfc292d7",
+      "name": "Combined LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse ket qua LLM (JSON co 2 key: telegram_html, clickup_markdown)\n// KHONG throw loi - tra ve co/khong parse duoc de nhanh Debug xu ly rieng, tranh sap ca workflow\nconst raw = $input.first().json.text || '';\nlet cleaned = raw.trim();\n\n// Bo markdown code fence neu LLM lo them vao\ncleaned = cleaned.replace(/^```json\\s*/i, '').replace(/^```\\s*/, '').replace(/```\\s*$/, '').trim();\n\nlet parsed = null;\nlet errorMessage = null;\n\ntry {\n  parsed = JSON.parse(cleaned);\n  if (!parsed.telegram_html || !parsed.clickup_markdown) {\n    errorMessage = 'JSON thieu key telegram_html hoac clickup_markdown. Nhan duoc key: ' + JSON.stringify(Object.keys(parsed));\n    parsed = null;\n  }\n} catch (e) {\n  errorMessage = 'Khong parse duoc JSON tu LLM: ' + e.message;\n}\n\nif (parsed) {\n  return [{\n    json: {\n      _parse_ok: true,\n      telegram_html: parsed.telegram_html,\n      clickup_markdown: parsed.clickup_markdown\n    }\n  }];\n}\n\n// Parse that bai - tra ve day du raw output de debug\nreturn [{\n  json: {\n    _parse_ok: false,\n    error_message: errorMessage,\n    raw_output: raw\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        432
+      ],
+      "id": "59c116d1-c6f5-4f0b-8638-6820f824b314",
+      "name": "Parse LLM Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "parse-ok-check",
+              "leftValue": "={{ $json._parse_ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        432
+      ],
+      "id": "check-parse-ok-001",
+      "name": "Check - Parse LLM OK?"
+    },
+    {
+      "parameters": {
+        "chatId": "=-1002768213220",
+        "text": "=🐞 <b>Debug: Loi Parse JSON tu LLM</b>\n\n<b>Học viên:</b> {{ $('Aggregate1').item.json.chatInput[0].student_name }} ({{ $('Aggregate1').item.json.chatInput[0].company }})\n<b>Lỗi:</b> {{ $json.error_message }}\n\n<b>Raw LLM output (toàn bộ):</b>\n<pre>{{ $json.raw_output }}</pre>\n\n⚠️ Task ClickUp và tin nhắn kết quả KHÔNG được tạo cho lượt này. Dữ liệu đã lưu Supabase (nhánh độc lập). Vui lòng kiểm tra prompt hoặc thử lại thủ công.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "message_thread_id": 33
+        }
+      },
+      "id": "debug-parse-error-001",
+      "name": "Debug - Loi Parse LLM",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1408,
+        688
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CyD40FlrijYDhqZx",
+          "name": "@elite_n8n_system_bot -> system noti bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Nhan form": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chuan bi du lieu Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error - Gui Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuan bi du lieu Supabase": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Luu danh gia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Combined LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a task1": {
+      "main": [
+        [
+          {
+            "node": "Gui Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model (Combined)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Combined LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combined LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse LLM Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LLM Output": {
+      "main": [
+        [
+          {
+            "node": "Check - Parse LLM OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check - Parse LLM OK?": {
+      "main": [
+        [
+          {
+            "node": "Create a task1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Debug - Loi Parse LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook - Nhan form": [
+      {
+        "headers": {
+          "host": "n8n.toididuhoc.net",
+          "content-type": "application/json"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "company": "ELMC",
+          "student_name": "Trần Mạnh Còi",
+          "profession": "ZFA",
+          "destination": "Hanoi",
+          "interview_date": "04/03/2026",
+          "evaluator": "Xuân Hoa",
+          "certificate": "B1 thiếu kĩ năng",
+          "age": "21",
+          "hometown": "Hưng Yên",
+          "family_in_germany": "Có",
+          "family_region": "Hà Nội",
+          "score_pronunciation": "1",
+          "score_listening": "1",
+          "score_content": "1",
+          "score_situation": "1.5",
+          "score_attitude": "1.5",
+          "score_adjustment": 0.5,
+          "adjustment_reason": "Có kinh nghiệm thực tế",
+          "total_score": "6.0",
+          "final_score": "6.5",
+          "detail_pronunciation": "Umlaut sai (ä/ö/ü), Giọng vùng miền nặng, Nói giật từng âm",
+          "detail_listening": "Hiểu ~60-70% câu hỏi, Im lặng khi không hiểu, Thiếu từ vựng nên không hiểu",
+          "detail_content": "Freisprechen yếu, ậm ừ nhiều, Nhiều lỗi ngữ pháp",
+          "detail_attitude": "Tươi cười, tự tin, Mặt căng thẳng, lo lắng",
+          "note_pronunciation": "",
+          "note_listening": "",
+          "note_content": "",
+          "note_attitude": "",
+          "sit_1_question": "Làm thêm giờ / cuối tuần",
+          "sit_1_answer": "Không muốn làm",
+          "sit_1_tags": "Đúng trọng tâm",
+          "sit_2_question": "Kündigung – bị sa thải",
+          "sit_2_answer": "Hỏi lại công ty xem ở đâu",
+          "sit_2_tags": "Không hiểu câu hỏi",
+          "sit_3_question": "Đồng nghiệp không tốt / Mobbing",
+          "sit_3_answer": "Tìm công ty tư vấn",
+          "sit_3_tags": "Đúng trọng tâm",
+          "sit_4_question": "Mâu thuẫn với đồng nghiệp (Konflikt)",
+          "sit_4_answer": "Chưa hỏi / Không có câu trả lời",
+          "sit_4_tags": "",
+          "sit_5_question": "Môi trường làm việc căng thẳng",
+          "sit_5_answer": "Cuối tuần đi nhẩy đầm",
+          "sit_5_tags": "Dẫn chứng kinh nghiệm thực tế",
+          "sit_6_question": "Khách hàng khó tính",
+          "sit_6_answer": "Chưa hỏi / Không có câu trả lời",
+          "sit_6_tags": "",
+          "strengths": "Rất là lươn",
+          "improvements": "Thật thà hơn",
+          "notes": "không có gì khác",
+          "verdict": "Đạt"
+        },
+        "webhookUrl": "https://n8n.toididuhoc.net/webhook/interview-evaluation",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "instanceId": "cd282a8e86ba6ea7383b6ead6c4d83af48d89ef07175a36246548ddb3b23e065"
+  }
+}
