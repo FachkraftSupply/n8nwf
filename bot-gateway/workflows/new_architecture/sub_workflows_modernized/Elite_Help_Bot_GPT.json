@@ -1,0 +1,1426 @@
+{
+  "name": "Elite Help Bot GPT",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-help"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "menu",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-menu"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "menu"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "groups",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-groups"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "groups"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "policy",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-policy"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "policy"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "contact",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-contact"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "contact"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "wiki",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "rule-kb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "wiki"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "where",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "rule-where"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "where"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "free_text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "rule-free-text"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "free_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "53d562d8-1399-4ef4-bc17-5c1ef449302c",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "task",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "task"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "a999aa46-7361-4d10-ab52-f1b64457af2b",
+      "name": "Switch (Intent)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1936,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "cce406b9-fe33-4de0-b361-bfae36382928",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -2592,
+        464
+      ],
+      "webhookId": "6eb99b53-3025-4862-899b-09be837eb393",
+      "credentials": {
+        "telegramApi": {
+          "id": "X24L5VL08b6UMV72",
+          "name": "Telegram Bot (DEV)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $items(\"SET ENV\")[0].json.ENV }}",
+                    "rightValue": "dev",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-env-dev"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $items(\"SET ENV\")[0].json.ENV }}",
+                    "rightValue": "prod",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "rule-env-prod"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e75e9e75-ff50-4012-9e78-11f44876e78b",
+      "name": "Switch (ENV)1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n// Mục tiêu: Giữ nguyên mọi key gốc. Chỉ bổ sung key phân tích.\n// Nếu key bổ sung trùng tên với key gốc -> đưa vào namespace `_parsed` để tránh overwrite.\n\nfunction parseIntent(t) {\n  const s = (t || '').toLowerCase().trim();\n  if (!s) return { intent: 'help' };\n  if (s.startsWith('/help') || s === 'help') return { intent: 'help' };\n  if (s.startsWith('/menu')) return { intent: 'menu' };\n  if (s.startsWith('/groups') || s.includes('nhóm')) return { intent: 'groups', query: s.replace('/groups', '').trim() };\n  if (s.startsWith('/wiki ')) return { intent: 'wiki', query: s.replace('/wiki', '').trim() };\n  if (s.startsWith('/where ')) return { intent: 'where', query: s.replace('/where', '').trim() };\n  if (s.startsWith('/task')) return { intent: 'task' };\n  if (s.startsWith('/bot')) return { intent: 'bot' };\n  return { intent: 'free_text', query: s };\n}\n\nfunction buildOutput(original) {\n  // clone sâu để không đụng vào tham chiếu gốc\n  const out = JSON.parse(JSON.stringify(original || {}));\n\n  const msg = out.message || {};\n  const text = (msg.text || '').trim();\n  const p = parseIntent(text);\n\n  const additions = {\n    chat_id: msg.chat?.id,\n    user_id: msg.from?.id,\n    username: msg.from?.username,\n    text,\n    intent: p.intent,\n    query: p.query || '',\n  };\n\n  // Thêm an toàn: nếu key đã tồn tại ở root -> đưa vào _parsed\n  let hasConflicts = false;\n  const parsedNamespace = {};\n\n  for (const [k, v] of Object.entries(additions)) {\n    if (Object.prototype.hasOwnProperty.call(out, k)) {\n      hasConflicts = true;\n      parsedNamespace[k] = v;\n    } else {\n      out[k] = v; // thêm trực tiếp vì không trùng key\n    }\n  }\n\n  if (hasConflicts) {\n    // Nếu _parsed đã tồn tại, merge cẩn thận để không mất dữ liệu cũ\n    if (typeof out._parsed !== 'object' || out._parsed === null) {\n      out._parsed = {};\n    }\n    for (const [k, v] of Object.entries(parsedNamespace)) {\n      // chỉ thêm nếu chưa có trong _parsed để tránh overwrite\n      if (!Object.prototype.hasOwnProperty.call(out._parsed, k)) {\n        out._parsed[k] = v;\n      }\n    }\n  }\n\n  return out;\n}\n\n// Hỗ trợ nhiều item từ upstream\nconst items = $input.all();\nconst results = items.map(it => {\n  const original = it.json ?? {};\n  const merged = buildOutput(original);\n  return { json: merged };\n});\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2160,
+        640
+      ],
+      "id": "c9c1fe95-d5d9-4a91-9841-c33de05a0e78",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "resource": "block",
+        "operation": "getAll",
+        "blockId": {
+          "__rl": true,
+          "value": "https://www.notion.so/Help-259f77c31f0c80828273e999e5a5bc5c?v=259f77c31f0c80698cc2000c4e9a08a2&source=copy_link#259f77c31f0c80dfb181febc2c21da73",
+          "mode": "url"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -1296,
+        -128
+      ],
+      "id": "ff20bb6c-a854-4d93-b47e-b891906f1231",
+      "name": "Get many child blocks",
+      "credentials": {
+        "notionApi": {
+          "id": "LZwC7qLZg4g4hCY3",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "content",
+              "renameField": true,
+              "outputFieldName": "chatInput"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        -96
+      ],
+      "id": "10964fb7-29fb-4bb7-8520-56d070e0a661",
+      "name": "Lấy thông tin từ page help"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "={{ $json.instruction }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        96,
+        608
+      ],
+      "id": "93d84ea5-3580-4965-9ddd-d7cf66a7cdcc",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-5-sonnet-20241022",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.5 (New)"
+        },
+        "options": {
+          "maxTokensToSample": "={{ $('SET ENV').item.json.MAX_CONTEXT_CHARS }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        -336,
+        864
+      ],
+      "id": "e7edc9b2-361a-4d18-9514-f6d96ae71136",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "DP1QX7D1jJ8ovDvL",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "259f77c3-1f0c-805d-b7a6-e18444354e3d",
+          "mode": "list",
+          "cachedResultName": "wiki",
+          "cachedResultUrl": "https://www.notion.so/259f77c31f0c805db7a6e18444354e3d"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "simple": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Simplify', ``, 'boolean') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notionTool",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        1264
+      ],
+      "id": "c6eab9e2-c805-4689-b2ab-7068492ebaef",
+      "name": "Get many database pages in Notion",
+      "credentials": {
+        "notionApi": {
+          "id": "LZwC7qLZg4g4hCY3",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.toididuhoc.net/mcp-test/8f28341a-36e2-4d02-bf75-315e71435883",
+        "serverTransport": "httpStreamable",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        224,
+        1264
+      ],
+      "id": "c4ffe706-752e-4cae-a59a-4a32c2505385",
+      "name": "MCP Client",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "path": "8f28341a-36e2-4d02-bf75-315e71435883"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2.1,
+      "position": [
+        -1600,
+        1520
+      ],
+      "id": "7d37cca3-3a1b-4865-a4dc-01e56f1cbf43",
+      "name": "MCP Notion",
+      "webhookId": "8f28341a-36e2-4d02-bf75-315e71435883",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "block",
+        "blockId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Block', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.notionTool",
+      "typeVersion": 2.2,
+      "position": [
+        -1600,
+        1744
+      ],
+      "id": "b5848cdc-f2c6-4444-9cb2-7a792810f822",
+      "name": "page content",
+      "credentials": {
+        "notionApi": {
+          "id": "LZwC7qLZg4g4hCY3",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "259f77c3-1f0c-805d-b7a6-e18444354e3d",
+          "mode": "list",
+          "cachedResultName": "wiki",
+          "cachedResultUrl": "https://www.notion.so/259f77c31f0c805db7a6e18444354e3d"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notionTool",
+      "typeVersion": 2.2,
+      "position": [
+        -1472,
+        1744
+      ],
+      "id": "26d0fe04-6778-47ab-aac7-ae78ce8e0508",
+      "name": "database page index",
+      "credentials": {
+        "notionApi": {
+          "id": "LZwC7qLZg4g4hCY3",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "259f77c3-1f0c-805d-b7a6-e18444354e3d",
+          "mode": "list",
+          "cachedResultName": "wiki",
+          "cachedResultUrl": "https://www.notion.so/259f77c31f0c805db7a6e18444354e3d"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Category|select",
+              "condition": "equals",
+              "selectValue": "groups"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -1376,
+        112
+      ],
+      "id": "e64643f4-8dcf-4c0e-87ec-024f56701be0",
+      "name": "Get many database pages",
+      "credentials": {
+        "notionApi": {
+          "id": "LZwC7qLZg4g4hCY3",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "name",
+              "renameField": true,
+              "outputFieldName": "chatInput"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        128
+      ],
+      "id": "e5881ed8-4d02-49af-8898-f5aebc3ace36",
+      "name": "lấy danh sách group"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano"
+        },
+        "options": {
+          "maxTokens": 6000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        1184
+      ],
+      "id": "dc214b7a-4dd6-4280-99c5-78050d0dc534",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "kh7SJ7S1fq3XfRRF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        1248
+      ],
+      "id": "429b12c0-e74b-4638-8c23-ee2e09c312cc",
+      "name": "Simple Memory",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').item.json.message.chat.id }}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Telegram Trigger1').item.json.message.message_id }}"
+        }
+      },
+      "id": "6f35cd21-4bba-4a21-9b4e-d56194a74531",
+      "name": "Telegram Send Dev",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        512
+      ],
+      "webhookId": "3c369845-a961-45b7-bef9-d46f73a446bd",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "X24L5VL08b6UMV72",
+          "name": "Telegram Bot (DEV)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42c7dbc0-2dda-4c1c-bdba-345078c6a936",
+              "name": "ENV",
+              "value": "prod",
+              "type": "string"
+            },
+            {
+              "id": "c7b76932-efa7-48e6-816a-fc7f6ad9b40c",
+              "name": "DEFAULT_LANGUAGE",
+              "value": "vi",
+              "type": "string"
+            },
+            {
+              "id": "0544277f-240e-4e17-8fc0-e952feef7a22",
+              "name": "DEV_CHAT_ID",
+              "value": "-1001234567890",
+              "type": "string"
+            },
+            {
+              "id": "79299cd4-4613-45d6-b2e1-b7b11040d1d2",
+              "name": "PROD_CHAT_ID",
+              "value": "-1009876543210",
+              "type": "string"
+            },
+            {
+              "id": "30f2d409-77a7-449d-93a3-52b190009af7",
+              "name": "MAX_CONTEXT_CHARS",
+              "value": 6000,
+              "type": "number"
+            },
+            {
+              "id": "0ac749f1-3f8a-40a2-b657-48828d80ae02",
+              "name": "CONFIDENCE_THRESHOLD",
+              "value": 0.6,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da29277f-99b9-4396-9bae-5824e2bee20c",
+      "name": "SET ENV",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -2384,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger PROD').item.json.message.chat.id }}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Telegram Trigger PROD').item.json.message.message_id }}"
+        }
+      },
+      "id": "1424b6ce-ff80-4b50-9a24-dc49e31c1d04",
+      "name": "Telegram Send Prod",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        704
+      ],
+      "webhookId": "3c369845-a961-45b7-bef9-d46f73a446bd",
+      "alwaysOutputData": true,
+      "credentials": {
+        "telegramApi": {
+          "id": "BcI2CP7dZaUkSVAe",
+          "name": "Elite Help Bot (Prod)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -2608,
+        896
+      ],
+      "id": "d781a731-5b20-4a0a-8ce1-2f2dabb1adba",
+      "name": "Telegram Trigger PROD",
+      "webhookId": "ced5276e-beab-453d-92bc-bb37549f9168",
+      "credentials": {
+        "telegramApi": {
+          "id": "BcI2CP7dZaUkSVAe",
+          "name": "Elite Help Bot (Prod)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteMessage",
+        "chatId": "={{ $json.result.chat.id }}",
+        "messageId": "={{ $json.result.message_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        784
+      ],
+      "id": "6c359cf4-0fcd-4fbc-b90d-43f16d157596",
+      "name": "Delete a chat message prod",
+      "webhookId": "e4fcfb88-d3e4-401a-9043-ba3ed953fa91",
+      "credentials": {
+        "telegramApi": {
+          "id": "BcI2CP7dZaUkSVAe",
+          "name": "Elite Help Bot (Prod)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteMessage",
+        "chatId": "={{ $json.result.chat.id }}",
+        "messageId": "={{ $json.result.message_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1488,
+        256
+      ],
+      "id": "f87be409-d23a-4fd2-a702-6f071a6e3821",
+      "name": "Delete a chat message deV",
+      "webhookId": "e4fcfb88-d3e4-401a-9043-ba3ed953fa91",
+      "credentials": {
+        "telegramApi": {
+          "id": "X24L5VL08b6UMV72",
+          "name": "Telegram Bot (DEV)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        512
+      ],
+      "id": "3109d395-a28c-469e-be49-9ef4ee8e572f",
+      "name": "Wait",
+      "webhookId": "80c5860e-7ac3-4e23-9da0-4da40c81fd08"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        704
+      ],
+      "id": "71dd94f7-e5da-48ad-8ec4-259dfdbcf814",
+      "name": "Wait1",
+      "webhookId": "32385f63-88ad-445b-9f9d-91a1c3ef2506"
+    },
+    {
+      "parameters": {
+        "operation": "deleteMessage",
+        "chatId": "={{ $json.result.chat.id }}",
+        "messageId": "={{ $json.result.message_thread_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1472,
+        496
+      ],
+      "id": "184283fa-113e-49d0-8fbf-9da070861b51",
+      "name": "Delete a chat message deV2",
+      "webhookId": "e4fcfb88-d3e4-401a-9043-ba3ed953fa91",
+      "credentials": {
+        "telegramApi": {
+          "id": "X24L5VL08b6UMV72",
+          "name": "Telegram Bot (DEV)"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "deleteMessage",
+        "chatId": "={{ $json.result.chat.id }}",
+        "messageId": "={{ $json.result.message_thread_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1488,
+        1024
+      ],
+      "id": "eb5398ad-ba1f-4815-9745-00066ec641e2",
+      "name": "Delete a user message prod",
+      "webhookId": "e4fcfb88-d3e4-401a-9043-ba3ed953fa91",
+      "credentials": {
+        "telegramApi": {
+          "id": "BcI2CP7dZaUkSVAe",
+          "name": "Elite Help Bot (Prod)"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "05725c30-418f-4331-a813-50877bc9ecb0",
+              "name": "chatInput",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "f369284c-0d5a-4056-90ef-087c5eba045a",
+              "name": "sessionId",
+              "value": "={{ $('SET ENV').item.json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "bac456b1-5851-4266-8fc9-d8f348a77b70",
+              "name": "instruction",
+              "value": "Bạn là trợ lý Telegram của Elite Education. \nNhiệm vụ:\n- trả lời NGẮN – RÕ – CHÍNH XÁC bằng tiếng Việt dựa trên context cho trước. Tối đa 40 từ kèm link\n- Nếu câu hỏi trùng nội dung trong context: trả lời + đính link/group link khi có.  cHỈ Gửi link trong property (link). Không gửi link đến trang notion. \n- Nếu hỏi các câu hỏi liên quan đến Topic cần gửi cả link group và Topic.\n\nB. Cách làm \n- Dùng tool notion để tìm dữ liệu trong notion. Cách tìm dựa trên cấu trúc của notion database như sau:\n  + Name: tên group, topic hoặc chủ đề\\n  + command: là câu trả lời này có thể trả lời cho các command nào nếu không phải free text\n  + parent: cấu trúc của group chat telegram trong đó topics nằm trong các group\n  + Category: chủ đề  để sàng lọc: groups, topic ... Group là group telegram có các topic nằm trong đó\n  + keyword: các từ khoá có thể dựa vào đó thể phân loại câu trả lời\n  + answer: các câu trả lời ngắn gọn về nội dung của topic hoặc group\n  + đường link đến group, topic, chủ đề đó\n- Phân tích câu hỏi dựa trên thứ tự sau của các Notion Propety (commands) => chủ đề (Category) => từ khoá (keyword) => miêu tả (answer)\n\n- với các câu hỏi về chỗ để gửi tin nhắn hoặc gửi file thì chỉ trả lời ngắn gọn\\n  + nhắc lại câu hỏi với câu trả lời phía dưới\n  + mỗi topic đều thuộc về một group thể hiện qua property Parent trong notion database. Câu trả lời thể hiện đường dẫn này. \n  + nếu thấy topics nằm trong 1 group nào đó thể hiện ở (Property Parent) thì câu trả lời phải kèm cả đường link của topic và group parent\n  + ghi thêm các lưu ý ghi gửi nội dung vào group hoặc topic này dựa trên phần answer\n- Trả lời phù hợp đối tượng (audience) nếu có.\n- Nếu không chắc chắn: nói rõ “chưa có trong dữ liệu”, đề xuất từ khoá liên quan, đừng bịa. Không lấy dữ liệu không có trong thực tế \n- Có thể hỏi lại user có muốn tìm câu trả lời ở ngoài không? Nếu có thì trả lời tiếp\n- Không đề xuất nguồn ngoài context trừ khi hỏi chung (ví dụ cách tải Telegram)\n- Bổ sung thêm thời gian để trả lời câu hỏi\n\n- Nhớ ghi rõ \"tin nhắn sẽ được xóa sau 60 giây để tránh spam trong group\"\n\nYêu cầu Output:\n- Trả lời luôn bằng tiếng Việt\n- Format lại tin nhắn cho đẹp nhưng không dùng bất cứ tag nào của telegram. Format lại tin nhắn cho chuẩn parse mode HTML của telegram\n- Tuyệt đối không dùng dùng các ký tự như #, ** mà hãy dùng chữ in nghiêng, in đậm để thể hiện mỗi title hoặc sub title\n- với cấu trúc có có yếu tố parent - children có thể dùng các ký tự sau để thể hiện sự liên kết ├ , └.\\\n- Thêm các emoji cho sinh động nhưng mỗi dòng không dùng quá 2 emoji\n- Tạo hyperlink nếu nó liên quan đến commands",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1184,
+        720
+      ],
+      "id": "1a008af5-6ffa-4d43-ae0e-5e98338a326f",
+      "name": "Edit /where"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "02865cb7-c8ff-4620-a52d-b6aee3413a13",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput }}",
+              "type": "array"
+            },
+            {
+              "id": "7f57dc2d-ba44-4d2a-a9f0-9d460313b200",
+              "name": "sessionId",
+              "value": "={{ $('Switch (Intent)').item.json.chat_id }}",
+              "type": "number"
+            },
+            {
+              "id": "275161e0-9fae-4aec-ad77-47c26ad5a609",
+              "name": "instruction",
+              "value": "# AI Agent Instruction - Updated\n\nBạn là trợ lý Telegram của Elite Education. Nhiệm vụ:\n\n## Quy tắc trả lời:\n- Trả lời NGẮN – RÕ – CHÍNH XÁC bằng tiếng Việt dựa trên context cho trước. Tối đa 40 từ kèm link\n- **BỮT BUỘC: Luôn gửi kèm property_link khi có trong object input**\n- Nếu câu hỏi trùng nội dung trong context: trả lời + **LUÔN đính kèm property_link**\n- CHỈ gửi link trong property_link. Không gửi link đến trang notion\n- Nếu hỏi các câu hỏi liên quan đến Topic cần gửi cả link group và Topic\n- Không dùng tool Notion mà chỉ tổng hợp thông tin từ input\n\n## Với câu hỏi về chỗ gửi tin nhắn/file:\n- Nhắc lại câu hỏi với câu trả lời phía dưới\n- Mỗi topic thuộc về một group thể hiện qua property Parent\n- Ghi thêm lưu ý gửi nội dung vào group/topic dựa trên phần answer\n- **BẮT BUỘC gửi property_link**\n\n## Xử lý câu hỏi:\n- Phân tích câu hỏi dựa trên (commands), từ khóa keywords, chủ đề category\n- Trả lời phù hợp đối tượng (audience) nếu có\n- Nếu không chắc chắn: nói rõ \"chưa có trong dữ liệu\", đề xuất từ khoá liên quan\n- Có thể hỏi lại user có muốn tìm câu trả lời ở ngoài không?\n- Không đề xuất nguồn ngoài context trừ khi hỏi chung\n- Nhớ ghi rõ \"tin nhắn sẽ được xóa sau 60 giây để tránh spam trong group\"\n\n## Yêu cầu Output:\n- Trả lời luôn bằng tiếng Việt\n- AI AGENT OUTPUT phải phù hợp với parse mode HTML của Telegram\n- Với cấu trúc parent-children dùng ký tự ├ , └ để thể hiện liên kết\n- Thêm emoji cho sinh động nhưng mỗi dòng không quá 2 emoji\n- **BẮT BUỘC: Mỗi nhóm được đề cập phải kèm theo property_link của nhóm đó**\n\n## Format output bắt buộc khi liệt kê nhóm:\n```\n├ [Tên nhóm] [emoji] - [mô tả ngắn]\n   Link: [property_link]\n```\n\n## Ví dụ output đúng:\n```\n├ ELITE SOS 🚨 - Hỗ trợ khẩn cấp học sinh\n   Link: https://t.me/+KTsTr4Ex_J5jMTM1\n├ INT RẢI ĐƠN 📋 - Thông tin đơn hàng\n   Link: https://t.me/+tYCHZkB9EEk3NTc1\n```",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -800,
+        -96
+      ],
+      "id": "fa722e6a-9415-4ef9-910f-c7e25913cebd",
+      "name": "Edit /help /groups"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lW8RuV8prA2qowpC",
+          "mode": "list",
+          "cachedResultName": "Telebot main"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -1584,
+        976
+      ],
+      "id": "ac09160f-7976-4529-a09f-2e0767847dd0",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "lskgsaFe6GLh0PxF",
+          "mode": "list",
+          "cachedResultName": "ZALO BOT DEV"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        576,
+        256
+      ],
+      "id": "1dc95c4f-6615-4b05-90d2-1eee8ce85dc3",
+      "name": "Execute Workflow1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1856,
+        -176
+      ],
+      "id": "e94bff86-8df9-446d-beb5-dfd124013386",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "connections": {
+    "Switch (Intent)": {
+      "main": [
+        [
+          {
+            "node": "Get many child blocks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [],
+        [
+          {
+            "node": "Edit /where",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit /where",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "SET ENV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch (ENV)1": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Dev",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Send Prod",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Switch (Intent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many child blocks": {
+      "main": [
+        [
+          {
+            "node": "Lấy thông tin từ page help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy thông tin từ page help": {
+      "main": [
+        [
+          {
+            "node": "Edit /help /groups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch (ENV)1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute Workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages in Notion": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "page content": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Notion",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "database page index": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Notion",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "lấy danh sách group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lấy danh sách group": {
+      "main": [
+        [
+          {
+            "node": "Edit /help /groups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SET ENV": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger PROD": {
+      "main": [
+        [
+          {
+            "node": "SET ENV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Send Dev": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Send Prod": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Delete a chat message deV",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Delete a chat message deV2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Delete a chat message prod",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Delete a user message prod",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit /where": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit /help /groups": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get many child blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {
+    "Telegram Trigger1": [
+      {
+        "json": {
+          "update_id": 431071395,
+          "message": {
+            "message_id": 659,
+            "from": {
+              "id": 975005174,
+              "is_bot": false,
+              "first_name": "Hải Anh",
+              "last_name": "Trần",
+              "username": "haianhtran89",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 975005174,
+              "first_name": "Hải Anh",
+              "last_name": "Trần",
+              "username": "haianhtran89",
+              "type": "private"
+            },
+            "date": 1756314265,
+            "text": "/where vấn đề nhà cửa thì chat ở đâu",
+            "entities": [
+              {
+                "offset": 0,
+                "length": 6,
+                "type": "bot_command"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "Telegram Trigger PROD": [
+      {
+        "json": {
+          "update_id": 133847261,
+          "message": {
+            "message_id": 1631,
+            "from": {
+              "id": 975005174,
+              "is_bot": false,
+              "first_name": "Hải Anh",
+              "last_name": "Trần",
+              "username": "haianhtran89",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": -1002637208485,
+              "title": "Elite Education Chat",
+              "type": "supergroup"
+            },
+            "date": 1758199203,
+            "text": "/where@elite_tele_help_bot gửi thông tin học sinh",
+            "entities": [
+              {
+                "offset": 0,
+                "length": 26,
+                "type": "bot_command"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -1,0 +1,1979 @@
+{
+  "name": "Elite Crawl Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "edited_message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -688,
+        16
+      ],
+      "id": "11a9cde7-806a-4a33-a3ad-44d3c1948605",
+      "name": "Telegram Trigger",
+      "webhookId": "0e81e71d-aef1-49fe-9c75-1a0c1eb093aa",
+      "credentials": {
+        "telegramApi": {
+          "id": "FNSueIpk2huWSLtD",
+          "name": "Elite Backup telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $json[\"message\"][\"from\"];\nreturn [{\n    user_id: user.id,\n    first_name: user.first_name,\n    last_name: user.last_name || null,\n    username: user.username || null,\n    language_code: user.language_code || null,\n    is_active: true,\n    user_group: null  // có thể cập nhật sau thủ công\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -384
+      ],
+      "id": "ffe31044-553e-41d9-b2fd-d17f859cd814",
+      "name": "Checkuser"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "telegram",
+          "mode": "list",
+          "cachedResultName": "telegram"
+        },
+        "table": {
+          "__rl": true,
+          "value": "telegram_users",
+          "mode": "list",
+          "cachedResultName": "telegram_users"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "is_active": "={{ $json.is_active }}",
+            "user_id": "={{ $json.user_id }}",
+            "first_name": "={{ $json.first_name }}",
+            "last_name": "={{ $json.last_name }}",
+            "username": "={{ $json.username }}",
+            "language_code": "={{ $json.language_code }}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "language_code",
+              "displayName": "language_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_active",
+              "displayName": "is_active",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_group",
+              "displayName": "user_group",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        432,
+        -384
+      ],
+      "id": "05fa28ad-a04f-4efa-9702-852ca2df394d",
+      "name": "upsert user",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "telegram",
+          "mode": "list",
+          "cachedResultName": "telegram"
+        },
+        "table": {
+          "__rl": true,
+          "value": "telegram_topics",
+          "mode": "list",
+          "cachedResultName": "telegram_topics"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "chat_id": "={{ $json.group.id }}",
+            "chat_type": "={{ $json.group.type }}",
+            "chat_title": "={{ $json.group.name }}",
+            "topic_id": "={{ $json.topic.id }}",
+            "topic_name": "={{ $json.topic.name }}",
+            "parent_group_id": "={{ $json.group.id }}",
+            "is_forum": "={{ $json.group.is_forum }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "chat_type",
+              "displayName": "chat_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_title",
+              "displayName": "chat_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_username",
+              "displayName": "chat_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "topic_name",
+              "displayName": "topic_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_topic",
+              "displayName": "is_topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "parent_group_id",
+              "displayName": "parent_group_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "topic_id",
+              "displayName": "topic_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_forum",
+              "displayName": "is_forum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        -176
+      ],
+      "id": "defe15e0-43fe-4745-bf91-61296a8d8541",
+      "name": "upsert group",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "644f1ebf-34ef-425b-97c3-7b47cd845dcd",
+              "name": "group.id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "df8a4991-13e3-4825-b1cf-73973f3ff9b4",
+              "name": "group.name",
+              "value": "={{ $json.message.chat.title }}",
+              "type": "string"
+            },
+            {
+              "id": "d4b1a238-5093-4c65-9982-bde6396c3ad0",
+              "name": "group.type",
+              "value": "={{ $json.message.chat.type }}",
+              "type": "string"
+            },
+            {
+              "id": "ed3e2c91-3100-4fd8-8d21-d929a3ad650f",
+              "name": "group.is_forum",
+              "value": "={{ $json.message.chat.is_forum }}",
+              "type": "boolean"
+            },
+            {
+              "id": "d0fb2c2c-60a1-494a-8e0c-339980c1623d",
+              "name": "topic.id",
+              "value": "={{ $json.message.message_thread_id }}",
+              "type": "number"
+            },
+            {
+              "id": "475e793e-ab0a-4f54-b163-f2acd3e9ba2f",
+              "name": "topic.name",
+              "value": "={{ $json.message.reply_to_message.forum_topic_created.name }}",
+              "type": "string"
+            },
+            {
+              "id": "15bc2f8c-3ad4-4242-b05e-10b0774726af",
+              "name": "id",
+              "value": "={{ $json.message.chat.id }}{{ $json.message.reply_to_message.message_thread_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        -176
+      ],
+      "id": "d3e1ed60-e3f4-4eb5-8198-c71ba6fe88c9",
+      "name": "Edit group/topics"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json[\"message\"];\n\n// Lấy các giá trị cần thiết\nconst chat_id = msg.chat.id;\nconst message_id = msg.message_id;\nconst user_id = msg.from.id;\n\n// Safely get thread_id - kiểm tra xem reply_to_message có tồn tại không\nconst thread_id = msg.reply_to_message?.message_thread_id || msg.message_thread_id || null;\n\n// Tạo custom_id bằng cách ghép chat_id, \"00\" và message_id\nconst custom_id = BigInt(chat_id.toString() + \"00\" + message_id.toString());\n\n// Tạo topic_chat_id - chỉ tạo khi có thread_id\nconst topic_chat_id = thread_id ? BigInt(chat_id.toString() + thread_id.toString()) : null;\n\nreturn [{\n    message_id: message_id,\n    chat_id: chat_id,\n    topic_chat_id: topic_chat_id,\n    user_id: user_id,\n    custom_id: custom_id,\n    date: new Date(msg.date * 1000),\n    message_text: msg.text || null,\n    entities: msg.entities ? JSON.stringify(msg.entities) : null,\n    caption: msg.caption || null,\n    photo: msg.photo ? JSON.stringify(msg.photo) : null,\n    audio: msg.audio ? JSON.stringify(msg.audio) : null,\n    document: msg.document ? JSON.stringify(msg.document) : null,\n    sticker: msg.sticker ? JSON.stringify(msg.sticker) : null,\n    video: msg.video ? JSON.stringify(msg.video) : null,\n    voice: msg.voice ? JSON.stringify(msg.voice) : null,\n    location: msg.location ? JSON.stringify(msg.location) : null,\n    venue: msg.venue ? JSON.stringify(msg.venue) : null,\n    message_thread_id: msg.message_thread_id || null,\n    thread_reply_count: msg.thread ? msg.thread.reply_count : null,\n    thread_top_message_id: msg.thread ? msg.thread.top_message_id : null\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        256
+      ],
+      "id": "e7db4af8-d580-4dc9-aed2-f2eba9f99d65",
+      "name": "extract message"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "telegram",
+          "mode": "list",
+          "cachedResultName": "telegram"
+        },
+        "table": {
+          "__rl": true,
+          "value": "telegram_chats",
+          "mode": "list",
+          "cachedResultName": "telegram_chats"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "is_forum": false,
+            "message_id": "={{ $json.message_id }}",
+            "user_id": "={{ $json.user_id }}",
+            "message_thread_id": "={{ $json.message_thread_id }}",
+            "thread_reply_count": "={{ $json.thread_reply_count }}",
+            "thread_top_message_id": "={{ $json.thread_top_message_id }}",
+            "parent_message_id": 0,
+            "chat_id": "={{ $json.chat_id }}",
+            "chat_title": "={{ $json.chat_id }}",
+            "chat_username": "=",
+            "date": "={{ $json.date }}",
+            "message_text": "={{ $json.message_text }}",
+            "caption": "={{ $json.caption }}",
+            "photo": "={{ $json.photo }}",
+            "audio": "={{ $json.audio }}",
+            "document": "={{ $json.document }}",
+            "video": "={{ $json.video }}",
+            "sticker": "={{ $json.sticker }}",
+            "voice": "={{ $json.voice }}",
+            "location": "={{ $json.location }}",
+            "venue": "={{ $json.venue }}",
+            "id": "={{ $json.custom_id }}",
+            "topic_id": "={{ $json.topic_chat_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_type",
+              "displayName": "chat_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_title",
+              "displayName": "chat_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_username",
+              "displayName": "chat_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_first_name",
+              "displayName": "user_first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "user_last_name",
+              "displayName": "user_last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "user_username",
+              "displayName": "user_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "user_language_code",
+              "displayName": "user_language_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_text",
+              "displayName": "message_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "entities",
+              "displayName": "entities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "caption",
+              "displayName": "caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "photo",
+              "displayName": "photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "audio",
+              "displayName": "audio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "document",
+              "displayName": "document",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sticker",
+              "displayName": "sticker",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "video",
+              "displayName": "video",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "voice",
+              "displayName": "voice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "venue",
+              "displayName": "venue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_thread_id",
+              "displayName": "message_thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "thread_reply_count",
+              "displayName": "thread_reply_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "thread_top_message_id",
+              "displayName": "thread_top_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_topic_message",
+              "displayName": "is_topic_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "parent_message_id",
+              "displayName": "parent_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "topic_id",
+              "displayName": "topic_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_forum",
+              "displayName": "is_forum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        256
+      ],
+      "id": "b033984b-fdec-465d-8a28-c98a9ba0cc04",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -544,
+        560
+      ],
+      "id": "b4d67abc-5b83-4a7d-93c6-af0385cbdda1",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    c.message_id,\n    c.message_text,\n    c.chat_id,\n    c.date,\n    c.message_thread_id,\n    c.entities,\n    c.caption,\n    c.photo, \n    c.audio, \n    c.document, \n    c.video,\n    c.voice,\n    u.user_id,\n    u.first_name,\n    u.last_name,\n    u.username,\n    u.user_group,\n    t.chat_title,\n    t.topic_name,\n    c.topic_id,\n    t.id\nFROM telegram.telegram_chats c\nJOIN telegram.telegram_users u ON c.user_id = u.user_id\nJOIN telegram.telegram_topics t ON c.topic_id = t.id\nWHERE c.date >= NOW() - INTERVAL '1 hour'\nORDER BY c.date DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -240,
+        560
+      ],
+      "id": "a2d9d362-71eb-4522-ba92-7674155668e1",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Bạn là trợ lý AI giúp tổng hợp tin nhắn Telegram. Phân tích các tin nhắn theo giờ và tạo tóm tắt ngắn gọn, rõ ràng nhưng đầy đủ thông tin.\n\nHãy trích xuất các thông tin sau từ đầu vào \n1. Chủ đề chính (topics): Các vấn đề chính được thảo luận\n2. Từ khóa (keywords): 5-10 từ khóa quan trọng trong cuộc trò chuyện\n3. Người dùng liên quan (related_users): Tổng hợp người dùng tham gia câu chuyện, hoặc được nhắc đến\n4. Tóm tắt (summary): Tóm tắt nội dung cuộc trò chuyện trong tối đa 10 câu\n5. Thời gian được đưa vào để tóm tắt (summary_period): khoảng thời gian xảy ra cuộc trò chuyện được tóm tắt\n6. các User được nhắc đến sẽ đặt trong (related_users)\n\nĐầu ra phải ở định dạng JSON theo cấu trúc sau dựa vào query trong tool (ai postgre). So sánh với cấu trúc bảng để output thông tin cho chính xác\n\n{\n  \"topics\": \"Topics mà trong đó cuộc trò chuyện được diễn ra, lưu ý chỉ nêu topic_name\",\n  \"keywords\": [\"keyword1\", \"keyword2\", \"keyword3\"],\n  \"related_users\": [{\"user_id\": 123, \"username\": \"user1\"}],\n  \"summary\": \"Tóm tắt ngắn gọn về cuộc trò chuyện\"\n  \"summary_period\": \"thời gian được tóm tắt\" dạng tsrange trong postgre\"\n  \"created_at\": \"thời gian bản tóm tắt được tạo ra\"\n  \"id\": \"số thứ tự tăng dần\"\n  \n}\nPhải tách output dựa trên từng topics\n\nLưu ý: Hãy trích xuất thông tin từ cả văn bản và media (nếu có caption). Đảm bảo tính khách quan, không thêm ý kiến cá nhân.`"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        768,
+        480
+      ],
+      "id": "4c5d7a65-0f8e-4775-924f-aceb111ba2ed",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "msg",
+              "renameField": true,
+              "outputFieldName": "chatInput"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        288,
+        560
+      ],
+      "id": "ad360c44-061f-4027-9e92-f818c60f9f5e",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5699e49a-2828-4127-bb67-deff5e442290",
+              "name": "msg.message_id",
+              "value": "={{ $json.message_id }}",
+              "type": "string"
+            },
+            {
+              "id": "824e2538-0c80-4f46-88f4-ce6d8fc11101",
+              "name": "msg.chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "3a71a43f-afc8-4d08-808b-4e4c4a5ad279",
+              "name": "msg.date",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "c1aafa0b-e8b5-4136-bff8-f0a3075db170",
+              "name": "msg.message_thread_id",
+              "value": "={{ $json.message_thread_id }}",
+              "type": "string"
+            },
+            {
+              "id": "70991185-c88e-41a9-8174-4b50516f90d4",
+              "name": "msg.topic_name",
+              "value": "={{ $json.topic_name }}",
+              "type": "string"
+            },
+            {
+              "id": "968d9c89-1d96-4ce0-91fa-b9544faed7dc",
+              "name": "msg.username",
+              "value": "={{ $json.username }}",
+              "type": "string"
+            },
+            {
+              "id": "f6a3134a-7c2b-42b1-a7ca-845a97dd463c",
+              "name": "msg.id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "f8920f96-5bbc-471b-a5bc-9d083eb70086",
+              "name": "msg.message_text",
+              "value": "={{ $json.message_text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        0,
+        560
+      ],
+      "id": "bd103e5b-8049-4a19-8545-36de5ba85b79",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano-2025-08-07",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano-2025-08-07"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        784
+      ],
+      "id": "543180f4-c5f5-45a0-b96d-48b5b230c914",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "kh7SJ7S1fq3XfRRF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT column_name, data_type, character_maximum_length, is_nullable\nFROM information_schema.columns\nWHERE table_schema = 'telegram'  -- Thay 'public' bằng schema bạn muốn (nếu cần)\nAND table_name = 'daily_chat_summary';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.7,
+      "position": [
+        1072,
+        784
+      ],
+      "id": "c520c7fc-7b0f-4b63-9ef2-c37980c45891",
+      "name": "ai postgre",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "084f480f-62b5-4e8c-aa9a-2aff30456e60",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1728,
+        480
+      ],
+      "id": "f82921ca-1522-4908-935e-429018e7cf75",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy chuỗi JSON từ đầu vào\nconst outputString = items[0].json.output;\n\n// Chuyển chuỗi JSON thành đối tượng JSON\nconst parsedJsonArray = JSON.parse(outputString);\n\n// Trả về dữ liệu đã phân tích dưới dạng đối tượng JSON\nreturn parsedJsonArray.map(item => {\n  return {\n    json: item\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        480
+      ],
+      "id": "a793b932-86ef-4ce3-9532-d7bfbb6ba676",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "telegram",
+          "mode": "list",
+          "cachedResultName": "telegram"
+        },
+        "table": {
+          "__rl": true,
+          "value": "daily_chat_summary",
+          "mode": "list",
+          "cachedResultName": "daily_chat_summary"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "summary_time": "={{ $json.created_at }}",
+            "topics": "={{ $json.topics }}",
+            "keywords": "={{ $json.keywords }}",
+            "related_users": "={{ $json.related_users }}",
+            "summary_period": "={{ $json.summary_period }}",
+            "summary": "={{ $json.summary }}",
+            "id": 0,
+            "chat_id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "summary_time",
+              "displayName": "summary_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "topics",
+              "displayName": "topics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_ids",
+              "displayName": "message_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "keywords",
+              "displayName": "keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "related_users",
+              "displayName": "related_users",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_links",
+              "displayName": "message_links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "summary_period",
+              "displayName": "summary_period",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1392,
+        480
+      ],
+      "id": "960d35fe-65da-4a78-a49d-c08e1041e0db",
+      "name": "summarize daily chat",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "721e3b60-3962-4eff-9c01-0fff571af57a",
+              "leftValue": "={{ $json.message.photo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        160
+      ],
+      "id": "cc3c5a94-f2ea-4e57-8427-105ffff5726c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('If').item.json.message.photo[2].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        432,
+        16
+      ],
+      "id": "03e8d54f-5a7c-4a9a-a7e3-5634f0b3e593",
+      "name": "Get a file",
+      "webhookId": "e7879b41-62d3-4de3-9a9c-8a8d532f0187",
+      "credentials": {
+        "telegramApi": {
+          "id": "FNSueIpk2huWSLtD",
+          "name": "Elite Backup telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ocr.space/parse/image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "K86718840788957"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "base64Image",
+              "value": "=data:{{ $json.mime_hint || 'image/jpeg' }};base64,{{$json.data}}"
+            },
+            {
+              "name": "OCREngine",
+              "value": "2"
+            },
+            {
+              "name": "language",
+              "value": "auto"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        16
+      ],
+      "id": "93f2327c-4454-4c42-a44a-ff12f127e581",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "37a7317e-4aa7-4252-a3e6-6f2a0b52ae4a",
+              "leftValue": "={{ $json.edited_message.text }}",
+              "rightValue": "@",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -272,
+        352
+      ],
+      "id": "860ca587-c7a4-42f4-b9c9-d93445ef1c42",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        16
+      ],
+      "id": "7e66577b-0ce0-4e39-b0a9-05ff675bf3b9",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "telegram",
+          "mode": "list",
+          "cachedResultName": "telegram"
+        },
+        "table": {
+          "__rl": true,
+          "value": "telegram_chats",
+          "mode": "list",
+          "cachedResultName": "telegram_chats"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "is_forum": false,
+            "message_id": "={{ $('extract').item.json.message_id }}",
+            "user_id": "={{ $('Telegram Trigger').item.json.message.reply_to_message.from.id }}",
+            "thread_reply_count": "={{ $('extract').item.json.thread_reply_count }}",
+            "thread_top_message_id": "={{ $('extract').item.json.thread_top_message_id }}",
+            "parent_message_id": 0,
+            "chat_id": "={{ $('extract').item.json.chat_id }}",
+            "chat_title": "={{ $('Telegram Trigger').item.json.message.chat.title }}",
+            "chat_username": "={{ $('Telegram Trigger').item.json.message.reply_to_message.from.username }}",
+            "date": "={{ $('extract').item.json.date }}",
+            "message_text": "={{ $('Telegram Trigger').item.json.message.from.first_name }} {{ $('Telegram Trigger').item.json.message.from.last_name }} gửi ảnh nội dung sau: {{ $json.ParsedResults[0].ParsedText }}",
+            "id": "={{ $('extract').item.json.custom_id }}",
+            "topic_id": "={{ $('extract').item.json.topic_chat_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_type",
+              "displayName": "chat_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_title",
+              "displayName": "chat_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "chat_username",
+              "displayName": "chat_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "user_first_name",
+              "displayName": "user_first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "user_last_name",
+              "displayName": "user_last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "user_username",
+              "displayName": "user_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "user_language_code",
+              "displayName": "user_language_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_text",
+              "displayName": "message_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "entities",
+              "displayName": "entities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "caption",
+              "displayName": "caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "photo",
+              "displayName": "photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "audio",
+              "displayName": "audio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "document",
+              "displayName": "document",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "sticker",
+              "displayName": "sticker",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "video",
+              "displayName": "video",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "voice",
+              "displayName": "voice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "venue",
+              "displayName": "venue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "message_thread_id",
+              "displayName": "message_thread_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "thread_reply_count",
+              "displayName": "thread_reply_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "thread_top_message_id",
+              "displayName": "thread_top_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_topic_message",
+              "displayName": "is_topic_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "parent_message_id",
+              "displayName": "parent_message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "topic_id",
+              "displayName": "topic_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "is_forum",
+              "displayName": "is_forum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1296,
+        16
+      ],
+      "id": "66c87984-1f6d-4391-a1b0-fc76484830c5",
+      "name": "Insert or update rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json[\"message\"];\n\n// Lấy các giá trị cần thiết\nconst chat_id = msg.chat.id;\nconst message_id = msg.message_id;\nconst user_id = msg.from.id;\n\n// Safely get thread_id - kiểm tra xem reply_to_message có tồn tại không\nconst thread_id = msg.reply_to_message?.message_thread_id || msg.message_thread_id || null;\n\n// Tạo custom_id bằng cách ghép chat_id, \"00\" và message_id\nconst custom_id = BigInt(chat_id.toString() + \"00\" + message_id.toString());\n\n// Tạo topic_chat_id - chỉ tạo khi có thread_id\nconst topic_chat_id = thread_id ? BigInt(chat_id.toString() + thread_id.toString()) : null;\n\nreturn [{\n    message_id: message_id,\n    chat_id: chat_id,\n    topic_chat_id: topic_chat_id,\n    user_id: user_id,\n    custom_id: custom_id,\n    date: new Date(msg.date * 1000),\n    message_text: msg.text || null,\n    entities: msg.entities ? JSON.stringify(msg.entities) : null,\n    caption: msg.caption || null,\n    photo: msg.photo ? JSON.stringify(msg.photo) : null,\n    audio: msg.audio ? JSON.stringify(msg.audio) : null,\n    document: msg.document ? JSON.stringify(msg.document) : null,\n    sticker: msg.sticker ? JSON.stringify(msg.sticker) : null,\n    video: msg.video ? JSON.stringify(msg.video) : null,\n    voice: msg.voice ? JSON.stringify(msg.voice) : null,\n    location: msg.location ? JSON.stringify(msg.location) : null,\n    venue: msg.venue ? JSON.stringify(msg.venue) : null,\n    message_thread_id: msg.message_thread_id || null,\n    thread_reply_count: msg.thread ? msg.thread.reply_count : null,\n    thread_top_message_id: msg.thread ? msg.thread.top_message_id : null\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        16
+      ],
+      "id": "91320c90-e9e6-42b7-a406-df2af3044582",
+      "name": "extract"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Checkuser",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit group/topics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checkuser": {
+      "main": [
+        [
+          {
+            "node": "upsert user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit group/topics": {
+      "main": [
+        [
+          {
+            "node": "upsert group",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract message": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai postgre": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "summarize daily chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "summarize daily chat": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "extract",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "extract message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 586797553,
+          "message": {
+            "message_id": 2916,
+            "from": {
+              "id": 975005174,
+              "is_bot": false,
+              "first_name": "Hải Anh",
+              "last_name": "Trần",
+              "username": "haianhtran89",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": -1003044712131,
+              "title": "🏠 Elite Nhà cửa / Support / Lịch bay",
+              "is_forum": true,
+              "type": "supergroup"
+            },
+            "date": 1758814262,
+            "message_thread_id": 410,
+            "reply_to_message": {
+              "message_id": 410,
+              "from": {
+                "id": 975005174,
+                "is_bot": false,
+                "first_name": "Hải Anh",
+                "last_name": "Trần",
+                "username": "haianhtran89",
+                "language_code": "en"
+              },
+              "chat": {
+                "id": -1003044712131,
+                "title": "🏠 Elite Nhà cửa / Support / Lịch bay",
+                "is_forum": true,
+                "type": "supergroup"
+              },
+              "date": 1756176024,
+              "message_thread_id": 410,
+              "forum_topic_created": {
+                "name": "Berlin",
+                "icon_color": 13338331
+              },
+              "is_topic_message": true
+            },
+            "photo": [
+              {
+                "file_id": "AgACAgUAAyEFAAS1ep7DAAILZGjVYDbNohUgqdxnyHJz4DU4dOLJAALz2TEbkUapVibAiBsHuyuRAQADAgADcwADNgQ",
+                "file_unique_id": "AQAD89kxG5FGqVZ4",
+                "file_size": 1086,
+                "width": 87,
+                "height": 90
+              },
+              {
+                "file_id": "AgACAgUAAyEFAAS1ep7DAAILZGjVYDbNohUgqdxnyHJz4DU4dOLJAALz2TEbkUapVibAiBsHuyuRAQADAgADbQADNgQ",
+                "file_unique_id": "AQAD89kxG5FGqVZy",
+                "file_size": 12268,
+                "width": 311,
+                "height": 320
+              },
+              {
+                "file_id": "AgACAgUAAyEFAAS1ep7DAAILZGjVYDbNohUgqdxnyHJz4DU4dOLJAALz2TEbkUapVibAiBsHuyuRAQADAgADeAADNgQ",
+                "file_unique_id": "AQAD89kxG5FGqVZ9",
+                "file_size": 13025,
+                "width": 336,
+                "height": 346
+              }
+            ],
+            "is_topic_message": true
+          }
+        }
+      }
+    ],
+    "Schedule Trigger": [
+      {
+        "json": {
+          "timestamp": "2025-09-25T23:00:11.096+07:00",
+          "Readable date": "September 25th 2025, 11:00:11 pm",
+          "Readable time": "11:00:11 pm",
+          "Day of week": "Thursday",
+          "Year": "2025",
+          "Month": "September",
+          "Day of month": "25",
+          "Hour": "23",
+          "Minute": "00",
+          "Second": "11",
+          "Timezone": "Asia/Ho_Chi_Minh (UTC+07:00)"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  }
+}
