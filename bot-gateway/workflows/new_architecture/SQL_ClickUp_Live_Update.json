@@ -1,0 +1,1027 @@
+{
+  "name": "SQL - ClickUp Live Update (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "list": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "space": {
+          "__rl": true,
+          "value": "9018351620",
+          "mode": "id"
+        },
+        "events": [
+          "taskUpdated",
+          "taskCommentPosted",
+          "taskCommentUpdated"
+        ]
+      },
+      "id": "ae588eef-bd8c-490e-b95f-a207448fa04b",
+      "name": "ClickUp Trigger (Live)",
+      "type": "n8n-nodes-base.clickUpTrigger",
+      "typeVersion": 1,
+      "position": [
+        -3600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Phan tich payload webhook ClickUp: xac dinh day la su kien \"field thuong doi\" hay \"comment\"\nconst body = $json;\nconst event = body.event; // taskUpdated | taskCommentPosted | taskCommentUpdated\nconst taskId = body.task_id;\nconst historyItems = body.history_items || [];\n\nconst isCommentEvent = event === 'taskCommentPosted' || event === 'taskCommentUpdated';\n\n// Map ten field ClickUp (trong history_items) -> ten cot Postgres.\n// CAN KIEM TRA LAI cho khop ten field that (field trong webhook thuong la ten ky thuat,\n// vi du \"status\", \"content\" (mo ta), \"name\"... con custom field se co field=\"1234-uuid\"\n// kem theo history_item.field co the la \"custom_field\" va can doc them 'custom_field' object\n// - phan nay se can tinh chinh sau khi thay 1 payload that.\nconst FIELD_TO_COLUMN = {\n  status: 'status',\n  name: 'name',\n  content: 'description',\n};\n\nlet updates = []; // [{ column, newValue, changedBy, fieldLabel }]\n\nif (!isCommentEvent) {\n  for (const h of historyItems) {\n    const col = FIELD_TO_COLUMN[h.field];\n    if (!col) continue; // bo qua field khong theo doi (assignee, priority... neu chua map)\n    let after = h.after;\n    if (after && typeof after === 'object') after = after.status || after.name || JSON.stringify(after);\n    updates.push({\n      column: col,\n      newValue: after,\n      changedBy: h.user?.username || 'không rõ',\n      fieldLabel: h.field,\n    });\n  }\n}\n\nreturn [{\n  json: {\n    taskId, event, isCommentEvent,\n    updates,\n    rawHistoryItems: historyItems,\n  }\n}];\n"
+      },
+      "id": "50276138-bda2-48c8-9048-baf8238fb7be",
+      "name": "Phân tích Webhook Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "56693f7f-56db-462a-8809-6d193d7b5a4e",
+              "leftValue": "={{ $json.isCommentEvent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1d28f282-d331-4607-a64d-8f254a3cc0dc",
+      "name": "Là comment event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3104,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Doc lai comment cua task, trich onedrive_link/youtube_link giong logic Flow 1\nconst taskId = $json.taskId;\n\nconst URL_RE = /https?:\\/\\/[^\\s)\"'\\]]+/g;\nfunction classifyLink(url) {\n  const u = url.toLowerCase();\n  if (u.includes('onedrive.live.com') || u.includes('1drv.ms') || u.includes('sharepoint.com')) return 'onedrive';\n  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';\n  return null;\n}\n\nlet onedriveLink = null, youtubeLink = null;\nconst resp = await this.helpers.httpRequestWithAuthentication.call(\n  this, 'clickUpApi',\n  { method: 'GET', url: `https://api.clickup.com/api/v2/task/${taskId}/comment`, json: true }\n);\nconst comments = resp.comments || [];\nlet lastAuthor = 'không rõ';\nif (comments.length > 0) lastAuthor = comments[0].user?.username || lastAuthor;\n\nfor (const c of comments) {\n  const segs = Array.isArray(c.comment) ? c.comment : [];\n  for (const seg of segs) {\n    const link = seg.attributes && seg.attributes.link;\n    if (link) {\n      const kind = classifyLink(link);\n      if (kind === 'onedrive' && !onedriveLink) onedriveLink = link;\n      if (kind === 'youtube' && !youtubeLink) youtubeLink = link;\n    }\n  }\n  const plain = c.comment_text || '';\n  const matches = plain.match(URL_RE) || [];\n  for (const url of matches) {\n    const kind = classifyLink(url);\n    if (kind === 'onedrive' && !onedriveLink) onedriveLink = url;\n    if (kind === 'youtube' && !youtubeLink) youtubeLink = url;\n  }\n  if (onedriveLink && youtubeLink) break;\n}\n\nreturn [{\n  json: {\n    taskId,\n    onedriveLink, youtubeLink,\n    changedBy: lastAuthor,\n    // \"gia tri moi\" hien thi trong thong bao: uu tien onedrive, roi youtube\n    newValueDisplay: onedriveLink || youtubeLink || '(không tìm thấy link trong comment)',\n  }\n}];\n"
+      },
+      "id": "33f57751-1465-4f56-a13b-836b5e3ea13e",
+      "name": "Đọc lại Comment + Trích Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2848,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET onedrive_link = COALESCE(NULLIF($1, ''), onedrive_link), youtube_link = COALESCE(NULLIF($2, ''), youtube_link), synced_at = now() WHERE id = $3 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.onedriveLink || '', $json.youtubeLink || '', $json.taskId] }}"
+        }
+      },
+      "id": "df12007d-1d51-4688-93c3-13bc05468472",
+      "name": "Update Postgres (comment)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2592,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "options": {}
+      },
+      "id": "de9fecbd-7ee0-4e07-a5f2-1bba8688f653",
+      "name": "Split Out Updates",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -2848,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Chi cho phep whitelist cot duoc update (tranh SQL injection qua ten cot dong)\nconst ALLOWED_COLUMNS = ['status', 'name', 'description', 'phu_trach', 'dkpv', 'pvtc',\n  'vfs', 'planbay', 'ngaybay', 'color'];\nconst u = $json;\nif (!ALLOWED_COLUMNS.includes(u.column)) {\n  return []; // bo qua field khong trong whitelist, khong lam gi\n}\nreturn [{ json: { ...u, taskId: $('Phân tích Webhook Payload').first().json.taskId } }];\n"
+      },
+      "id": "b0968712-9335-4ddc-8c33-16c07203461f",
+      "name": "Lọc cột hợp lệ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2592,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1ee4e766-8248-4e4e-8bbe-8fb514a8d4a4",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f3503f80-c59a-4468-93e9-10d8ed35f523",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "name",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "name"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8a2c7bec-f91c-4ac2-93fc-4f05028c339f",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "description",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "description"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c8644564-013f-4572-a5c0-09ea2a5ad00e",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "phu_trach",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "phu_trach"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8af6e7d9-d7a9-4bc1-8c6a-4f3ba31457a8",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "dkpv",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "dkpv"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "aa488630-ee14-451e-adf7-5262ad52e095",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "pvtc",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pvtc"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "79d3ca24-d447-4418-b89a-a6238ab030eb",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "vfs",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "vfs"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2202986e-6e04-4adf-8061-5491b9fd7eef",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "planbay",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "planbay"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b579ab65-4169-4949-8f6e-27da6ec013cc",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "ngaybay",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ngaybay"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f601eb40-170d-4a7a-87ba-9ec49ac31a4c",
+                    "leftValue": "={{ $json.column }}",
+                    "rightValue": "color",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "color"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "2cdf23fd-f49c-4df0-8beb-9a8ce41e3f29",
+      "name": "Switch (Cột cần update)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -2336,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET status = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "8e675be4-8f5b-4f20-bf63-6d5d6568bf0e",
+      "name": "Update: status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET name = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "08009579-5bb6-4ccd-a939-28d91a8303c7",
+      "name": "Update: name",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET description = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "212e2481-5da8-4a18-ba2b-1cd2357fc469",
+      "name": "Update: description",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        520
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET phu_trach = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "6eadcd8c-1d67-4acc-9cff-47c61621878f",
+      "name": "Update: phu_trach",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        580
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET dkpv = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "3be83f6b-eae5-42eb-8377-7023019a4c6d",
+      "name": "Update: dkpv",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        640
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET pvtc = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "b7e86545-47e0-4023-ab50-3a918482fc1e",
+      "name": "Update: pvtc",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET vfs = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "ca198de6-bb25-444b-b47c-95804683e23e",
+      "name": "Update: vfs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        760
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET planbay = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "a629fbfa-96e0-4618-8fb8-ac6c22a91a7d",
+      "name": "Update: planbay",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        820
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET ngaybay = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "af279714-b8e5-4f64-bc03-62bdec2e50cd",
+      "name": "Update: ngaybay",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        880
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET color = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.newValue, $json.taskId] }}"
+        }
+      },
+      "id": "4a1226cb-bf6e-4bc6-a775-ba89d795c07c",
+      "name": "Update: color",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2080,
+        940
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT admin_chat_id FROM gateway.config LIMIT 1;",
+        "options": {}
+      },
+      "id": "cf01606b-4e32-4f4a-bd5d-60d6aa0c95c4",
+      "name": "Lay Admin Chat ID (F2)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -3600,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pgRow = $json;\nconst meta = $('Lọc cột hợp lệ').first().json;\nconst admin = $('Lay Admin Chat ID (F2)').first().json;\n\nconst FIELD_LABELS = {\"status\": \"Trạng thái\", \"name\": \"Tên task\", \"description\": \"Mô tả\", \"phu_trach\": \"Phụ trách\", \"dkpv\": \"DKPV\", \"pvtc\": \"PVTC\", \"vfs\": \"VFS\", \"planbay\": \"Plan bay\", \"ngaybay\": \"Ngày bay\", \"color\": \"Color\"};\nconst label = FIELD_LABELS[meta.column] || meta.column;\nconst now = new Date();\n\nconst text = `🔄 <b>Thông báo CẬP NHẬT Task</b>\\n\\n` +\n  `🔧 Thay đổi:\\n` +\n  `📝 Trường \"${label}\" được cập nhật bởi ${meta.changedBy}\\n` +\n  `✅ Giá trị mới: ${meta.newValue ?? '—'}\\n\\n` +\n  `📦 Thông tin:\\n` +\n  `🆔 ID: ${pgRow.id}\\n` +\n  `📌 Tên: ${pgRow.name || '—'}\\n` +\n  `🔗 Link: ${pgRow.url || '—'}\\n` +\n  `🕒 Cập nhật lúc: ${now.toLocaleString('vi-VN')} #task_updated`;\n\nreturn [{ json: { chatId: admin.admin_chat_id, text } }];\n"
+      },
+      "id": "0f8afba0-6f0c-490d-8908-844a8b4eef9e",
+      "name": "Build Notify (field)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1824,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pgRow = $input.all()[0].json;\nconst meta = $('Đọc lại Comment + Trích Link').first().json;\nconst admin = $('Lay Admin Chat ID (F2)').first().json;\nconst now = new Date();\n\nconst text = `🔄 <b>Thông báo CẬP NHẬT Task</b>\\n\\n` +\n  `🔧 Thay đổi:\\n` +\n  `📝 Trường \"comment\" được cập nhật bởi ${meta.changedBy}\\n` +\n  `✅ Giá trị mới: ${meta.newValueDisplay}\\n\\n` +\n  `📦 Thông tin:\\n` +\n  `🆔 ID: ${pgRow ? pgRow.id : meta.taskId || '—'}\\n` +\n  `📌 Tên: ${pgRow ? (pgRow.name || '—') : '—'}\\n` +\n  `🔗 Link: ${pgRow ? (pgRow.url || '—') : '—'}\\n` +\n  `🕒 Cập nhật lúc: ${now.toLocaleString('vi-VN')} #task_updated`;\n\nreturn [{ json: { chatId: admin.admin_chat_id, text } }];\n"
+      },
+      "id": "f37bf0da-5bfe-4ff9-ad6b-d192b1f1b6e6",
+      "name": "Build Notify (comment)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2336,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "d0fde3de-58b5-49b0-a6bb-9643125b7ace",
+      "name": "Notify (field changed)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1568,
+        520
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "e65490b9-6aa5-4af9-962f-67b24d01a6a1",
+      "name": "Notify (comment changed)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2080,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ClickUp Trigger (Live)": {
+      "main": [
+        [
+          {
+            "node": "Phân tích Webhook Payload",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lay Admin Chat ID (F2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phân tích Webhook Payload": {
+      "main": [
+        [
+          {
+            "node": "Là comment event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Là comment event?": {
+      "main": [
+        [
+          {
+            "node": "Đọc lại Comment + Trích Link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Out Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đọc lại Comment + Trích Link": {
+      "main": [
+        [
+          {
+            "node": "Update Postgres (comment)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Updates": {
+      "main": [
+        [
+          {
+            "node": "Lọc cột hợp lệ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lọc cột hợp lệ": {
+      "main": [
+        [
+          {
+            "node": "Switch (Cột cần update)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch (Cột cần update)": {
+      "main": [
+        [
+          {
+            "node": "Update: status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: name",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: description",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: phu_trach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: dkpv",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: pvtc",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: vfs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: planbay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: ngaybay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update: color",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: status": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: name": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: description": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: phu_trach": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: dkpv": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: pvtc": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: vfs": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: planbay": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: ngaybay": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update: color": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (field)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Postgres (comment)": {
+      "main": [
+        [
+          {
+            "node": "Build Notify (comment)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notify (field)": {
+      "main": [
+        [
+          {
+            "node": "Notify (field changed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notify (comment)": {
+      "main": [
+        [
+          {
+            "node": "Notify (comment changed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
