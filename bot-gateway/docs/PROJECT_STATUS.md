@@ -137,3 +137,50 @@ TRƯỚC, để `/taotask` cuối cùng và xoá/dọn task test sau khi xong.
 1. Test #4, #5, #6, #7 còn lại (xem docs/SETUP_PHASE_0_1.md mục Test nghiệm thu) — nếu chưa làm.
 2. Giai đoạn 2 đang ưu tiên ClickUp (Telebot Main) — xem mục "ĐỔI ƯU TIÊN" phía trên để biết đang chờ gì.
 3. Help Bot GPT: code đã xong bước 1-2, chỉ còn thiếu workflow ID thật (mục Giai đoạn 2 phía trên).
+
+
+## ĐẬP ĐI LÀM LẠI (04/09/2026) — Telebot Main → "Telebot ClickUp Reader"
+Quyết định: KHÔNG dùng `Telebot_main.json` (72 node, chưa từng import lên n8n live) nữa. Dựng file
+hoàn toàn mới, gọn hơn, chỉ tập trung đọc dữ liệu + tìm/tải file OneDrive.
+
+### File mới: `sub_workflows_modernized/Telebot_ClickUp_Reader.json`
+Commit: https://github.com/FachkraftSupply/n8nwf/commit/10ac87bf3f6594760593b9c63048e1920c79010f
+26 node (giảm từ 72). Kiến trúc:
+```
+sub workflow (Execute Workflow Trigger, passthrough)
+  -> Phân tích lệnh (Code, đọc Envelope trực tiếp, tự tính route)
+  -> Switch: help / task / chitiet / view_file / taotask / (fallback: unknown)
+```
+- help: text hướng dẫn mới (bỏ mô tả /taotask cũ, thêm ghi chú "đang xây lại bằng AI")
+- task: y hệt luồng cũ (Prepare Search -> PostgreSQL search tasks -> Code1 scoring -> Beautify full ->
+  Telegram) — ĐÃ SỬA 1 lỗi trong query gốc: ts_rank hard-code chữ 'hnd' thay vì dùng $1, giờ dùng đúng $1.
+  ĐÃ BỎ nhánh Discord/Zalo đi kèm (Gộp dữ liệu, Merge2, Execute Workflow gọi "ZALO BOT DEV", Beautify unfull1).
+- chitiet: task_detail_sql -> extract output -> Beautify_detail (ĐÃ SỬA lỗi cú pháp thừa dấu } ở link
+  OneDrive trong code gốc) -> If1 (có onedrive_link?) -> Telegram thường / telegram inline (nút "Xem file"
+  callback_data=view_file:<taskId>, bỏ nút "Upload File" cũ)
+- view_file (MỚI, callback từ nút "Xem file"): task_detail_sql (dùng chung) -> Encode Share URL (encode
+  OneDrive share link theo chuẩn Microsoft Graph u!<base64url>) -> HTTP Request tới
+  graph.microsoft.com/v1.0/shares/{id}/driveItem?$expand=children -> Beautify File List (dựng nút bấm tải
+  từng file bằng @microsoft.graph.downloadUrl, KHÔNG qua Telegram upload nên không bị giới hạn 50MB) ->
+  Telegram (File List).
+  ⚠️ CHƯA TEST ĐƯỢC field name response Graph API thật (không chạy được n8n live trong phiên này) — cần anh
+  test kỹ, field @microsoft.graph.downloadUrl có thể khác tùy loại tài khoản OneDrive (personal vs
+  SharePoint/business) hoặc cần thêm $select.
+- taotask: placeholder — trả lời "đang xây dựng lại bằng AI, chưa khả dụng", KHÔNG gọi ClickUp — an toàn
+  100%, không tạo task thật.
+
+### ĐÃ BỎ khỏi workflow (không xóa, giữ trong Telebot_main.json cũ làm tham khảo)
+- /taotask thật (cr_task_hs, cr_task_dh, tt_dk, Validate code, toàn bộ chuỗi upload OneDrive)
+- zalo code (thử nghiệm dở, đọc sai shape)
+- Xử lý ảnh (xóa nền/nén trang/chèn logo) — CẦN CHUYỂN SANG "Bot System Main" khi build workflow đó. Logic
+  gốc nằm trong Telebot_main.json (giữ nguyên, KHÔNG XÓA), các node liên quan: Edit Fields1, Check if Photo,
+  check caption, nocaption, Get a file xoa nen, Get a file1 nen trang, Get a file chen logo,
+  HTTP Request xoa nen(1), HTTP Request nen trang, Extract from File, gui file nen trang, Send a document(1),
+  Send a photo message2.
+- MySQL cũ (MySQL2, task_detail_sql bản MySQL — đã có bản Postgres thay thế, node MySQL là thừa)
+
+### Việc tiếp theo — CẦN TỪ ANH
+1. Import Telebot_ClickUp_Reader.json vào n8n (workflow MỚI, chưa từng có trên live, không rủi ro ghi đè).
+2. Test kỹ nhánh view_file trước tiên (rủi ro cao nhất vì chưa test được Graph API response thật).
+3. Lấy Workflow ID, gắn vào Gateway node "→ Sub: Telebot Main".
+4. Khi nào làm "Bot System Main", quay lại lấy cụm node xử lý ảnh trong Telebot_main.json.
