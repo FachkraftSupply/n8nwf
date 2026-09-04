@@ -1,0 +1,2924 @@
+{
+  "name": "Telebot sql",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Get the input data (usually one item containing all lists)\nconst inputData = $input.item.json;\n\n// Extract the 'lists' array from the API response\nconst lists = inputData.lists;\n\n// Filter out lists that are hidden\nconst visibleLists = lists.filter(list => list.folder.hidden !== true);\n\n// Get the count of visible lists\nconst listCount = visibleLists.length;\n\n// Create output items\nconst result = [];\n\nfor (const list of visibleLists) {\n  result.push({\n    json: {\n      ...list,\n      myNewField: 1,\n      totalLists: listCount\n    }\n  });\n}\n\nreturn result;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -2992
+      ],
+      "id": "a584f667-9170-460b-b7af-a5a2ee05e84f",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7599f9cc-1d8a-4666-a11e-61373c63d27f",
+              "leftValue": "={{ $json.list }}",
+              "rightValue": "2025",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        -2912
+      ],
+      "id": "ff2335e7-4b57-4188-bdff-da40276d0f03",
+      "name": "Filter1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1e4e9552-028a-42ef-9e0e-24f0d2597f71",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "901805909593",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "39a29976-4ed4-4036-97f8-ba54edc7b103",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "901805909357",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "42234bc3-3c8f-4cda-aef0-a54f659771f3",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "=901806136328",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "5a3f5547-4e91-45a4-87c3-2aef2f03f946",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "=901812218309",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -2992
+      ],
+      "id": "0d764722-ca76-4eb1-a9e3-7ca4c38a9a74",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        3536,
+        -2896
+      ],
+      "id": "6503fca4-b973-47a2-ba98-c0be370d0c58",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'tasks') AS tasks_exists,\n  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'db_info') AS db_info_exists,\n  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'db_config') AS db_config_exists;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        -2608
+      ],
+      "id": "96dedd49-f148-4237-a9ab-5cb02c412b7d",
+      "name": "Check db",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO db_config (config_key, config_value, description) VALUES\n('telegram_tasks_per_page', '5', 'Số lượng tasks hiển thị mỗi trang trong Telegram'),\n('telegram_display_fields', 'name,status,due_date,url', 'Các trường task hiển thị trong Telegram'),\n('web_tasks_per_page', '10', 'Số lượng tasks hiển thị mỗi trang trên web dashboard')\n('get_list_comment', '10', 'id list lấy comment tránh làm tắc workflow')\nON DUPLICATE KEY UPDATE date_modified = CURRENT_TIMESTAMP;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1120,
+        -2432
+      ],
+      "id": "78ef5c86-b327-40e1-ba73-7511fe879eab",
+      "name": "cauhinh",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE db_config (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  config_key VARCHAR(100) UNIQUE,\n  config_value TEXT,\n  description TEXT,\n  date_created DATETIME DEFAULT CURRENT_TIMESTAMP,\n  date_modified DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        -2432
+      ],
+      "id": "999ebcc8-94f0-4e97-baaf-dfae4c96541e",
+      "name": "tao_db_config",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4d9a2032-f08b-4d07-837e-4e244389bb5a",
+              "leftValue": "={{ $json.dbConfigTableExists }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -2416
+      ],
+      "id": "b6875804-184a-4d56-8a67-1271cc84bde7",
+      "name": "kt_db_config"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4d9a2032-f08b-4d07-837e-4e244389bb5a",
+              "leftValue": "={{ $json.dbInfoTableExists }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -2608
+      ],
+      "id": "be82f599-2d39-4aa5-b307-c33d694822b7",
+      "name": "kt_db_info"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE db_info (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  last_update DATETIME DEFAULT CURRENT_TIMESTAMP,\n  update_count INT DEFAULT 0,\n  items_fetched INT DEFAULT 0,\n  total_tasks INT DEFAULT 0,\n  total_lists INT DEFAULT 0,\n  auto_trigger_count INT DEFAULT 0,\n  manual_trigger_count INT DEFAULT 0,\n  notes TEXT\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        -2624
+      ],
+      "id": "1bf1c18a-04b1-4e9c-9a95-1f16290a06c4",
+      "name": "tao_task_table1",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE tasks (\n  id VARCHAR(100) PRIMARY KEY,\n  name TEXT NOT NULL,\n  url TEXT,\n  description TEXT,\n  status_color VARCHAR(20),\n  date_created DATETIME,\n  date_updated DATETIME,\n  phu_trach TEXT,\n  tags TEXT,\n  DKPV TEXT,\n  PVTC TEXT,\n  folder_name VARCHAR(255),\n  list_name VARCHAR(255),\n  vfs DATETIME,\n  planbay DATETIME,\n  ngaybay DATETIME,\n  youtube_link TEXT,\n  onedrive_link TEXT,\n  sync_time DATETIME DEFAULT CURRENT_TIMESTAMP,\n  name_khong_dau TEXT,\n  status TEXT,\n  color TEXT,\n  other_link TEXT\n);\n\n-- Thêm chỉ mục FULLTEXT cho cột name_khong_dau\nALTER TABLE tasks ADD FULLTEXT(name_khong_dau);\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        -2816
+      ],
+      "id": "4cc412df-26bd-4d81-8af6-2f8495b9b51b",
+      "name": "tao_task_table",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4d9a2032-f08b-4d07-837e-4e244389bb5a",
+              "leftValue": "={{ $json.tasksTableExists }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -2800
+      ],
+      "id": "1e2c14bc-3b17-4ce0-9602-870afbca627d",
+      "name": "kt_task_table"
+    },
+    {
+      "parameters": {
+        "jsCode": "const checkResult = $json; // MySQL node trả về 1 item duy nhất\n\n// Lấy processedTasks từ node trước có tên rõ ràng\nconst processedTasks = $('Check db').item.json.processedTasks;\n\nreturn {\n  json: {\n    tasksTableExists: checkResult.tasks_exists > 0,\n    dbInfoTableExists: checkResult.db_info_exists > 0,\n    dbConfigTableExists: checkResult.db_config_exists > 0,\n    processedTasks\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -2608
+      ],
+      "id": "8dfdc14c-051b-433a-b793-97074f9f9c40",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        3312,
+        -2992
+      ],
+      "id": "f0bcc927-7d4c-4eba-99af-9edc25a2767f",
+      "name": "Gộp dữ liệu"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a49618d4-b4f9-4049-a233-13d68401b597",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "988c2ef6-b6e3-4232-bb2f-b10fe044e23c",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "d252c43b-1dd3-4399-b22e-0edc61e3c0a1",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "b838bb6b-7566-4b8b-b4d5-9496bd920dcb",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "6ff89622-9c29-4133-bd57-423292c2313f",
+              "name": "status",
+              "value": "={{ $json.status.status }}",
+              "type": "string"
+            },
+            {
+              "id": "c7684fcc-21b0-4af9-9efe-0f6a991912d6",
+              "name": "sttcolor",
+              "value": "={{ $json.status.color }}",
+              "type": "string"
+            },
+            {
+              "id": "37956647-31c4-4dce-bb29-86f86febea84",
+              "name": "date_created",
+              "value": "={{ (() => {\n  const ts = parseInt($json.date_created, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "5597d385-7a42-4469-8f62-a0429f11d221",
+              "name": "date_updated",
+              "value": "={{ (() => {\n  const ts = parseInt($json.date_updated, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "54091f91-b206-4ed1-8d2b-04f0ebafb538",
+              "name": "phu_trach",
+              "value": "={{ (() => {\n  const assignees = $json.assignees || [];\n  return assignees.map(a => a.username).join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "1d99d483-0ce0-4f29-b8ec-9806b6385991",
+              "name": "tags",
+              "value": "={{ (() => {\n  const tags = $json.tags || [];\n  return tags.map(tag => tag.name).join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "e4014ef3-306c-416d-818d-972acee0d8a1",
+              "name": "DKPV",
+              "value": "={{ (() => {\n  const fields = $json.custom_fields || [];\n  const allowedIds = [\n    \"6e8541b5-42c1-4fc9-bd49-8388f13d449e\",\n  ];\n\n  const result = [];\n\n  for (const field of fields) {\n    if (!allowedIds.includes(field.id)) continue;\n\n    const values = Array.isArray(field.value) ? field.value : [];\n\n    for (const val of values) {\n      const name = val.name || '';\n      const url = val.url || '';\n      result.push(`${name} (${url})`);\n    }\n  }\n\n  return result.join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "fc459679-2947-445f-96ab-2c64f55a5c34",
+              "name": "PVTC",
+              "value": "={{ (() => {\n  const fields = $json.custom_fields || [];\n  const allowedIds = [\n    \"172100b2-1910-4df6-8a76-0d4b7e9b9b8e\",\n  ];\n\n  const result = [];\n\n  for (const field of fields) {\n    if (!allowedIds.includes(field.id)) continue;\n\n    const values = Array.isArray(field.value) ? field.value : [];\n\n    for (const val of values) {\n      const name = val.name || '';\n      const url = val.url || '';\n      result.push(`${name} (${url})`);\n    }\n  }\n\n  return result.join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "a4b45608-69dc-4ee5-b9c9-32ebe628f1d8",
+              "name": "Folder",
+              "value": "={{ $json.folder.name }}",
+              "type": "string"
+            },
+            {
+              "id": "92751b5e-1e87-4bfe-a356-631dd562387a",
+              "name": "list",
+              "value": "={{ $json.list.name }}",
+              "type": "string"
+            },
+            {
+              "id": "cf3a33b5-d413-4b7b-80e2-4bac13261542",
+              "name": "vfs",
+              "value": "={{ (() => {\n  const raw = $json.custom_fields[6]?.value;\n  if (!raw || isNaN(parseInt(raw))) return null;\n\n  const ts = parseInt(raw, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "67cfa2ad-d71d-4b19-a516-872c7dfb8d76",
+              "name": "planbay",
+              "value": "={{ (() => {\n  const raw = $json.custom_fields[7]?.value;\n  if (!raw || isNaN(parseInt(raw))) return null;\n\n  const ts = parseInt(raw, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "4b4de65e-1967-4ddc-81a6-0bad58b2be66",
+              "name": "ngaybay",
+              "value": "={{ (() => {\n  const raw = $json.custom_fields[8]?.value;\n  if (!raw || isNaN(parseInt(raw))) return null;\n\n  const ts = parseInt(raw, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1344,
+        -2992
+      ],
+      "id": "527acb80-ed74-4ef7-a980-9a02381cd718",
+      "name": "loc tt task"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy toàn bộ dữ liệu đầu vào\nconst items = $input.all();\n\n// Hàm kiểm tra định dạng URL\nconst isYoutubeUrl = (url) => url.includes('youtube.com') || url.includes('youtu.be');\nconst isOneDriveUrl = (url) => url.includes('onedrive') || url.includes('1drv.ms');\n\n// Hàm trích xuất URL từ chuỗi comment_text\nconst extractUrlFromText = (text) => {\n  if (!text) return null;\n  const ignoredPattern = /Attachment ignored:\\s*(https?:\\/\\/[^\\s]+)/;\n  const match = text.match(ignoredPattern);\n  if (match) return match[1];\n\n  const genericPattern = /(https?:\\/\\/[^\\s]+)/;\n  const matchGeneric = text.match(genericPattern);\n  return matchGeneric ? matchGeneric[1] : null;\n};\n\n// Kết quả được lưu theo taskId\nconst resultMap = new Map();\n\n// Duyệt qua từng item\nfor (const item of items) {\n  const taskId = item.json?.task?.id;\n  if (!taskId) continue;\n\n  // Nếu chưa có taskId trong resultMap thì khởi tạo\n  if (!resultMap.has(taskId)) {\n    resultMap.set(taskId, {\n      json: {\n        id: taskId,\n        youtube_link: [],\n        onedrive_link: [],\n        other_link: [],\n      }\n    });\n  }\n\n  const result = resultMap.get(taskId);\n  let foundUrls = [];\n\n  // 1. Lấy từ comment[].bookmark.url nếu có\n  const comments = item.json.comment || [];\n  for (const c of comments) {\n    const url = c?.bookmark?.url;\n    if (url) {\n      foundUrls.push(url);\n    }\n  }\n\n  // 2. Nếu chưa có URL, thử lấy từ comment_text\n  if (foundUrls.length === 0 && item.json.comment_text) {\n    const extractedUrl = extractUrlFromText(item.json.comment_text);\n    if (extractedUrl) {\n      foundUrls.push(extractedUrl);\n    }\n  }\n\n  // 3. Phân loại và lưu vào object\n  for (const url of foundUrls) {\n    if (isYoutubeUrl(url)) {\n      result.json.youtube_link.push(url);\n    } else if (isOneDriveUrl(url)) {\n      result.json.onedrive_link.push(url);\n    } else {\n      result.json.other_link.push(url);\n    }\n  }\n}\n\n// Trả kết quả về dạng array\nreturn Array.from(resultMap.values());\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        -2928
+      ],
+      "id": "ea7b5b3e-3d96-434e-b91a-bbd67b0d11e4",
+      "name": "loc link"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8940b055-9838-45e7-addd-eb7ee8c3d203",
+              "name": "task.id",
+              "value": "={{ $('Edit Fields').item.json.task.id }}",
+              "type": "string"
+            },
+            {
+              "id": "f23b0f48-68b4-47c9-a2db-b26bd782a7ab",
+              "name": "comment[0].bookmark.url",
+              "value": "={{ $json.comment[0].bookmark.url }}",
+              "type": "string"
+            },
+            {
+              "id": "9071c1df-1b3a-4e43-a640-7d4d4d0cfbca",
+              "name": "comment_text",
+              "value": "={{ $json.comment_text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2736,
+        -2928
+      ],
+      "id": "d676f4c7-7f6f-4f0a-8d96-6b43072ce781",
+      "name": "task id comment"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "team": "9018351620",
+        "space": "90183192291",
+        "folderless": true,
+        "list": "={{ $json.id }}",
+        "returnAll": false,
+        "limit": "={{ $json.task_count }}",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -2992
+      ],
+      "id": "95826588-c429-4717-9251-7bb918879198",
+      "name": "lay task",
+      "executeOnce": false,
+      "credentials": {
+        "clickUpApi": {
+          "id": "6eo4VYxudLK5NTb6",
+          "name": "ClickUp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5fe5e913-67fc-4a20-a790-54750c593209",
+              "name": "task.id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        -2912
+      ],
+      "id": "3b104416-2c9e-4aa2-9362-b97dd3bb3a29",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "url": "https://api.clickup.com/api/v2/team/9018351620/list",
+        "allowUnauthorizedCerts": true,
+        "options": {}
+      },
+      "id": "f9457d7f-50c6-44fe-9b3d-851b7be8e3f7",
+      "name": "Get ClickUp Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -2992
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": false,
+      "credentials": {
+        "clickUpApi": {
+          "id": "6eo4VYxudLK5NTb6",
+          "name": "ClickUp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "table": {
+          "__rl": true,
+          "value": "tasks",
+          "mode": "list",
+          "cachedResultName": "tasks"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "id",
+        "valueToMatchOn": "={{ $json.id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "name",
+              "value": "={{ $json.name }}"
+            },
+            {
+              "column": "url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "column": "description",
+              "value": "={{ $json.description }}"
+            },
+            {
+              "column": "status",
+              "value": "={{ $json.status }}"
+            },
+            {
+              "column": "status_color",
+              "value": "={{ $json.sttcolor }}"
+            },
+            {
+              "column": "date_created",
+              "value": "={{ $json.date_created }}"
+            },
+            {
+              "column": "date_updated",
+              "value": "={{ $json.date_updated }}"
+            },
+            {
+              "column": "phu_trach",
+              "value": "={{ $json.phu_trach }}"
+            },
+            {
+              "column": "tags",
+              "value": "={{ $json.tags }}"
+            },
+            {
+              "column": "DKPV",
+              "value": "={{ $json.DKPV }}"
+            },
+            {
+              "column": "PVTC",
+              "value": "={{ $json.PVTC }}"
+            },
+            {
+              "column": "folder_name",
+              "value": "={{ $json.Folder }}"
+            },
+            {
+              "column": "list_name",
+              "value": "={{ $json.list }}"
+            },
+            {
+              "column": "planbay",
+              "value": "={{ (() => {\n  const raw = $('Merge').item.json.planbay?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+            },
+            {
+              "column": "ngaybay",
+              "value": "={{ (() => {\n  const raw = $('Merge').item.json.ngaybay?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+            },
+            {
+              "column": "youtube_link",
+              "value": "={{ $json.youtube_link.join(', ') }}"
+            },
+            {
+              "column": "onedrive_link",
+              "value": "={{ $json.onedrive_link.join(', ') }}"
+            },
+            {
+              "column": "other_link",
+              "value": "={{ $json.other_link.join(', ') }}"
+            },
+            {
+              "column": "vfs",
+              "value": "={{ (() => {\n  const raw = $('Merge').item.json.vfs?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+            },
+            {
+              "column": "name_khong_dau",
+              "value": "={{ $json.name_khong_dau }}"
+            }
+          ]
+        },
+        "options": {
+          "detailedOutput": false
+        }
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        3984,
+        -3088
+      ],
+      "id": "dc59a10b-cb6f-42cf-a811-605075d8c18e",
+      "name": "Cập nhật database1",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 5,
+              "triggerAtHour": 2
+            }
+          ]
+        }
+      },
+      "id": "41cb1213-90c4-4fb8-8f84-b7dccd74cffe",
+      "name": "Hen Gio",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -2704
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "get",
+        "id": "={{ $('task_start').item.json.task_id }}"
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -3456
+      ],
+      "id": "3bfb3305-c3f6-405f-b8b2-bc831185a1bf",
+      "name": "lay task1",
+      "executeOnce": false,
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "z7JZpz95fpg9zKM6",
+          "name": "ClickUp account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7599f9cc-1d8a-4666-a11e-61373c63d27f",
+              "leftValue": "={{ $json.list }}",
+              "rightValue": "2025",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "16f6c667-6397-46bd-bc2a-b5c69b8f2923",
+              "leftValue": "={{ $json.list }}",
+              "rightValue": "2026",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        -3376
+      ],
+      "id": "38562e5c-f465-4ae5-82da-b833055d1c6a",
+      "name": "Filter2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8940b055-9838-45e7-addd-eb7ee8c3d203",
+              "name": "task.id",
+              "value": "={{ $('cr_task_filter').item.json.task_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8c1578a3-26bb-4f68-b629-d184aea9f93c",
+              "name": "comment[0].bookmark.url",
+              "value": "={{ $json.comment[0].bookmark.url }}",
+              "type": "string"
+            },
+            {
+              "id": "2d8aa695-672a-4a18-818d-fba4ef0b7f2a",
+              "name": "comment_text",
+              "value": "={{ $json.comment_text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        -3376
+      ],
+      "id": "accd2c7d-a24a-4ae3-b2e0-e1c9a7e4c599",
+      "name": "task id comment1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy toàn bộ dữ liệu đầu vào\nconst items = $input.all();\n\n// Hàm kiểm tra định dạng URL\nconst isYoutubeUrl = (url) => url.includes('youtube.com') || url.includes('youtu.be');\nconst isOneDriveUrl = (url) => url.includes('onedrive') || url.includes('1drv.ms');\n\n// Hàm trích xuất URL từ chuỗi comment_text\nconst extractUrlFromText = (text) => {\n  if (!text) return null;\n  const ignoredPattern = /Attachment ignored:\\s*(https?:\\/\\/[^\\s]+)/;\n  const match = text.match(ignoredPattern);\n  if (match) return match[1];\n\n  const genericPattern = /(https?:\\/\\/[^\\s]+)/;\n  const matchGeneric = text.match(genericPattern);\n  return matchGeneric ? matchGeneric[1] : null;\n};\n\n// Kết quả được lưu theo taskId hoặc \"no_task_id\" nếu taskId null\nconst resultMap = new Map();\n\n// Duyệt qua từng item\nfor (const item of items) {\n  let taskId = item.json?.task?.id;\n  // Xử lý trường hợp taskId null\n  if (!taskId) taskId = 'no_task_id';\n\n  // Nếu chưa có taskId trong resultMap thì khởi tạo\n  if (!resultMap.has(taskId)) {\n    resultMap.set(taskId, {\n      json: {\n        id: taskId !== 'no_task_id' ? taskId : null,\n        youtube_link: [],\n        onedrive_link: [],\n        other_link: [],\n      }\n    });\n  }\n\n  const result = resultMap.get(taskId);\n  let foundUrls = [];\n\n  // 1. Lấy từ comment[].bookmark.url nếu có\n  const comments = item.json.comment || [];\n  for (const c of comments) {\n    const url = c?.bookmark?.url;\n    if (url) {\n      foundUrls.push(url);\n    }\n  }\n\n  // 2. Nếu chưa có URL, thử lấy từ comment_text\n  if (foundUrls.length === 0 && item.json.comment_text) {\n    const extractedUrl = extractUrlFromText(item.json.comment_text);\n    if (extractedUrl) {\n      foundUrls.push(extractedUrl);\n    }\n  }\n\n  // 3. Phân loại và lưu vào object\n  for (const url of foundUrls) {\n    if (isYoutubeUrl(url)) {\n      result.json.youtube_link.push(url);\n    } else if (isOneDriveUrl(url)) {\n      result.json.onedrive_link.push(url);\n    } else {\n      result.json.other_link.push(url);\n    }\n  }\n}\n\n// Trả kết quả về dạng array\nreturn Array.from(resultMap.values());\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        -3376
+      ],
+      "id": "cc33fb6e-e029-4dd1-8da5-47a9b47ad397",
+      "name": "loc link1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5fe5e913-67fc-4a20-a790-54750c593209",
+              "name": "task.id",
+              "value": "={{ $json.task_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1344,
+        -3376
+      ],
+      "id": "22d3173c-7e36-43f1-9d57-3584fb75fd22",
+      "name": "Edit comment"
+    },
+    {
+      "parameters": {
+        "resource": "comment",
+        "operation": "getAll",
+        "commentsOn": "task",
+        "id": "={{ $json.task.id }}"
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        -3376
+      ],
+      "id": "dcb28ad4-acdc-4d78-9dbb-c69d0e9df586",
+      "name": "cr_task_comment",
+      "alwaysOutputData": true,
+      "credentials": {
+        "clickUpApi": {
+          "id": "6eo4VYxudLK5NTb6",
+          "name": "ClickUp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a49618d4-b4f9-4049-a233-13d68401b597",
+              "name": "task_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "988c2ef6-b6e3-4232-bb2f-b10fe044e23c",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "d252c43b-1dd3-4399-b22e-0edc61e3c0a1",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "b838bb6b-7566-4b8b-b4d5-9496bd920dcb",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "6ff89622-9c29-4133-bd57-423292c2313f",
+              "name": "status",
+              "value": "={{ $json.status.status }}",
+              "type": "string"
+            },
+            {
+              "id": "c7684fcc-21b0-4af9-9efe-0f6a991912d6",
+              "name": "sttcolor",
+              "value": "={{ $json.status.color }}",
+              "type": "string"
+            },
+            {
+              "id": "37956647-31c4-4dce-bb29-86f86febea84",
+              "name": "date_created",
+              "value": "={{ (() => {\n  const ts = parseInt($json.date_created, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "5597d385-7a42-4469-8f62-a0429f11d221",
+              "name": "date_updated",
+              "value": "={{ (() => {\n  const ts = parseInt($json.date_updated, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "54091f91-b206-4ed1-8d2b-04f0ebafb538",
+              "name": "phu_trach",
+              "value": "={{ (() => {\n  const assignees = $json.assignees || [];\n  return assignees.map(a => a.username).join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "1d99d483-0ce0-4f29-b8ec-9806b6385991",
+              "name": "tags",
+              "value": "={{ (() => {\n  const tags = $json.tags || [];\n  return tags.map(tag => tag.name).join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "e4014ef3-306c-416d-818d-972acee0d8a1",
+              "name": "DKPV",
+              "value": "={{ (() => {\n  const fields = $json.custom_fields || [];\n  const allowedIds = [\n    \"6e8541b5-42c1-4fc9-bd49-8388f13d449e\",\n  ];\n\n  const result = [];\n\n  for (const field of fields) {\n    if (!allowedIds.includes(field.id)) continue;\n\n    const values = Array.isArray(field.value) ? field.value : [];\n\n    for (const val of values) {\n      const name = val.name || '';\n      const url = val.url || '';\n      result.push(`${name} (${url})`);\n    }\n  }\n\n  return result.join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "fc459679-2947-445f-96ab-2c64f55a5c34",
+              "name": "PVTC",
+              "value": "={{ (() => {\n  const fields = $json.custom_fields || [];\n  const allowedIds = [\n    \"172100b2-1910-4df6-8a76-0d4b7e9b9b8e\",\n  ];\n\n  const result = [];\n\n  for (const field of fields) {\n    if (!allowedIds.includes(field.id)) continue;\n\n    const values = Array.isArray(field.value) ? field.value : [];\n\n    for (const val of values) {\n      const name = val.name || '';\n      const url = val.url || '';\n      result.push(`${name} (${url})`);\n    }\n  }\n\n  return result.join(', ');\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "a4b45608-69dc-4ee5-b9c9-32ebe628f1d8",
+              "name": "Folder",
+              "value": "={{ $json.folder.name }}",
+              "type": "string"
+            },
+            {
+              "id": "92751b5e-1e87-4bfe-a356-631dd562387a",
+              "name": "list",
+              "value": "={{ $json.list.name }}",
+              "type": "string"
+            },
+            {
+              "id": "cf3a33b5-d413-4b7b-80e2-4bac13261542",
+              "name": "vfs",
+              "value": "={{ (() => {\n  const raw = $json.custom_fields[6]?.value;\n  if (!raw || isNaN(parseInt(raw))) return null;\n\n  const ts = parseInt(raw, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "67cfa2ad-d71d-4b19-a516-872c7dfb8d76",
+              "name": "planbay",
+              "value": "={{ (() => {\n  const raw = $json.custom_fields[7]?.value;\n  if (!raw || isNaN(parseInt(raw))) return null;\n\n  const ts = parseInt(raw, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "4b4de65e-1967-4ddc-81a6-0bad58b2be66",
+              "name": "ngaybay",
+              "value": "={{ (() => {\n  const raw = $json.custom_fields[8]?.value;\n  if (!raw || isNaN(parseInt(raw))) return null;\n\n  const ts = parseInt(raw, 10);\n  const d = new Date(ts);\n  const pad = n => String(n).padStart(2, '0');\n  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n})() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        -3456
+      ],
+      "id": "757881f1-8fe1-4a11-9cbe-cf44776415b9",
+      "name": "cr_task_filter"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        2240,
+        -3456
+      ],
+      "id": "e87edc68-3b47-46b9-8fd0-77074d2779e3",
+      "name": "cr_task_merge"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "table": {
+          "__rl": true,
+          "value": "tasks",
+          "mode": "list",
+          "cachedResultName": "tasks"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "id",
+        "valueToMatchOn": "={{ $('cr_task_merge').item.json.id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "name",
+              "value": "={{ $('cr_task_merge').item.json.name }}"
+            },
+            {
+              "column": "url",
+              "value": "={{ $('cr_task_merge').item.json.url }}"
+            },
+            {
+              "column": "description",
+              "value": "={{ $('cr_task_merge').item.json.description }}"
+            },
+            {
+              "column": "status",
+              "value": "={{ $('cr_task_merge').item.json.status }}"
+            },
+            {
+              "column": "date_created",
+              "value": "={{ $('cr_task_merge').item.json.date_created }}"
+            },
+            {
+              "column": "date_updated",
+              "value": "={{ $('cr_task_merge').item.json.date_updated }}"
+            },
+            {
+              "column": "phu_trach",
+              "value": "={{ $('cr_task_merge').item.json.phu_trach }}"
+            },
+            {
+              "column": "tags",
+              "value": "={{ $('cr_task_merge').item.json.tags }}"
+            },
+            {
+              "column": "DKPV",
+              "value": "={{ $('cr_task_merge').item.json.DKPV }}"
+            },
+            {
+              "column": "PVTC",
+              "value": "={{ $('cr_task_merge').item.json.PVTC }}"
+            },
+            {
+              "column": "folder_name",
+              "value": "={{ $('cr_task_merge').item.json.Folder }}"
+            },
+            {
+              "column": "list_name",
+              "value": "={{ $('cr_task_merge').item.json.list }}"
+            },
+            {
+              "column": "vfs",
+              "value": "={{ (() => {\n  const raw = $('cr_task_merge').item.json.vfs?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+            },
+            {
+              "column": "planbay",
+              "value": "={{ (() => {\n  const raw = $('cr_task_merge').item.json.planbay?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+            },
+            {
+              "column": "ngaybay",
+              "value": "={{ (() => {\n  const raw = $('cr_task_merge').item.json.ngaybay?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+            },
+            {
+              "column": "onedrive_link",
+              "value": "={{ $('cr_task_merge').item.json.onedrive_link ? `'${$('cr_task_merge').item.json.onedrive_link}'` : 'NULL' }}"
+            },
+            {
+              "column": "youtube_link",
+              "value": "={{ $('cr_task_merge').item.json.youtube_link !== undefined ? `'${$('cr_task_merge').item.json.youtube_link}'` : 'NULL' }}\n"
+            },
+            {
+              "column": "name_khong_dau",
+              "value": "={{ $json.name_khong_dau }}"
+            }
+          ]
+        },
+        "options": {
+          "detailedOutput": false
+        }
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        2688,
+        -3312
+      ],
+      "id": "f5fb6476-1e22-4473-94e9-9d3563253dfb",
+      "name": "Cập nhật database",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "975005174",
+        "text": "=#full_update Bắt đầu cập nhật database  {{ $json.timestamp }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        -2896
+      ],
+      "id": "cc065d37-8329-4ecc-9338-9b8db9dab3ff",
+      "name": "Telegram",
+      "webhookId": "c8b4aaed-78b5-434a-aa7b-3774080ae036",
+      "credentials": {
+        "telegramApi": {
+          "id": "DO15v7qIspwdVxDw",
+          "name": "Telegram wf sys"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -1520
+      ],
+      "id": "954b7b30-8187-4272-a49f-b3b1b18f98f1",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "975005174",
+        "text": "=#complete_refresh\n{{ `Cập nhật hoàn thành lúc ${new Date().toLocaleString()}` }}\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4416,
+        -2976
+      ],
+      "id": "1f6c67c7-fa8d-4ba0-b2fc-87b7141ed345",
+      "name": "all_update_Telegram",
+      "webhookId": "790de492-a164-49d6-9b8f-0050d9ce604c",
+      "credentials": {
+        "telegramApi": {
+          "id": "DO15v7qIspwdVxDw",
+          "name": "Telegram wf sys"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c77d60a8-6666-4877-9245-456dbeddaa51",
+              "leftValue": "={{ $json.event }}",
+              "rightValue": "taskUpdated",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        -3456
+      ],
+      "id": "c194c008-09bf-48be-9e45-1f186a321c65",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "975005174",
+        "text": "={{ $json.message }} #task_updated",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3136,
+        -3424
+      ],
+      "id": "53f06f7e-f121-4afd-b55b-def4d5662a8f",
+      "name": "task_update_telemsg",
+      "webhookId": "e915dc15-dd12-490e-b695-2f40f0b1c349",
+      "credentials": {
+        "telegramApi": {
+          "id": "DO15v7qIspwdVxDw",
+          "name": "Telegram wf sys"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('task_start').first().json || {};\nconst historyItems = input.history_items || [];\nconst taskId = input.task_id || 'Không xác định';\n\nconst task = $('cr_task_merge').first().json || {};\n\n// Hàm làm sạch\nconst clean = val => typeof val === 'string' ? val.trim() || '—' : (val ?? '—');\n\n// 🔄 Các thay đổi\nconst changes = historyItems.map(h => {\n  const field = h.custom_field?.name || h.field || 'Trường không xác định';\n  const user = h.user?.username || 'Không rõ';\n\n  const formatVal = val => {\n    if (val === null || val === undefined) return '—';\n    if (Array.isArray(val)) return val.join(', ');\n    return val.toString();\n  };\n\n  const before = formatVal(h.before);\n  const after = formatVal(h.after);\n\n  return `📝 Trường \"${field}\" được cập nhật bởi ${user}\\n• `;\n}).join('\\n\\n') || '— Không có thay đổi —';\n\n\n// 🧾 Task info\nconst taskInfo = `\n🆔 ID: ${clean(task.id)}\n📌 Tên: ${clean(task.name)}\n🔗 Link: ${clean(task.url)}\n📊 Trạng thái: ${clean(task.status)}\n\n`;\n\n// Final message\nconst message = `\n🔄 Thông báo cập nhật Task\n\n🔧 Các thay đổi:\n${changes}\n\n📦 Thông tin chi tiết:\n${taskInfo.trim()}\n\n🕒 Cập nhật lúc: ${new Date().toLocaleString()}\n`;\n\nreturn [{\n  json: {\n    message: message.trim()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        -3520
+      ],
+      "id": "dc5136e9-0f48-4bb3-ab61-c77e145565d9",
+      "name": "beautify"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9018351620",
+        "events": [
+          "taskCreated",
+          "taskUpdated"
+        ],
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.clickUpTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -3456
+      ],
+      "id": "32d1cdd2-0dbe-46fb-b6e2-86ee15bb6187",
+      "name": "task_start",
+      "webhookId": "2a07311b-2643-47f8-bbf1-133b70489bb0",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "z7JZpz95fpg9zKM6",
+          "name": "ClickUp account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Cập nhật DB\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/sticky-notes/)",
+        "height": 520,
+        "width": 3380
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        -3664
+      ],
+      "id": "fd8bca90-8237-4a36-9e9b-1a4f9d95a3bc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "##Update toàn bộ\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/sticky-notes/)",
+        "height": 520,
+        "width": 3284,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -3056
+      ],
+      "id": "6aad62d8-4177-4569-9f6e-507cd1c30db6",
+      "name": "Sticky Note1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Bắt lỗi \n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/sticky-notes/)",
+        "height": 280,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -1632
+      ],
+      "id": "662dac37-db07-4b85-9801-19388afbbc58",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\n// Hàm loại bỏ dấu tiếng Việt\nfunction removeVietnameseTones(str) {\n  return str.normalize(\"NFD\")\n            .replace(/[\\u0300-\\u036f]/g, \"\")\n            .replace(/đ/g, \"d\")\n            .replace(/Đ/g, \"D\");\n}\n\n// Xử lý từng item\nconst output = inputItems.map(item => {\n  const name = item.json.name || '';\n  const name_khong_dau = removeVietnameseTones(name);\n\n  return {\n    json: {\n      ...item.json,\n      name_khong_dau\n    }\n  };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        -3088
+      ],
+      "id": "605e9263-5ad3-46d2-a206-11aab1202b13",
+      "name": "bo dau"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\n// Hàm loại bỏ dấu tiếng Việt\nfunction removeVietnameseTones(str) {\n  return str.normalize(\"NFD\")\n            .replace(/[\\u0300-\\u036f]/g, \"\")\n            .replace(/đ/g, \"d\")\n            .replace(/Đ/g, \"D\");\n}\n\n// Xử lý từng item\nconst output = inputItems.map(item => {\n  const name = item.json.name || '';\n  const name_khong_dau = removeVietnameseTones(name);\n\n  return {\n    json: {\n      ...item.json,\n      name_khong_dau\n    }\n  };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        -3456
+      ],
+      "id": "2a69e999-cd41-4df2-8a3a-d70885eebb9e",
+      "name": "bo dau update task"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Có lỗi xảy ra \nWF: {{ $json.workflow.name }}\nWorkflow: \"8422\",\nUrl: {{ $json.execution.url }}\nName: {{ $json.execution.error.name }}\ntype: {{ $json.execution.error.node.type }}\nlast node exec: {{ $json.execution.lastNodeExecuted }}\n\nCHi tiết lỗi:\n\nMessage: {{ $json.execution.error.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -1616
+      ],
+      "id": "a382f167-375b-49b4-bfb0-cd8d6a6adf1b",
+      "name": "Discord sys info error",
+      "webhookId": "7dc614b6-1c58-49d4-bc30-b5d6a223f842",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Bắt đầu cập nhật database  {{ $json.timestamp }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -3088
+      ],
+      "id": "409993ea-aabb-4a4a-8ff0-490ba3fb9b7a",
+      "name": "Discord sys info error1",
+      "webhookId": "7dc614b6-1c58-49d4-bc30-b5d6a223f842",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ `Cập nhật hoàn thành lúc ${new Date().toLocaleString()}` }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        4416,
+        -2784
+      ],
+      "id": "34c9e18a-8ae4-443a-bf97-b0f3233501c1",
+      "name": "Discord sys info error2",
+      "webhookId": "7dc614b6-1c58-49d4-bc30-b5d6a223f842",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Có update như sau\n",
+        "options": {},
+        "embeds": {
+          "values": [
+            {
+              "description": "={{ $json.message }}",
+              "color": "#8C6262",
+              "title": "Update:"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        -3616
+      ],
+      "id": "afd314e0-52c8-41ce-bd09-4b83120740de",
+      "name": "Discord sys info update",
+      "webhookId": "7dc614b6-1c58-49d4-bc30-b5d6a223f842",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3536,
+        -3088
+      ],
+      "id": "356dcfc0-3092-4c8b-ad68-c386e71d61e9",
+      "name": "Convert to File",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "comment",
+        "operation": "getAll",
+        "commentsOn": "task",
+        "id": "={{ $json.task.id }}",
+        "limit": "={{ 50 }}"
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        -2816
+      ],
+      "id": "450324e2-8b1f-4858-abb4-dbaaa4e369cb",
+      "name": "lay comment1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "clickUpApi": {
+          "id": "6eo4VYxudLK5NTb6",
+          "name": "ClickUp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "clickup",
+          "mode": "list",
+          "cachedResultName": "clickup"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tasks",
+          "mode": "list",
+          "cachedResultName": "tasks"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "id",
+        "valueToMatchOn": "={{ $('cr_task_merge').item.json.id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "name",
+              "value": "={{ $('cr_task_merge').item.json.name }}"
+            },
+            {
+              "column": "url",
+              "value": "={{ $('cr_task_merge').item.json.url }}"
+            },
+            {
+              "column": "description",
+              "value": "={{ $('cr_task_merge').item.json.description }}"
+            },
+            {
+              "column": "status",
+              "value": "={{ $('cr_task_merge').item.json.status }}"
+            },
+            {
+              "column": "date_created",
+              "value": "={{ $('cr_task_merge').item.json.date_created ?? null }}"
+            },
+            {
+              "column": "date_updated",
+              "value": "={{ $('cr_task_merge').item.json.date_updated ?? null }}"
+            },
+            {
+              "column": "phu_trach",
+              "value": "={{ $('cr_task_merge').item.json.phu_trach ?? null }}"
+            },
+            {
+              "column": "tags",
+              "value": "={{ $('cr_task_merge').item.json.tags ?? null }}"
+            },
+            {
+              "column": "dkpv",
+              "value": "={{ $('cr_task_merge').item.json.DKPV ?? null }}"
+            },
+            {
+              "column": "pvtc",
+              "value": "={{ $('cr_task_merge').item.json.PVTC ?? null }}"
+            },
+            {
+              "column": "folder_name",
+              "value": "={{ $('cr_task_merge').item.json.Folder ?? null }}"
+            },
+            {
+              "column": "list_name",
+              "value": "={{ $('cr_task_merge').item.json.list ?? null }}"
+            },
+            {
+              "column": "vfs",
+              "value": "={{ (() => { const raw = $('cr_task_merge').item.json.vfs; if (raw === undefined || raw === null) return null; const s = String(raw).trim(); return (!s || s === 'null') ? null : s; })() }}"
+            },
+            {
+              "column": "planbay",
+              "value": "={{ (() => { const raw = $('cr_task_merge').item.json.planbay; if (raw === undefined || raw === null) return null; const s = String(raw).trim(); return (!s || s === 'null') ? null : s; })() }}"
+            },
+            {
+              "column": "ngaybay",
+              "value": "={{ (() => { const raw = $('cr_task_merge').item.json.ngaybay; if (raw === undefined || raw === null) return null; const s = String(raw).trim(); return (!s || s === 'null') ? null : s; })() }}"
+            },
+            {
+              "column": "onedrive_link",
+              "value": "={{ $('cr_task_merge').item.json.onedrive_link ?? null }}"
+            },
+            {
+              "column": "youtube_link",
+              "value": "={{ $('cr_task_merge').item.json.youtube_link ?? null }}"
+            },
+            {
+              "column": "name_khong_dau",
+              "value": "={{ $json.name_khong_dau ?? null }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        -3600
+      ],
+      "id": "12824a9b-a35a-4500-ac39-8e804b12dae3",
+      "name": "Cập nhật database (PostgreSQL)",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "975005174",
+        "text": "=Có lỗi xảy ra \nWF: {{ $json.workflow.name }}\nWorkflow: \"8422\",\nUrl: {{ $json.execution.url }}\nName: {{ $json.execution.error.name }}\ntype: {{ $json.execution.error.node.type }}\nlast node exec: {{ $json.execution.lastNodeExecuted }}\n\nCHi tiết lỗi:\n\nMessage: {{ $json.execution.error.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        -1424
+      ],
+      "id": "d31268d9-e829-4aef-8ed8-4523cc66b08a",
+      "name": "all_update_Telegram1",
+      "webhookId": "790de492-a164-49d6-9b8f-0050d9ce604c",
+      "credentials": {
+        "telegramApi": {
+          "id": "DO15v7qIspwdVxDw",
+          "name": "Telegram wf sys"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": "clickup",
+        "table": {
+          "__rl": true,
+          "value": "tasks",
+          "mode": "list",
+          "cachedResultName": "tasks"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "id",
+        "valueToMatchOn": "={{ $json.id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "name",
+              "value": "={{ $json.name }}"
+            },
+            {
+              "column": "url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "column": "description",
+              "value": "={{ $json.description }}"
+            },
+            {
+              "column": "status",
+              "value": "={{ $json.status }}"
+            },
+            {
+              "column": "status_color",
+              "value": "={{ $json.sttcolor }}"
+            },
+            {
+              "column": "date_created",
+              "value": "={{ $json.date_created ?? null }}"
+            },
+            {
+              "column": "date_updated",
+              "value": "={{ $json.date_updated ?? null }}"
+            },
+            {
+              "column": "phu_trach",
+              "value": "={{ $json.phu_trach ?? null }}"
+            },
+            {
+              "column": "tags",
+              "value": "={{ $json.tags ?? null }}"
+            },
+            {
+              "column": "dkpv",
+              "value": "={{ $json.DKPV ?? null }}"
+            },
+            {
+              "column": "pvtc",
+              "value": "={{ $json.PVTC ?? null }}"
+            },
+            {
+              "column": "folder_name",
+              "value": "={{ $json.Folder ?? null }}"
+            },
+            {
+              "column": "list_name",
+              "value": "={{ $json.list ?? null }}"
+            },
+            {
+              "column": "planbay",
+              "value": "={{ (() => { const raw = $('Merge').item.json.planbay; if (raw === undefined || raw === null) return null; const s = String(raw).trim(); return (!s || s === 'null') ? null : s; })() }}"
+            },
+            {
+              "column": "ngaybay",
+              "value": "={{ (() => { const raw = $('Merge').item.json.ngaybay; if (raw === undefined || raw === null) return null; const s = String(raw).trim(); return (!s || s === 'null') ? null : s; })() }}"
+            },
+            {
+              "column": "youtube_link",
+              "value": "={{ Array.isArray($json.youtube_link) ? $json.youtube_link.join(', ') : ($json.youtube_link ?? null) }}"
+            },
+            {
+              "column": "onedrive_link",
+              "value": "={{ Array.isArray($json.onedrive_link) ? $json.onedrive_link.join(', ') : ($json.onedrive_link ?? null) }}"
+            },
+            {
+              "column": "other_link",
+              "value": "={{ Array.isArray($json.other_link) ? $json.other_link.join(', ') : ($json.other_link ?? null) }}"
+            },
+            {
+              "column": "vfs",
+              "value": "={{ (() => { const raw = $('Merge').item.json.vfs; if (raw === undefined || raw === null) return null; const s = String(raw).trim(); return (!s || s === 'null') ? null : s; })() }}"
+            },
+            {
+              "column": "name_khong_dau",
+              "value": "={{ $json.name_khong_dau ?? null }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        -2880
+      ],
+      "id": "8e2318b1-5b1a-4521-b122-535be9f3a9f0",
+      "name": "Cập nhật database1 (PostgreSQL)",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'clickup' AND table_name = 'tasks') AS tasks_exists,\n  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'clickup' AND table_name = 'db_info') AS db_info_exists,\n  (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'clickup' AND table_name = 'db_config') AS db_config_exists;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -2032
+      ],
+      "id": "7a976d51-c6eb-45af-8a57-e5182008bb46",
+      "name": "Check db1",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const checkResult = $json;\nconst processedTasks = $('Check db1').item.json.processedTasks;\nreturn {\n  json: {\n    tasksTableExists: (checkResult.tasks_exists || 0) > 0,\n    dbInfoTableExists: (checkResult.db_info_exists || 0) > 0,\n    dbConfigTableExists: (checkResult.db_config_exists || 0) > 0,\n    processedTasks\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -2032
+      ],
+      "id": "80fe4b89-a098-40d8-8296-941612c2dbe6",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-dbconf",
+              "leftValue": "={{ $json.dbConfigTableExists }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -1840
+      ],
+      "id": "1e78f139-fc90-40f8-894b-eb2c448bb8d5",
+      "name": "kt_db_config1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-dbinfo",
+              "leftValue": "={{ $json.dbInfoTableExists }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -2032
+      ],
+      "id": "e176ee56-4885-44da-aae7-dd10a32ee762",
+      "name": "kt_db_info1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-tasks",
+              "leftValue": "={{ $json.tasksTableExists }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -2224
+      ],
+      "id": "5d8c6986-22b7-4af0-a00f-6f4999b09e7b",
+      "name": "kt_task_table1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE SCHEMA IF NOT EXISTS clickup;\n\nCREATE TABLE IF NOT EXISTS clickup.db_config (\n  id BIGSERIAL PRIMARY KEY,\n  config_key VARCHAR(100) UNIQUE,\n  config_value TEXT,\n  description TEXT,\n  date_created TIMESTAMPTZ DEFAULT now(),\n  date_modified TIMESTAMPTZ DEFAULT now()\n);\n\n-- trigger tự động cập nhật date_modified khi UPDATE\nCREATE OR REPLACE FUNCTION clickup_set_updated_at() RETURNS trigger AS $$\nBEGIN NEW.date_modified = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;\nDROP TRIGGER IF EXISTS trg_db_config_updated ON clickup.db_config;\nCREATE TRIGGER trg_db_config_updated\nBEFORE UPDATE ON clickup.db_config\nFOR EACH ROW EXECUTE FUNCTION clickup_set_updated_at();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -1856
+      ],
+      "id": "5f4f4dcf-ee14-442c-8029-72955729bfe6",
+      "name": "tao_db_config1",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO clickup.db_config (config_key, config_value, description)\nVALUES\n  ('telegram_tasks_per_page', '5', 'Số lượng tasks hiển thị mỗi trang trong Telegram'),\n  ('telegram_display_fields', 'name,status,due_date,url', 'Các trường task hiển thị trong Telegram'),\n  ('web_tasks_per_page', '10', 'Số lượng tasks hiển thị mỗi trang trên web dashboard'),\n  ('get_list_comment', '10', 'id list lấy comment tránh làm tắc workflow')\nON CONFLICT (config_key)\nDO UPDATE SET\n  config_value = EXCLUDED.config_value,\n  description  = EXCLUDED.description,\n  date_modified = now();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -1856
+      ],
+      "id": "d3d78210-61a3-4059-97fe-ce2bbad5031b",
+      "name": "cauhinh1",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS clickup.db_info (\n  id BIGSERIAL PRIMARY KEY,\n  last_update TIMESTAMPTZ DEFAULT now(),\n  update_count INT DEFAULT 0,\n  items_fetched INT DEFAULT 0,\n  total_tasks INT DEFAULT 0,\n  total_lists INT DEFAULT 0,\n  auto_trigger_count INT DEFAULT 0,\n  manual_trigger_count INT DEFAULT 0,\n  notes TEXT\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -2048
+      ],
+      "id": "66d89251-f467-40cb-989c-e5aaed2c0dc3",
+      "name": "tao_task_table2",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS clickup.tasks (\n  id TEXT PRIMARY KEY,\n  name TEXT NOT NULL,\n  url TEXT,\n  description TEXT,\n  status_color VARCHAR(20),\n  date_created TIMESTAMPTZ,\n  date_updated TIMESTAMPTZ,\n  phu_trach TEXT,\n  tags TEXT,\n  \"dkpv\" TEXT,\n  \"pvtc\" TEXT,\n  folder_name VARCHAR(255),\n  list_name VARCHAR(255),\n  vfs TIMESTAMPTZ,\n  planbay TIMESTAMPTZ,\n  ngaybay TIMESTAMPTZ,\n  youtube_link TEXT,\n  onedrive_link TEXT,\n  sync_time TIMESTAMPTZ DEFAULT now(),\n  name_khong_dau TEXT,\n  status TEXT,\n  color TEXT,\n  other_link TEXT\n);\n-- FTS index tương đương FULLTEXT MySQL\nCREATE INDEX IF NOT EXISTS idx_tasks_name_khong_dau_fts\n  ON clickup.tasks USING GIN (to_tsvector('simple', COALESCE(name_khong_dau, '')));\n-- (tùy chọn) index phục vụ ORDER BY date_updated\nCREATE INDEX IF NOT EXISTS idx_tasks_date_updated ON clickup.tasks (date_updated DESC);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -2240
+      ],
+      "id": "41f4efde-643a-4af0-9517-a994d9371531",
+      "name": "tao_task_table3",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 100,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1968,
+        -2912
+      ],
+      "id": "973a9854-0241-4116-87a5-34551920b275",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2176,
+        -2816
+      ],
+      "id": "036d3c92-c877-447f-a745-37f32407034f",
+      "name": "Wait",
+      "webhookId": "de0970be-c440-4e82-9f13-279e9fa7a082"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\n// Hàm loại bỏ dấu tiếng Việt\nfunction removeVietnameseTones(str) {\n  return str.normalize(\"NFD\")\n            .replace(/[\\u0300-\\u036f]/g, \"\")\n            .replace(/đ/g, \"d\")\n            .replace(/Đ/g, \"D\");\n}\n\n// Xử lý từng item\nconst output = inputItems.map(item => {\n  const name = item.json.name || '';\n  const name_khong_dau = removeVietnameseTones(name);\n\n  return {\n    json: {\n      ...item.json,\n      name_khong_dau\n    }\n  };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3776,
+        -2896
+      ],
+      "id": "52da5eea-7e73-49e7-86de-968ad8577772",
+      "name": "bo dau1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS unaccent;\n\n-- Thêm cột nếu chưa có (trong trường hợp môi trường khác thiếu)\nALTER TABLE clickup.tasks\n  ADD COLUMN IF NOT EXISTS name_khong_dau text;\n\n-- Cập nhật giá trị hiện có (khử dấu + thường hoá)\nUPDATE clickup.tasks\nSET name_khong_dau = regexp_replace(\n                       lower(unaccent(COALESCE(name,''))),\n                       '\\s+', ' ', 'g'\n                     )\nWHERE name_khong_dau IS NULL\n   OR name_khong_dau = ''\n   OR name_khong_dau <> regexp_replace(\n                           lower(unaccent(COALESCE(name,''))),\n                           '\\s+', ' ', 'g'\n                         );\n\t\t\t\t\t\t \n-- Thêm cột tsvector sinh tự động từ name_khong_dau\nALTER TABLE clickup.tasks\n  ADD COLUMN IF NOT EXISTS vec tsvector\n  GENERATED ALWAYS AS (\n    to_tsvector('simple', COALESCE(name_khong_dau,''))\n  ) STORED;\n-- Thêm cột tsvector sinh tự động từ name_khong_dau\nALTER TABLE clickup.tasks\n  ADD COLUMN IF NOT EXISTS vec tsvector\n  GENERATED ALWAYS AS (\n    to_tsvector('simple', COALESCE(name_khong_dau,''))\n  ) STORED;\n\n-- GIN index trên cột vec (nhanh cho FTS)\nCREATE INDEX IF NOT EXISTS tasks_vec_gin_idx\n  ON clickup.tasks\n  USING gin (vec);\n\n-- Trigram index cho ILIKE trên name_khong_dau (bạn đã có)\nCREATE EXTENSION IF NOT EXISTS pg_trgm; -- phòng khi môi trường khác thiếu\nCREATE INDEX IF NOT EXISTS tasks_name_trgm_idx\n  ON clickup.tasks\n  USING gin (name_khong_dau gin_trgm_ops);  ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4176,
+        -2640
+      ],
+      "id": "48bbff1d-0e22-49d4-bd2a-a557fcd29e40",
+      "name": "bo sung name khong dau",
+      "credentials": {
+        "postgres": {
+          "id": "SBV2AKSec2HXSW1J",
+          "name": "Postgres telegram db"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "lay task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "bo dau",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "bo dau1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check db": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tao_db_config": {
+      "main": [
+        [
+          {
+            "node": "cauhinh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kt_db_config": {
+      "main": [
+        [
+          {
+            "node": "tao_db_config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kt_db_info": {
+      "main": [
+        [
+          {
+            "node": "tao_task_table1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "kt_task_table": {
+      "main": [
+        [
+          {
+            "node": "tao_task_table",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "kt_db_config",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "kt_task_table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "kt_db_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gộp dữ liệu": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loc tt task": {
+      "main": [
+        [
+          {
+            "node": "Gộp dữ liệu",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loc link": {
+      "main": [
+        [
+          {
+            "node": "Gộp dữ liệu",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "task id comment": {
+      "main": [
+        [
+          {
+            "node": "loc link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lay task": {
+      "main": [
+        [
+          {
+            "node": "loc tt task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ClickUp Tasks": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cập nhật database1": {
+      "main": [
+        []
+      ]
+    },
+    "Hen Gio": {
+      "main": [
+        [
+          {
+            "node": "Check db",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord sys info error1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check db1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lay task1": {
+      "main": [
+        [
+          {
+            "node": "cr_task_filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter2": {
+      "main": [
+        [
+          {
+            "node": "Edit comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "task id comment1": {
+      "main": [
+        [
+          {
+            "node": "loc link1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loc link1": {
+      "main": [
+        [
+          {
+            "node": "cr_task_merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit comment": {
+      "main": [
+        [
+          {
+            "node": "cr_task_comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cr_task_comment": {
+      "main": [
+        [
+          {
+            "node": "task id comment1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cr_task_filter": {
+      "main": [
+        [
+          {
+            "node": "Filter2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "cr_task_merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cr_task_merge": {
+      "main": [
+        [
+          {
+            "node": "bo dau update task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Get ClickUp Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Discord sys info error",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "all_update_Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "lay task1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Cập nhật database": {
+      "main": [
+        []
+      ]
+    },
+    "beautify": {
+      "main": [
+        [
+          {
+            "node": "task_update_telemsg",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord sys info update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "task_start": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bo dau": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật database1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bo dau update task": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật database",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cập nhật database (PostgreSQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord sys info error1": {
+      "main": [
+        []
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        []
+      ]
+    },
+    "lay comment1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cập nhật database (PostgreSQL)": {
+      "main": [
+        [
+          {
+            "node": "beautify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cập nhật database1 (PostgreSQL)": {
+      "main": [
+        [
+          {
+            "node": "bo sung name khong dau",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord sys info error2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "all_update_Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check db1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "kt_db_config1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "kt_task_table1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "kt_db_info1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kt_db_config1": {
+      "main": [
+        [
+          {
+            "node": "tao_db_config1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kt_db_info1": {
+      "main": [
+        [
+          {
+            "node": "tao_task_table2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "kt_task_table1": {
+      "main": [
+        [
+          {
+            "node": "tao_task_table3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tao_db_config1": {
+      "main": [
+        [
+          {
+            "node": "cauhinh1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "task id comment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "lay comment1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "bo dau1": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật database1 (PostgreSQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 3600
+  },
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "8450",
+            "url": "https://n8n.toididuhoc.net/workflow/HIMZETao8CmqRtzy/executions/8450",
+            "error": {
+              "level": "warning",
+              "tags": {},
+              "context": {
+                "itemIndex": 0
+              },
+              "functionality": "regular",
+              "name": "NodeOperationError",
+              "timestamp": 1749091209883,
+              "node": {
+                "parameters": {
+                  "resource": "database",
+                  "operation": "upsert",
+                  "table": {
+                    "__rl": true,
+                    "value": "tasks",
+                    "mode": "list",
+                    "cachedResultName": "tasks"
+                  },
+                  "dataMode": "defineBelow",
+                  "columnToMatchOn": "id",
+                  "valueToMatchOn": "={{ $('cr_task_merge').item.json.id }}",
+                  "valuesToSend": {
+                    "values": [
+                      {
+                        "column": "name",
+                        "value": "={{ $('cr_task_merge').item.json.name }}"
+                      },
+                      {
+                        "column": "url",
+                        "value": "={{ $('cr_task_merge').item.json.url }}"
+                      },
+                      {
+                        "column": "description",
+                        "value": "={{ $('cr_task_merge').item.json.description }}"
+                      },
+                      {
+                        "column": "status",
+                        "value": "={{ $('cr_task_merge').item.json.status }}"
+                      },
+                      {
+                        "column": "date_created",
+                        "value": "={{ $('cr_task_merge').item.json.date_created }}"
+                      },
+                      {
+                        "column": "date_updated",
+                        "value": "={{ $('cr_task_merge').item.json.date_updated }}"
+                      },
+                      {
+                        "column": "phu_trach",
+                        "value": "={{ $('cr_task_merge').item.json.phu_trach }}"
+                      },
+                      {
+                        "column": "tags",
+                        "value": "={{ $('cr_task_merge').item.json.tags }}"
+                      },
+                      {
+                        "column": "DKPV",
+                        "value": "={{ $('cr_task_merge').item.json.DKPV }}"
+                      },
+                      {
+                        "column": "PVTC",
+                        "value": "={{ $('cr_task_merge').item.json.PVTC }}"
+                      },
+                      {
+                        "column": "Folder",
+                        "value": "={{ $('cr_task_merge').item.json.Folder }}"
+                      },
+                      {
+                        "column": "list",
+                        "value": "={{ $('cr_task_merge').item.json.list }}"
+                      },
+                      {
+                        "column": "vfs",
+                        "value": "={{ (() => {\n  const raw = $('cr_task_merge').item.json.vfs?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+                      },
+                      {
+                        "column": "planbay",
+                        "value": "={{ (() => {\n  const raw = $('cr_task_merge').item.json.planbay?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+                      },
+                      {
+                        "column": "ngaybay",
+                        "value": "={{ (() => {\n  const raw = $('cr_task_merge').item.json.ngaybay?.toString().trim();\n  return (!raw || raw === 'null') ? null : raw;\n})() }}"
+                      },
+                      {
+                        "column": "onedrive_link",
+                        "value": "={{ $('cr_task_merge').item.json.onedrive_link ? `'${$('cr_task_merge').item.json.onedrive_link}'` : 'NULL' }}"
+                      },
+                      {
+                        "column": "youtube_link",
+                        "value": "={{ $('cr_task_merge').item.json.youtube_link !== undefined ? `'${$('cr_task_merge').item.json.youtube_link}'` : 'NULL' }}\n"
+                      },
+                      {
+                        "column": "name_khong_dau",
+                        "value": "={{ $json.name_khong_dau }}"
+                      }
+                    ]
+                  },
+                  "options": {
+                    "detailedOutput": false
+                  }
+                },
+                "type": "n8n-nodes-base.mySql",
+                "typeVersion": 2.4,
+                "position": [
+                  4080,
+                  -3300
+                ],
+                "id": "f5fb6476-1e22-4473-94e9-9d3563253dfb",
+                "name": "Cập nhật database",
+                "credentials": {
+                  "mySql": {
+                    "id": "1U9mW3tWwg9npaLn",
+                    "name": "MySQL account"
+                  }
+                }
+              },
+              "messages": [],
+              "description": "sql: INSERT INTO `tasks`(`name`, `url`, `description`, `status`, `date_created`, `date_updated`, `phu_trach`, `tags`, `DKPV`, `PVTC`, `Folder`, `list`, `vfs`, `planbay`, `ngaybay`, `onedrive_link`, `youtube_link`, `name_khong_dau`, `id`) VALUES('EL Phạm Thị Huyền Trang ZFA Nurnberg','https://app.clickup.com/t/86etq4ev2','Không xoá - không di chuyển','chưa xử lý','2025-06-04 09:45:21\\n','2025-06-05 02:40:02\\n','Phạm Thùy Trang\\n','el\\n','\\n','\\n','Xử Lý Hồ Sơ','2025',NULL,NULL,NULL,'\\'\\'','\\'\\'\\n','EL Pham Thi Huyen Trang ZFA Nurnberg','86etq4ev2') ON DUPLICATE KEY UPDATE `name` = 'EL Phạm Thị Huyền Trang ZFA Nurnberg', `url` = 'https://app.clickup.com/t/86etq4ev2', `description` = 'Không xoá - không di chuyển', `status` = 'chưa xử lý', `date_created` = '2025-06-04 09:45:21\\n', `date_updated` = '2025-06-05 02:40:02\\n', `phu_trach` = 'Phạm Thùy Trang\\n', `tags` = 'el\\n', `DKPV` = '\\n', `PVTC` = '\\n', `Folder` = 'Xử Lý Hồ Sơ', `list` = '2025', `vfs` = NULL, `planbay` = NULL, `ngaybay` = NULL, `onedrive_link` = '\\'\\'', `youtube_link` = '\\'\\'\\n', `name_khong_dau` = 'EL Pham Thi Huyen Trang ZFA Nurnberg', code: ER_BAD_FIELD_ERROR",
+              "message": "Unknown column 'status' in 'field list'",
+              "stack": "NodeOperationError: Unknown column 'status' in 'field list'\n    at ExecuteContext.parseMySqlError (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_12b981d6b49d407a163f4d5244314033/node_modules/n8n-nodes-base/nodes/MySql/v2/helpers/utils.ts:114:9)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_12b981d6b49d407a163f4d5244314033/node_modules/n8n-nodes-base/nodes/MySql/v2/helpers/utils.ts:263:35\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_12b981d6b49d407a163f4d5244314033/node_modules/n8n-nodes-base/nodes/MySql/v2/actions/database/upsert.operation.ts:202:15)\n    at ExecuteContext.router (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_12b981d6b49d407a163f4d5244314033/node_modules/n8n-nodes-base/nodes/MySql/v2/actions/router.ts:35:18)\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_12b981d6b49d407a163f4d5244314033/node_modules/n8n-nodes-base/nodes/MySql/v2/MySqlV2.node.ts:26:10)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_openai@4.78.1_encoding@0.1.13_zod@3.24.1_/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1185:9)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_openai@4.78.1_encoding@0.1.13_zod@3.24.1_/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1534:27\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_openai@4.78.1_encoding@0.1.13_zod@3.24.1_/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2098:11"
+            },
+            "lastNodeExecuted": "Cập nhật database",
+            "mode": "webhook"
+          },
+          "workflow": {
+            "id": "HIMZETao8CmqRtzy",
+            "name": "Telebot sql"
+          }
+        }
+      }
+    ],
+    "task_start": [
+      {
+        "json": {
+          "event": "taskUpdated",
+          "history_items": [
+            {
+              "id": "4785714240072693303",
+              "type": 1,
+              "date": "1761046936889",
+              "field": "comment",
+              "parent_id": "901812218309",
+              "data": {},
+              "source": null,
+              "user": {
+                "id": 74528105,
+                "username": "Hai Anh Tran",
+                "email": "seiferjevano1009@gmail.com",
+                "color": "",
+                "initials": "HT",
+                "profilePicture": null,
+                "role": 1,
+                "role_subtype": 0
+              },
+              "before": null,
+              "after": "90180163291744",
+              "comment": {
+                "id": "90180163291744",
+                "date": "1761046936889",
+                "parent": "86ev5n37x",
+                "type": 1,
+                "comment": [
+                  {
+                    "text": "test",
+                    "attributes": {}
+                  },
+                  {
+                    "text": "\n",
+                    "attributes": {
+                      "block-id": "block-a73fe948-0b57-4cf2-91be-ad8aec241191"
+                    }
+                  }
+                ],
+                "text_content": "test\n",
+                "x": null,
+                "y": null,
+                "image_y": null,
+                "image_x": null,
+                "page": null,
+                "comment_number": null,
+                "comment_time": null,
+                "referenced_content": "",
+                "_version_vector": {
+                  "workspace_id": 9018351620,
+                  "object_type": "comment",
+                  "object_id": "90180163291744",
+                  "vector": [
+                    {
+                      "master_id": 34,
+                      "version": 1761046936921000,
+                      "deleted": false
+                    }
+                  ]
+                },
+                "comment_type": null,
+                "date_updated": null,
+                "root_parent_id": "86ev5n37x",
+                "root_parent_type": 1,
+                "extra": null,
+                "page_id": null,
+                "page_name": null,
+                "view_id": null,
+                "view_name": null,
+                "team": null,
+                "view_parent_id": null,
+                "view_parent_type": null,
+                "view_parent_avatar_source": null,
+                "view_parent_avatar_value": null,
+                "view_parent_avatar_key": null,
+                "view_parent_color": null,
+                "view_type": null,
+                "user": {
+                  "id": 74528105,
+                  "username": "Hai Anh Tran",
+                  "email": "seiferjevano1009@gmail.com",
+                  "color": "",
+                  "initials": "HT",
+                  "profilePicture": null
+                },
+                "new_thread_count": 0,
+                "new_mentioned_thread_count": 0,
+                "email_attachments": [],
+                "threaded_users": [],
+                "threaded_replies": 0,
+                "threaded_assignees": 0,
+                "threaded_assignees_members": [],
+                "threaded_unresolved_count": 0,
+                "thread_followers": [
+                  {
+                    "id": 74528105,
+                    "username": "Hai Anh Tran",
+                    "email": "seiferjevano1009@gmail.com",
+                    "color": "",
+                    "initials": "HT",
+                    "profilePicture": null
+                  }
+                ],
+                "group_thread_followers": [],
+                "reactions": [],
+                "emails": []
+              }
+            }
+          ],
+          "task_id": "86ev5n37x",
+          "team_id": "9018351620",
+          "webhook_id": "8b1d215f-db7a-433e-8a1c-b19a6c147e16"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

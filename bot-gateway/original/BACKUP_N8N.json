@@ -1,0 +1,560 @@
+{
+  "name": "BACKUP N8N",
+  "nodes": [
+    {
+      "parameters": {
+        "filters": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        -180
+      ],
+      "id": "7b5a8d2c-82a9-4600-a91e-98c1a265662c",
+      "name": "n8n",
+      "credentials": {
+        "n8nApi": {
+          "id": "NCZ9ouyNcdmmfJ41",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -220,
+        -180
+      ],
+      "id": "e94969ab-f5ae-425d-b478-83039b521481",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "name": "={{ `workflow_${new Date().toISOString().slice(5,7)}${new Date().toISOString().slice(8,10)}${new Date().getFullYear()}`\n }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1A_4cj-2R7RMOLNxEyY35OWiFzqj9pUAZ",
+          "mode": "list",
+          "cachedResultName": "Workflow",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1A_4cj-2R7RMOLNxEyY35OWiFzqj9pUAZ"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        -180
+      ],
+      "id": "04269c16-aa8a-4d50-bf2d-12d3ad7dad09",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vUTLym62eGhgLuUd",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -660,
+        -180
+      ],
+      "id": "33e262a8-9f2b-4339-bd97-3ec0bfc6db71",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -680,
+        540
+      ],
+      "id": "d2600bd6-d891-4a38-ae1e-3d9e235022a2",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "content": "WF Của anh Thắng",
+        "height": 720,
+        "width": 1100
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -340
+      ],
+      "id": "4cf484cd-b85b-4f41-abab-817f39d9408e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "WF RESTART",
+        "height": 360,
+        "width": 1100
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        400
+      ],
+      "id": "a8b139fe-600c-4598-a891-783f66ee697f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/tmp/credentials-{{ new Date().toISOString().slice(0, 10) }}.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        -320
+      ],
+      "id": "970b8db9-b05d-4d32-889b-cc4eb8feb726",
+      "name": "Read Files1"
+    },
+    {
+      "parameters": {
+        "command": "=n8n export:credentials --all --decrypted --output=/tmp/credentials-{{ new Date().toISOString().slice(0, 10) }}.json"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        -320
+      ],
+      "id": "752092b8-bd44-4ca5-b644-7692c7e9cf92",
+      "name": "Backup All Credentials1"
+    },
+    {
+      "parameters": {
+        "name": "={{ `credential_${new Date().toISOString().slice(5,7)}${new Date().toISOString().slice(8,10)}${new Date().getFullYear()}`\n }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1A_4cj-2R7RMOLNxEyY35OWiFzqj9pUAZ",
+          "mode": "list",
+          "cachedResultName": "Workflow",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1A_4cj-2R7RMOLNxEyY35OWiFzqj9pUAZ"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        -320
+      ],
+      "id": "6884827f-e952-49b0-99f5-ecd15c0d2d63",
+      "name": "Google Drive2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vUTLym62eGhgLuUd",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deactivate",
+        "workflowId": {
+          "__rl": true,
+          "value": "lW8RuV8prA2qowpC",
+          "mode": "list",
+          "cachedResultName": "Telebot main (#lW8RuV8prA2qowpC)"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        540
+      ],
+      "id": "b2beca19-6337-4b77-9221-607d06cb8db8",
+      "name": "n8n1",
+      "credentials": {
+        "n8nApi": {
+          "id": "NCZ9ouyNcdmmfJ41",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "activate",
+        "workflowId": {
+          "__rl": true,
+          "value": "lW8RuV8prA2qowpC",
+          "mode": "list",
+          "cachedResultName": "Telebot main (#lW8RuV8prA2qowpC)"
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        540
+      ],
+      "id": "abc1f40c-9310-45bc-9f80-c2e5ffa20907",
+      "name": "n8n2",
+      "credentials": {
+        "n8nApi": {
+          "id": "NCZ9ouyNcdmmfJ41",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Đã backup n8n credential ngày {{ new Date().toISOString().slice(0, 19) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -320
+      ],
+      "id": "8c7aaeb9-cf46-4e5f-8390-ca5978272144",
+      "name": "Discord",
+      "webhookId": "e9b50242-6ca6-4f0c-8d2b-474d068805dd",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Đã backup n8n wf ngày {{ new Date().toISOString().slice(0, 19) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -180
+      ],
+      "id": "7d623639-f498-4271-9c69-4f72683a35dc",
+      "name": "Discord1",
+      "webhookId": "e9b50242-6ca6-4f0c-8d2b-474d068805dd",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Đã restart n8n wf ngày {{ new Date().toISOString().slice(0, 19) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        180,
+        540
+      ],
+      "id": "b84aad83-3640-4313-a38a-a35e7b7104c2",
+      "name": "Discord2",
+      "webhookId": "e9b50242-6ca6-4f0c-8d2b-474d068805dd",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "mysqldump -u admin -phaianh89 clickup > /tmp/backup.sql\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -420,
+        60
+      ],
+      "id": "78b705a1-278b-4106-a4c7-903c5b8e3df8",
+      "name": "MySQL",
+      "credentials": {
+        "mySql": {
+          "id": "1U9mW3tWwg9npaLn",
+          "name": "MySQL account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "fileSelector": "/tmp/backup.sql",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        60
+      ],
+      "id": "a99fc63e-026a-49f6-942f-72ab85b5e737",
+      "name": "Read/Write Files from Disk",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "name": "={{ `workflow_${new Date().toISOString().slice(5,7)}${new Date().toISOString().slice(8,10)}${new Date().getFullYear()}`\n }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1A_4cj-2R7RMOLNxEyY35OWiFzqj9pUAZ",
+          "mode": "list",
+          "cachedResultName": "Workflow",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1A_4cj-2R7RMOLNxEyY35OWiFzqj9pUAZ"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        20,
+        60
+      ],
+      "id": "98811bc8-2e26-43f8-b630-8d67de0f3b00",
+      "name": "Google Drive1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vUTLym62eGhgLuUd",
+          "name": "Google Drive account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Đã backup n8n sql ngày {{ new Date().toISOString().slice(0, 19) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        240,
+        60
+      ],
+      "id": "abd836e1-4046-42b0-bc2a-d51c74c9a4a1",
+      "name": "Discord3",
+      "webhookId": "e9b50242-6ca6-4f0c-8d2b-474d068805dd",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "aUi9nktjeNcMdif9",
+          "name": "Discord Webhook account"
+        }
+      },
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "n8n": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "n8n",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Backup All Credentials1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Discord1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "n8n1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup All Credentials1": {
+      "main": [
+        [
+          {
+            "node": "Read Files1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Files1": {
+      "main": [
+        [
+          {
+            "node": "Google Drive2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive2": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n1": {
+      "main": [
+        [
+          {
+            "node": "n8n2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n2": {
+      "main": [
+        [
+          {
+            "node": "Discord2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Google Drive1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
