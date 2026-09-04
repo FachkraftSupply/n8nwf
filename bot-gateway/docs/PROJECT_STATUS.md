@@ -69,3 +69,14 @@ workflows/new_architecture/sub_workflows_modernized/Elite_Help_Bot_GPT.json) th�
   qua GitHub web UI thay vì dán vào chat.
 - Credential Postgres docker: `Postgres account` (id iNVsYeDUnMl6pq4M).
   Credential Supabase: `Supabase Postgres`.
+
+
+## LẦN SỬA MỚI NHẤT (sau lần cutover thử nghiệm)
+- Lỗi "chat_id is empty" ở node "Bỏ qua (không phải admin)": nguyên nhân là node Postgres
+  "Check admin" phía trước GHI ĐÈ toàn bộ $json bằng kết quả SQL (chỉ còn cột `role`), làm
+  mất chat_id gốc. ĐÃ SỬA: chatId giờ đọc từ `{{ $('GW-01 Envelope').first().json.chat_id }}`
+  thay vì `{{ $json.chat_id }}`. Đã rà toàn bộ workflow, không còn node nào khác mắc lỗi
+  tương tự (mọi node khác đều đi qua Code node trung gian giữ nguyên envelope).
+- Bài học chung: BẤT KỲ lúc nào thêm node Postgres/DB query vào giữa luồng, node theo SAU nó
+  không được đọc thẳng $json cho các field gốc (chat_id, user_id...) — phải tham chiếu ngược
+  về node Envelope hoặc Merge Auth bằng $('TênNode').first().json.field.
