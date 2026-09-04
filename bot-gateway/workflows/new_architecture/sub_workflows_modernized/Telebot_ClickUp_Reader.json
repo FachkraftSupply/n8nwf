@@ -1,0 +1,1058 @@
+{
+  "name": "Telebot ClickUp Reader",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3200,
+        400
+      ],
+      "id": "c96cdc6b-c494-4862-a2ad-562a778806a5",
+      "name": "sub workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway,\n// tinh route/command/params/taskId, dong thoi TAI TAO lai originalData.message /\n// originalData.callback_query giong shape Telegram cu, de cac node Code/Set\n// duoc tai su dung nguyen ven (Prepare Search, noresult, extract output...)\n// van hoat dong binh thuong qua $('Phan tich lenh').item.json.originalData....\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/taotask') return { route: 'taotask', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    if (rawText.startsWith('chitiet_')) {\n      route = 'chitiet'; taskId = rawText.replace('chitiet_', '').trim(); params = 'chitiet';\n    } else if (rawText.startsWith('view_file:')) {\n      route = 'view_file'; taskId = rawText.replace('view_file:', '').trim(); params = 'view_file';\n    } else {\n      route = 'unknown_command'; params = rawText;\n    }\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  // Tai tao legacy shape (.message / .callback_query) de code cu doc duoc\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: {\n        ...env,\n        message: legacyMessage,\n        callback_query: legacyCallback\n      }\n    }\n  };\n});\n"
+      },
+      "id": "3b536612-118e-4ff5-9894-778ed8601030",
+      "name": "Phân tích lệnh",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2960,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ef881c0c-883c-476f-9e82-e1b8971420e3",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b8a3c418-41af-4dbc-9651-b24393605554",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "task",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "task"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "727f70a7-1715-4e41-a521-1a05c37b1765",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "chitiet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "chitiet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2e8a1cc4-f027-4c64-b680-ba5325169260",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "view_file",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "view_file"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a3c50972-57dc-42be-83c1-c46b3e4ffb35",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "taotask",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "taotask"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "bbf7c18e-aa4e-4f1f-b443-ac0c091d2040",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -2688,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').item.json.chatId }}",
+        "text": "❓ Lệnh không hợp lệ. Gõ /help để xem danh sách lệnh.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "7045ab70-ea24-466f-9bf7-567b652c052e",
+      "name": "Reply Unknown Command",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2384,
+        976
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $json;\nconst helpText = `<b>📘 Danh sách lệnh Telegram</b>\\n\\n` +\n  `👉 <code>/task &lt;từ khóa&gt;</code> – Tìm task\\n` +\n  `👉 <code>/task chitiet_&lt;id&gt;</code> – Chi tiết task (hiện link OneDrive nếu có)\\n\\n` +\n  `🚧 <code>/taotask</code> – Đang xây dựng lại (tạo task tự động bằng AI), chưa khả dụng.\\n\\n` +\n  `📌 <i>Ví dụ nhanh:</i>\\n<code>/task linh nhi</code>\\n<code>/task chitiet_86ervu2mt</code>`;\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
+      },
+      "id": "cdb7b2db-ad2e-4534-af1e-e141bb73e584",
+      "name": "Nội dung lệnh help",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2384,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "40b5aec5-1c19-4271-8481-91d05a391d91",
+      "name": "help",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2112,
+        -400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8dffbc96-bd0f-4b79-941b-4f52f87ae743",
+              "leftValue": "={{ $json.params }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fdc2124a-01e5-4fa5-a4eb-b77d29d08693",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2384,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').item.json.chatId }}",
+        "text": "Không được gõ /task không kèm nội dung. Ví dụ: /task bí ẹo",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1f39a8e-3aef-4960-8522-2b5533dd0112",
+      "name": "no content in task command",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2112,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst allItems = $input.all();\nconst normalize = (s) =>\n  s.normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/\\u0111/g, 'd')\n    .replace(/\\u0110/g, 'D')\n    .toLowerCase();\nconst processedData = allItems.map(({ json: item }) => {\n  const raw = item.params || '';\n  const words = raw.trim().split(/\\s+/).filter(Boolean);\n  const keywords = words.flatMap(word => [word, normalize(word), normalize(word).toLowerCase()]);\n  return {\n    json: {\n      ...item,\n      searchKeywords: [...new Set(keywords)],\n      originalText: raw,\n      originalText_khong_dau: normalize(raw),\n    }\n  };\n});\nreturn processedData;\n"
+      },
+      "id": "e9b22431-8a8c-4987-b47d-0d44c6614399",
+      "name": "Prepare Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- $1 la tu khoa\nSELECT t.*,\n       ts_rank(\n         to_tsvector('simple', COALESCE(t.name_khong_dau, $1 )),\n         websearch_to_tsquery('simple', $1)\n       ) AS relevance\nFROM clickup.tasks t\nWHERE to_tsvector('simple', COALESCE(t.name_khong_dau,'')) @@ websearch_to_tsquery('simple', $1 )\n   OR t.name_khong_dau ILIKE '%' || $1 || '%'\nORDER BY relevance DESC NULLS LAST,\n         date_updated DESC NULLS LAST\nLIMIT 100;",
+        "options": {
+          "queryReplacement": "={{ $json.originalText_khong_dau }}"
+        }
+      },
+      "id": "6f970505-b0a2-4b9f-b8ff-653aa02ab0d7",
+      "name": "PostgreSQL (search tasks)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -1856,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst normalize = s => s\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/\\u0111/g, 'd')\n  .replace(/\\u0110/g, 'D')\n  .toLowerCase();\n\nconst results = $input.all().map(item => {\n  const task = item.json;\n  const keywords = Array.isArray(task.searchKeywords) ? task.searchKeywords.map(kw => normalize(kw)) : [];\n  const name = normalize(task.name || '');\n  const nameWords = name.split(/\\s+/);\n  const matchWords = keywords.filter(kw => nameWords.includes(kw));\n  const match_score = matchWords.length;\n  const fullMatch = match_score === keywords.length && keywords.length > 0;\n  return { json: { ...task, match_score, max_score: keywords.length, fullMatch } };\n});\nreturn results;\n"
+      },
+      "id": "024b20d4-5e98-416d-9a99-8d0c4c409994",
+      "name": "Code1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "40aa1ac2-a5be-4f76-8a57-ad9bdc36fc0c",
+                    "leftValue": "={{ $json.match_score }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "noresult"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "6aa9a6cc-3ad8-47a5-ab98-87a5f3e39515",
+      "name": "Switch2",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1344,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Prepare Search').item.json.originalData.message.chat.id }}",
+        "text": "⚠️ Không tìm thấy kết quả!",
+        "additionalFields": {}
+      },
+      "id": "11da71bb-966e-4da7-b05a-a4b6896d9c1a",
+      "name": "noresult",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1088,
+        -120
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst inputItems = $input.all();\nconst originalContext = inputItems.find(i => i.json.chatId);\nconst chatId = originalContext?.json?.chatId || null;\nconst messageId = originalContext?.json?.messageId || null;\nconst searchText = originalContext?.json?.originalText || '';\nconst all = inputItems.filter(i => i.json.id).map(i => i.json);\nconst fullMatches = all.filter(i => i.fullMatch === true);\nconst partialMatches = all.filter(i => i.fullMatch !== true);\n\nconst escapeHtml = (text) =>\n  text?.replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\") || '';\n\nconst cleanLink = (link) => link?.replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim() || '';\n\nconst botUsername = 'Elite_clickup_bot';\n\nconst formatTask = (task, index) => {\n  const link = `https://t.me/${botUsername}?start=chitiet_${task.id}`;\n  const matchScore = task.match_score !== undefined ? ` + (${task.match_score})` : '';\n  const onedrive = task.onedrive_link ? cleanLink(task.onedrive_link) : '';\n  const clickupUrl = task.url ? cleanLink(task.url) : '';\n  return (\n`<b>${index + 1}.</b> <a href=\"${link}\">${escapeHtml(task.name)}</a>\n\\u251c Tr\\u1ea1ng th\\u00e1i: ${escapeHtml(task.status) || 'Kh\\u00f4ng r\\u00f5'}${matchScore}\n\\u251c List: ${task.list ? escapeHtml(task.list) : 'Kh\\u00f4ng r\\u00f5'}\n\\u251c Ph\\u1ee5 tr\\u00e1ch: ${escapeHtml(task.phu_trach?.trim()) || 'Kh\\u00f4ng r\\u00f5'}\n${onedrive ? `\\u251c \\ud83d\\udcc1 <a href=\"${onedrive}\">Xem OneDrive</a>\\n` : ''}\\u2514 \\ud83d\\udd17 <a href=\"${clickupUrl}\">Xem trong ClickUp</a>`\n  );\n};\n\nlet messages = [];\nif (all.length === 0) {\n  messages.push({ json: { chatId, beautified: `\\u274c Kh\\u00f4ng t\\u00ecm th\\u1ea5y k\\u1ebft qu\\u1ea3 n\\u00e0o ph\\u00f9 h\\u1ee3p v\\u1edbi t\\u1eeb kh\\u00f3a <b>${escapeHtml(searchText)}</b>`, messageId, parse_mode: \"HTML\" } });\n} else {\n  const headerMessage = `\\ud83d\\udd0d <b>K\\u1ebft qu\\u1ea3 t\\u00ecm ki\\u1ebfm: ${escapeHtml(searchText)}</b>\\nT\\u00ecm th\\u1ea5y ${all.length} k\\u1ebft qu\\u1ea3:`;\n  messages.push({ json: { chatId, beautified: headerMessage, messageId, parse_mode: \"HTML\" } });\n  const combined = [...fullMatches, ...partialMatches];\n  combined.forEach((task, index) => {\n    messages.push({ json: { chatId, beautified: formatTask(task, index), messageId: null, parse_mode: \"HTML\" } });\n  });\n}\nreturn messages;\n"
+      },
+      "id": "aa421560-1120-42eb-a5ab-ffcd9e149d3c",
+      "name": "Beautify full",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.beautified }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "669fe334-8757-4d90-beae-9cbd9df539c2",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -832,
+        60
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "clickup",
+        "table": {
+          "__rl": true,
+          "value": "tasks",
+          "mode": "list",
+          "cachedResultName": "tasks"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "id",
+              "value": "={{ $json.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ab7268c7-47c1-4222-bdaa-a0e5890281fd",
+      "name": "task_detail_sql (PostgreSQL)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2384,
+        600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7ef17c85-36cb-4fbc-9bfc-598c340762fe",
+              "leftValue": "={{ $('Phân tích lệnh').item.json.route }}",
+              "rightValue": "view_file",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1998256b-6636-41b0-9d04-48ce549ed752",
+      "name": "Route After Detail",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2112,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "62fa8446-003d-471a-9ce7-bcac7bbbb4db",
+              "name": "chatId",
+              "value": "={{ $('Phân tích lệnh').item.json.chatId }}",
+              "type": "number"
+            },
+            {
+              "id": "af886599-2998-4c56-9feb-5242eebe051e",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "001c3305-2774-4980-ba3e-2da6e0d5d8da",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "46c2c68d-9633-40a6-815f-c32f662271c4",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "650f4697-91e0-4714-859b-09d86156000a",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "3beb85ac-92fc-4728-bf0c-1a86f6054054",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "62a6eaf1-9e88-4b0c-8a74-4d93e917e987",
+              "name": "phu_trach",
+              "value": "={{ $json.phu_trach }}",
+              "type": "string"
+            },
+            {
+              "id": "3820fcab-62aa-4854-a1f2-a10045c2031e",
+              "name": "DKPV",
+              "value": "={{ $json.dkpv }}",
+              "type": "string"
+            },
+            {
+              "id": "d4eb4cc9-0645-4f22-9f0b-bd7c4f9c5141",
+              "name": "PVTC",
+              "value": "={{ $json.pvtc }}",
+              "type": "string"
+            },
+            {
+              "id": "127c7fe2-cf52-4553-88c3-f9d3c46198bd",
+              "name": "Folder",
+              "value": "={{ $json.folder_name }}",
+              "type": "string"
+            },
+            {
+              "id": "ebe85390-c04c-4315-aa82-a036d7e2bb27",
+              "name": "list",
+              "value": "={{ $json.list_name }}",
+              "type": "string"
+            },
+            {
+              "id": "5c8757e1-147b-4538-97bc-0e836541a3ce",
+              "name": "youtube_link",
+              "value": "={{ $json.youtube_link }}",
+              "type": "string"
+            },
+            {
+              "id": "e7fdc706-75f4-4fcc-be94-32b86d83d6b3",
+              "name": "onedrive_link",
+              "value": "={{ $json.onedrive_link ? $json.onedrive_link.replace(/[{}]/g, '').trim() : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "90fde714-98c1-4387-af42-d3dc378fcf8a",
+              "name": "other_link",
+              "value": "={{ $json.other_link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dcc160ed-33e9-4666-84b7-c0e4cc7fdeeb",
+      "name": "extract output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1856,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst inputItems = $input.all();\nconst originalContext = inputItems.find(i => i.json.chatId);\nconst chatId = originalContext?.json?.chatId || null;\nconst messageId = originalContext?.json?.messageId || null;\nconst all = inputItems.filter(i => i.json.id).map(i => i.json);\nconst botUsername = 'Elite_clickup_bot';\n\nconst escapeHtml = (text) => text?.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') || '';\nconst cleanLink = (link) => {\n  if (!link) return '';\n  return link.replace(/^'+|'+$/g, '').replace(/^\\(+|\\)+$/g, '').replace(/[{}]/g, '').trim();\n};\n\nconst task = all[0] || {};\nconst link = `https://t.me/${botUsername}?start=chitiet_${task.id}`;\nconst lines = [];\nlines.push(`<b>${escapeHtml(task.name)}</b>`);\nlines.push(`\\u251c Mi\\u00eau t\\u1ea3: ${escapeHtml(task.description?.trim()) || 'Kh\\u00f4ng r\\u00f5'}`);\nlines.push(`\\u251c Tr\\u1ea1ng th\\u00e1i: ${escapeHtml(task.status || 'Kh\\u00f4ng r\\u00f5')}`);\nlines.push(`\\u251c List: ${task.list ? escapeHtml(task.list) : 'Kh\\u00f4ng r\\u00f5'}`);\nlines.push(`\\u251c Ph\\u1ee5 tr\\u00e1ch: ${escapeHtml(task.phu_trach?.trim()) || 'Kh\\u00f4ng r\\u00f5'}`);\nif (task.DKPV) lines.push(`\\u251c \\u0110\\u0103ng k\\u00ed ph\\u1ecfng v\\u1ea5n: ${escapeHtml(task.DKPV)}`);\nif (task.PVTC) lines.push(`\\u251c Ph\\u1ecfng v\\u1ea5n th\\u00e0nh c\\u00f4ng: ${escapeHtml(task.PVTC)}`);\nif (task.onedrive_link) {\n  lines.push(`\\u251c \\ud83d\\udcc1 <a href=\"${cleanLink(task.onedrive_link)}\">Xem OneDrive</a>`);\n}\nif (task.youtube_link) {\n  lines.push(`\\u251c \\ud83c\\udfde\\ufe0f Video: ${task.youtube_link}`);\n}\nlines.push(`\\u2514 \\ud83d\\udd17 <a href=\"${cleanLink(task.url)}\">Xem trong ClickUp</a>`);\n\nreturn [{\n  json: {\n    beautified: lines.join('\\n'),\n    chatId, messageId, parse_mode: \"HTML\",\n    taskId: task.id || null,\n    hasOnedriveLink: !!task.onedrive_link\n  }\n}];\n"
+      },
+      "id": "1fe91ad6-abf8-44ff-89da-08851e18f1ca",
+      "name": "Beautify_detail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "892a3752-9004-4b72-9ad4-b727703538d5",
+              "leftValue": "={{ $json.hasOnedriveLink }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "22022f1f-3ce6-4d0a-b2ee-b6fceba4fcdd",
+      "name": "If1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1344,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.beautified }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📁 Xem file (liệt kê từng file)",
+                    "additionalFields": {
+                      "callback_data": "=view_file:{{ $json.taskId }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "33a3a793-d26d-4dd9-85a2-c0ad134af84a",
+      "name": "telegram inline",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1088,
+        620
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Chuan hoa OneDrive share link thanh dinh dang Graph API can (u!<base64url>)\n// Tham khao: https://learn.microsoft.com/en-us/graph/api/shares-get\nconst items = $input.all();\nfunction encodeSharingUrl(url) {\n  const b64 = Buffer.from(url, 'utf-8').toString('base64');\n  return 'u!' + b64.replace(/=+$/, '').replace(/\\//g, '_').replace(/\\+/g, '-');\n}\nreturn items.map(it => {\n  const raw = (it.json.onedrive_link || '').replace(/[{}]/g, '').replace(/^'+|'+$/g, '').trim();\n  return {\n    json: {\n      ...it.json,\n      onedriveUrlClean: raw,\n      encodedShareId: raw ? encodeSharingUrl(raw) : null\n    }\n  };\n});\n"
+      },
+      "id": "86800848-989a-4c0c-86fe-74b47eaba946",
+      "name": "Encode Share URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1856,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.microsoft.com/v1.0/shares/{{ $json.encodedShareId }}/driveItem?$expand=children",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOneDriveOAuth2Api",
+        "options": {}
+      },
+      "id": "d327d8d1-02f9-47ca-9bbd-d99ea26a8139",
+      "name": "HTTP Request (Resolve OneDrive Share)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1600,
+        500
+      ],
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "yVTzl7nlVFmcWv4v",
+          "name": "Microsoft Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Dung item cua 'Phan tich lenh' de lay chatId (khong phai item hien tai, vi item hien tai la Graph API response)\nconst chatId = $('Phân tích lệnh').item.json.chatId;\nconst item = $json;\n\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nlet text = '';\nlet buttons = [];\n\nif (item.error) {\n  text = '\\u26a0\\ufe0f Kh\\u00f4ng th\\u1ec3 m\\u1edf link OneDrive c\\u1ee7a task n\\u00e0y (link l\\u1ed7i ho\\u1eb7c \\u0111\\u00e3 h\\u1ebft h\\u1ea1n chia s\\u1ebb).';\n} else if (item.folder && Array.isArray(item.children) && item.children.length > 0) {\n  text = `\\ud83d\\udcc1 <b>${escapeHtml(item.name)}</b>\\nB\\u1ea5m v\\u00e0o t\\u00ean file \\u0111\\u1ec3 t\\u1ea3i v\\u1ec1 (link t\\u1ea3i c\\u00f3 hi\\u1ec7u l\\u1ef1c t\\u1ea1m th\\u1eddi):`;\n  buttons = item.children\n    .filter(c => c.file) // chi lay file, bo qua sub-folder o phien ban dau\n    .slice(0, 20) // gioi han so nut tranh tin nhan qua dai\n    .map(c => ({\n      text: c.name,\n      additionalFields: { url: c['@microsoft.graph.downloadUrl'] || c.webUrl }\n    }));\n  if (buttons.length === 0) {\n    text += '\\n\\n(Th\\u01b0 m\\u1ee5c ch\\u1ec9 ch\\u1ee9a th\\u01b0 m\\u1ee5c con, ch\\u01b0a h\\u1ed7 tr\\u1ee3 li\\u1ec7t k\\u00ea \\u0111\\u1ec7 quy \\u1edf b\\u1ea3n n\\u00e0y.)';\n  }\n} else if (item.file) {\n  text = `\\ud83d\\udcc4 <b>${escapeHtml(item.name)}</b>`;\n  buttons = [{ text: '\\u2b07\\ufe0f T\\u1ea3i file', additionalFields: { url: item['@microsoft.graph.downloadUrl'] || item.webUrl } }];\n} else {\n  text = '\\u26a0\\ufe0f Kh\\u00f4ng x\\u00e1c \\u0111\\u1ecbnh \\u0111\\u01b0\\u1ee3c n\\u1ed9i dung OneDrive c\\u1ee7a task n\\u00e0y.';\n}\n\n// Telegram gioi han 8 nut/hang -> xep moi hang 1 nut cho ten file dai de de doc\nconst rows = buttons.map(b => ({ row: { buttons: [b] } }));\n\nreturn [{\n  json: { chatId, text, rows, hasButtons: rows.length > 0 }\n}];\n"
+      },
+      "id": "3590ebec-0582-41a0-af42-76dfa2df5c9c",
+      "name": "Beautify File List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "replyMarkup": "={{ $json.hasButtons ? 'inlineKeyboard' : undefined }}",
+        "inlineKeyboard": "={{ $json.hasButtons ? { rows: $json.rows } : {} }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0f3336c7-edb0-4da0-a4d1-87247f0fe8fe",
+      "name": "Telegram (File List)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1088,
+        500
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').item.json.chatId }}",
+        "text": "🚀 Tinh nang tao task tu dong (ho tro boi AI) dang duoc xay dung lai trong mot sub-workflow rieng, chua kha dung o day.\nDung /help de xem cac lenh hien co.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "73356d6f-a14a-4749-a02e-bf557bd36188",
+      "name": "Reply Taotask Placeholder",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -2384,
+        850
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "sub workflow": {
+      "main": [
+        [
+          {
+            "node": "Phân tích lệnh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phân tích lệnh": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Nội dung lệnh help",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "task_detail_sql (PostgreSQL)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "task_detail_sql (PostgreSQL)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Taotask Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Unknown Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nội dung lệnh help": {
+      "main": [
+        [
+          {
+            "node": "help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Prepare Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "no content in task command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Search": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL (search tasks)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL (search tasks)": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "noresult",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Beautify full",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Beautify full": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "task_detail_sql (PostgreSQL)": {
+      "main": [
+        [
+          {
+            "node": "Route After Detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route After Detail": {
+      "main": [
+        [
+          {
+            "node": "Encode Share URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "extract output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract output": {
+      "main": [
+        [
+          {
+            "node": "Beautify_detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Beautify_detail": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "telegram inline",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encode Share URL": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (Resolve OneDrive Share)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (Resolve OneDrive Share)": {
+      "main": [
+        [
+          {
+            "node": "Beautify File List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Beautify File List": {
+      "main": [
+        [
+          {
+            "node": "Telegram (File List)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
