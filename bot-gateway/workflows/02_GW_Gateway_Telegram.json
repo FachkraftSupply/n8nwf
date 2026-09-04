@@ -1,1 +1,1310 @@
-{"name":"GW Gateway - Telegram (DEV)","nodes":[{"parameters":{"updates":["message","callback_query"],"additionalFields":{}},"type":"n8n-nodes-base.telegramTrigger","typeVersion":1.5,"position":[-380,0],"id":"f3c3bf16-e0ef-4bc6-a898-9bb0a2af9a40","name":"Telegram Trigger Gateway","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}},"webhookId":"9e5cefc0-af9b-4e9f-87f1-c94a1a353073"},{"parameters":{"jsCode":"// ╔══════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '7030500584',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', help:'help_bot',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[-180,0],"id":"ead42395-b1a6-400f-8084-cee1446d01d9","name":"⚙️ Config"},{"parameters":{"jsCode":"// ╔══════════════════════════════════════════╗\n// ║  GW-01: Chuẩn hóa update -> Envelope       ║\n// ║  request_id = correlation ID để debug      ║\n// ╚══════════════════════════════════════════╝\nconst upd = $('Telegram Trigger Gateway').first().json;\nconst reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nlet kind, m = null, user, chat, text = '', callback = null;\n\nif (upd.callback_query) {\n  kind = 'callback';\n  const cq = upd.callback_query;\n  user = cq.from;\n  chat = cq.message.chat;\n  callback = { id: cq.id, data: cq.data || '', message_id: cq.message.message_id };\n  text = cq.data || '';\n} else {\n  m = upd.message || upd.edited_message;\n  if (!m) return [];              // update lạ -> bỏ qua\n  kind = 'message';\n  user = m.from;\n  chat = m.chat;\n  text = m.text || m.caption || '';\n}\n\nconst command = (text.match(/^\\/(\\w+)/) || [])[1] || null;\n\nreturn [{ json: {\n  request_id: reqId,\n  platform: 'telegram',\n  kind,                                   // message | callback\n  user_id: String(user.id),\n  username: user.username || '',\n  display_name: [user.first_name, user.last_name].filter(Boolean).join(' '),\n  chat_id: String(chat.id),\n  text,\n  command,\n  callback,\n  has_media: !!(m && (m.photo || m.document || m.video)),\n  ts: new Date().toISOString(),\n  raw: upd\n}}];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[20,0],"id":"a208b29c-86da-4820-9dfe-818077154873","name":"GW-01 Envelope"},{"parameters":{"operation":"executeQuery","query":"INSERT INTO gateway.interaction_logs (request_id, platform, user_id, username, chat_id, direction, event, content, meta) VALUES ($1,'telegram',$2,$3,$4,'in',$5,$6,$7::jsonb)","options":{"queryReplacement":"={{ $json.request_id }},{{ $json.user_id }},{{ $json.username }},{{ $json.chat_id }},{{ $json.kind }},{{ $json.text }},={{ JSON.stringify({command: $json.command, has_media: $json.has_media}) }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[240,-220],"id":"c24f82eb-5cd7-43d4-883d-0a9f9f2a0e90","name":"Audit Log (Docker)","credentials":{"postgres":{"id":"iNVsYeDUnMl6pq4M","name":"Postgres account"}},"onError":"continueRegularOutput"},{"parameters":{"operation":"executeQuery","query":"INSERT INTO gateway.interaction_logs (request_id, platform, user_id, username, chat_id, direction, event, content, meta) VALUES ($1,'telegram',$2,$3,$4,'in',$5,$6,$7::jsonb)","options":{"queryReplacement":"={{ $json.request_id }},{{ $json.user_id }},{{ $json.username }},{{ $json.chat_id }},{{ $json.kind }},{{ $json.text }},={{ JSON.stringify({command: $json.command, has_media: $json.has_media}) }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[240,-380],"id":"cbddefe4-bc77-46ee-b91b-1dd117e7ac09","name":"Audit Log (Supabase)","credentials":{"postgres":{"id":"SUPABASE_PG_CRED_ID","name":"Supabase Postgres"}},"onError":"continueRegularOutput"},{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"cc86e8af-efed-42be-bba1-619c845c93e8","leftValue":"={{ $json.kind }}","rightValue":"message","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"message"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"829c5e72-350a-4519-b477-6c617fea4a96","leftValue":"={{ $json.kind }}","rightValue":"callback","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"callback"}]},"options":{}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[240,60],"id":"b34c7d3a-7bf4-40d7-b702-bc87a5baa774","name":"Loại update?"},{"parameters":{"operation":"executeQuery","query":"SELECT u.status, u.role, COALESCE(array_agg(p.bot_key) FILTER (WHERE p.bot_key IS NOT NULL), '{}') AS bots FROM gateway.bot_users u LEFT JOIN gateway.bot_permissions p ON p.platform = u.platform AND p.user_id = u.user_id WHERE u.platform = 'telegram' AND u.user_id = $1 GROUP BY u.status, u.role","options":{"queryReplacement":"={{ $json.user_id }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[480,-40],"id":"d6edcb79-c9bc-4dcc-94cd-1ec25ca3c463","name":"GW-02 Auth Lookup","credentials":{"postgres":{"id":"iNVsYeDUnMl6pq4M","name":"Postgres account"}},"alwaysOutputData":true},{"parameters":{"jsCode":"// ╔══════════════════════════════════════════╗\n// ║  GW-02b: Gộp envelope + kết quả auth      ║\n// ╚══════════════════════════════════════════╝\nconst env  = $('GW-01 Envelope').first().json;\nconst rows = $input.all().map(i => i.json).filter(r => r && r.status);\n\nlet state = 'new', bots = [], role = 'user';\nif (rows.length) {\n  const r = rows[0];\n  role = r.role;\n  bots = r.bots || [];\n  state = r.status === 'active'  ? 'active'\n        : r.status === 'pending' ? 'pending'\n        : 'denied';               // denied | banned\n}\nreturn [{ json: { ...env, auth: { state, role, bots } } }];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[680,-40],"id":"c96522aa-5dbc-4b4f-832c-5eacabd0d254","name":"GW-02b Merge Auth"},{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"4a4c8fae-00bb-4e50-a63a-1fa040cd9c25","leftValue":"={{ $json.auth.state }}","rightValue":"new","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"new"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"36b7024b-34e0-4865-918f-1dcb9b5d1921","leftValue":"={{ $json.auth.state }}","rightValue":"pending","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"pending"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"9611c422-551a-4800-8485-b9daa917b5e9","leftValue":"={{ $json.auth.state }}","rightValue":"denied","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"denied"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"c00c6984-b64a-4536-a08e-b08c4b52ddea","leftValue":"={{ $json.auth.state }}","rightValue":"active","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"active"}]},"options":{}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[880,-40],"id":"c43731b4-946b-40a2-a2b0-ef17ad5e47e8","name":"Trạng thái user?"},{"parameters":{"operation":"executeQuery","query":"INSERT INTO gateway.bot_users (user_id, platform, username, display_name) VALUES ($1, 'telegram', $2, $3) ON CONFLICT (platform, user_id) DO NOTHING","options":{"queryReplacement":"={{ $json.user_id }},{{ $json.username }},{{ $json.display_name }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[1120,-280],"id":"d0f75abc-50b3-4047-9329-195517dbda21","name":"Tạo pending user","credentials":{"postgres":{"id":"iNVsYeDUnMl6pq4M","name":"Postgres account"}},"alwaysOutputData":true},{"parameters":{"chatId":"={{ $('GW-02b Merge Auth').item.json.chat_id }}","text":"🔐 Xin chào! Bạn chưa có quyền sử dụng hệ thống.\nYêu cầu của bạn đã được gửi tới quản trị viên, vui lòng chờ phê duyệt.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1320,-360],"id":"5b06988c-92c0-4187-9409-458ea7caf669","name":"Báo user chờ duyệt","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}},"onError":"continueRegularOutput"},{"parameters":{"chatId":"={{ $('⚙️ Config').first().json.ADMIN_CHAT_ID }}","text":"=🆕 USER MỚI XIN QUYỀN\n👤 {{ $('GW-02b Merge Auth').item.json.display_name }} (@{{ $('GW-02b Merge Auth').item.json.username }})\n🆔 {{ $('GW-02b Merge Auth').item.json.user_id }}\n💬 Tin nhắn đầu: {{ $('GW-02b Merge Auth').item.json.text }}\n🔗 request_id: {{ $('GW-02b Merge Auth').item.json.request_id }}\n\nChọn quyền cấp cho user:","replyMarkup":"inlineKeyboard","inlineKeyboard":{"rows":[{"row":{"buttons":[{"text":"✅ telebot_main","additionalFields":{"callback_data":"=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:telebot_main"}},{"text":"✅ help_bot","additionalFields":{"callback_data":"=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:help_bot"}}]}},{"row":{"buttons":[{"text":"✅ crawl_bot","additionalFields":{"callback_data":"=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:crawl_bot"}},{"text":"✅ TẤT CẢ","additionalFields":{"callback_data":"=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:ALL"}}]}},{"row":{"buttons":[{"text":"⛔ Từ chối","additionalFields":{"callback_data":"=dn:{{ $('GW-02b Merge Auth').item.json.user_id }}:-"}}]}}]},"additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1320,-200],"id":"f5ba319b-71df-41e1-84e5-101e91c8028b","name":"Báo admin duyệt user","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"chatId":"={{ $json.chat_id }}","text":"⏳ Yêu cầu của bạn đang chờ quản trị viên phê duyệt. Vui lòng quay lại sau.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1120,-80],"id":"7727c506-d321-463c-b04a-ce2517751cb5","name":"Nhắc đang chờ duyệt","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"chatId":"={{ $json.chat_id }}","text":"🚫 Rất tiếc, bạn không có quyền truy cập hệ thống này. Liên hệ quản trị viên nếu có nhầm lẫn.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1120,60],"id":"e156c5f3-0b96-46d8-90ce-c1934feac8c8","name":"Thông báo từ chối","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"jsCode":"// ╔══════════════════════════════════════════╗\n// ║  GW-03: Lệnh -> bot_key + check quyền     ║\n// ╚══════════════════════════════════════════╝\nconst cfg = $('⚙️ Config').first().json;\nconst env = $input.first().json;\n\nconst bot = env.command ? (cfg.COMMAND_MAP[env.command] || null) : cfg.DEFAULT_BOT;\n\nlet route;\nif (!bot)                                route = 'unknown';\nelse if (!env.auth.bots.includes(bot))   route = 'no_permission';\nelse                                     route = bot;\n\nreturn [{ json: { ...env, bot_key: bot, route } }];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[1120,200],"id":"b6875384-d409-4ade-803a-20b5b0515dcd","name":"GW-03 Router"},{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"501e94b9-b743-47f0-a3cd-28758cee522d","leftValue":"={{ $json.route }}","rightValue":"telebot_main","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"telebot_main"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"670d97a3-b074-42e3-8804-3654e04c3fcd","leftValue":"={{ $json.route }}","rightValue":"help_bot","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"help_bot"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"f75357b8-19a4-44f8-9565-032a1b6417a9","leftValue":"={{ $json.route }}","rightValue":"crawl_bot","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"crawl_bot"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"586eda55-9b8f-4abb-ae99-91fa44ea407e","leftValue":"={{ $json.route }}","rightValue":"no_permission","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"no_permission"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"784fba26-e791-4680-ad8a-16c0457a25e2","leftValue":"={{ $json.route }}","rightValue":"unknown","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"unknown"}]},"options":{}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[1320,200],"id":"3ab93430-5762-46d2-a741-a0fa87c675f3","name":"Route bot?"},{"parameters":{"source":"database","workflowId":{"__rl":true,"value":"REPLACE_TELEBOT_MAIN_ID","mode":"id"},"mode":"each","options":{"waitForSubWorkflow":false}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[1560,20],"id":"dcd8f3ff-3d11-4745-9f97-f031d197da9f","name":"→ Sub: Telebot Main","onError":"continueRegularOutput"},{"parameters":{"source":"database","workflowId":{"__rl":true,"value":"REPLACE_HELP_BOT_ID","mode":"id"},"mode":"each","options":{"waitForSubWorkflow":false}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[1560,160],"id":"32070ebd-a195-4f70-a32c-01ee80464684","name":"→ Sub: Help Bot","onError":"continueRegularOutput"},{"parameters":{"source":"database","workflowId":{"__rl":true,"value":"REPLACE_CRAWL_BOT_ID","mode":"id"},"mode":"each","options":{"waitForSubWorkflow":false}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[1560,300],"id":"c21c8f72-eb58-4e5d-868a-db9d0991e0fc","name":"→ Sub: Crawl Bot","onError":"continueRegularOutput"},{"parameters":{"chatId":"={{ $json.chat_id }}","text":"=🔒 Bạn chưa được cấp quyền dùng chức năng {{ $json.bot_key }}. Liên hệ quản trị viên để được cấp thêm.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1560,440],"id":"6bde7e51-ec2a-4ab3-a3fb-2f7959d418d5","name":"Không có quyền bot này","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"chatId":"={{ $json.chat_id }}","text":"❓ Lệnh không hợp lệ. Các lệnh khả dụng:\n/task - tra cứu task\n/ask - hỏi trợ lý AI\n/sum - tóm tắt","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1560,580],"id":"1988f5ec-8d77-4eb0-8c84-83a8e5ae48af","name":"Hướng dẫn lệnh","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"operation":"executeQuery","query":"SELECT role FROM gateway.bot_users WHERE platform='telegram' AND user_id=$1 AND role='admin'","options":{"queryReplacement":"={{ $json.user_id }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[480,480],"id":"a1a18a83-72d7-444f-b93f-fad72b7b42b6","name":"Check admin","credentials":{"postgres":{"id":"iNVsYeDUnMl6pq4M","name":"Postgres account"}},"alwaysOutputData":true},{"parameters":{"conditions":{"options":{"caseSensitive":true,"typeValidation":"loose","version":2},"conditions":[{"id":"5bc18f7b-13f8-49ac-bac1-bb525bebc83b","leftValue":"={{ $json.role }}","rightValue":"admin","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"options":{}},"type":"n8n-nodes-base.if","typeVersion":2.3,"position":[680,480],"id":"6546f96e-cecc-4115-8aeb-5d5d219decd1","name":"Là admin?"},{"parameters":{"jsCode":"// ap:<uid>:<bot_key|ALL>  |  dn:<uid>:-\nconst env = $('GW-01 Envelope').first().json;\nconst [action, uid, bot] = (env.callback.data || '').split(':');\nreturn [{ json: { ...env, action, target_uid: uid, target_bot: bot || '' } }];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[880,420],"id":"b64d830c-d4ef-4547-ac1a-32d094164903","name":"Parse callback"},{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"b63c8ec3-0b57-4816-a859-a76a72da93f7","leftValue":"={{ $json.action }}","rightValue":"ap","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"approve"},{"conditions":{"options":{"caseSensitive":true,"typeValidation":"strict","version":2},"conditions":[{"id":"e726f409-8610-492f-9dc1-49465468f551","leftValue":"={{ $json.action }}","rightValue":"dn","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"deny"}]},"options":{}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[1080,420],"id":"a6c94a46-6bef-44f2-9e22-71c5d48bcc31","name":"Approve hay Deny?"},{"parameters":{"operation":"executeQuery","query":"UPDATE gateway.bot_users SET status='active', updated_at=now() WHERE platform='telegram' AND user_id=$1; INSERT INTO gateway.bot_permissions (platform, user_id, bot_key, granted_by) SELECT 'telegram', $1, unnest(CASE WHEN $2='ALL' THEN string_to_array((SELECT value FROM gateway.config WHERE key='available_bots'), ',') ELSE ARRAY[$2] END), $3 ON CONFLICT DO NOTHING;","options":{"queryReplacement":"={{ $json.target_uid }},{{ $json.target_bot }},{{ $json.user_id }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[1320,340],"id":"e6ba6588-a8c3-48a0-884a-43dc4d0311b0","name":"Approve: cấp quyền","credentials":{"postgres":{"id":"iNVsYeDUnMl6pq4M","name":"Postgres account"}}},{"parameters":{"operation":"executeQuery","query":"UPDATE gateway.bot_users SET status='denied', updated_at=now() WHERE platform='telegram' AND user_id=$1","options":{"queryReplacement":"={{ $json.target_uid }}"}},"type":"n8n-nodes-base.postgres","typeVersion":2.7,"position":[1320,500],"id":"81f23700-4f44-4686-b26a-68cb8a5bb537","name":"Deny: từ chối user","credentials":{"postgres":{"id":"iNVsYeDUnMl6pq4M","name":"Postgres account"}}},{"parameters":{"chatId":"={{ $('Parse callback').item.json.chat_id }}","text":"=✅ Đã cấp quyền [{{ $('Parse callback').item.json.target_bot }}] cho user {{ $('Parse callback').item.json.target_uid }}","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1560,340],"id":"73727b1b-da44-45fb-8818-b5d889271499","name":"Xác nhận với admin","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"chatId":"={{ $('Parse callback').item.json.target_uid }}","text":"=🎉 Bạn đã được cấp quyền sử dụng hệ thống. Gõ /help để xem các lệnh.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1760,340],"id":"fda7d485-dea2-4501-a670-db9f8cc2159c","name":"Báo user được duyệt","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}},"onError":"continueRegularOutput"},{"parameters":{"chatId":"={{ $('Parse callback').item.json.target_uid }}","text":"🚫 Yêu cầu truy cập của bạn đã bị từ chối.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[1560,500],"id":"06d0ff0d-c1e7-4822-ba53-62ac15dc9cf1","name":"Báo user bị từ chối","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}},"onError":"continueRegularOutput"},{"parameters":{"chatId":"={{ $json.chat_id }}","text":"⚠️ Bạn không có quyền thực hiện thao tác này.","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[880,560],"id":"5f0cbda7-2d20-47f0-8a43-f29b62e1e752","name":"Bỏ qua (không phải admin)","credentials":{"telegramApi":{"id":"REPLACE_TELEGRAM_DEV_BOT","name":"Telegram Dev Bot"}}},{"parameters":{"content":"## GATEWAY v1.0 — 1 trigger cho mọi bot\nLuồng: Trigger → Config → Envelope → (Audit ‖ Switch)\n- message: Auth → Trạng thái → Router → Sub-workflow\n- callback: Check admin → Approve/Deny quyền\n\n### Cần thay sau khi import\n1. Credential Telegram (bot DEV) ở mọi node Telegram\n2. Credential 'Supabase Postgres' ở node Audit Log (Supabase)\n3. 3 node '→ Sub:' — chọn đúng workflow ID sub-workflow\n4. ADMIN_CHAT_ID + COMMAND_MAP trong node ⚙️ Config\n\nrequest_id đi xuyên suốt — tra log: \nSELECT * FROM gateway.interaction_logs WHERE request_id='...'","height":420,"width":420},"type":"n8n-nodes-base.stickyNote","typeVersion":1,"position":[-400,-500],"id":"c83a7309-8233-4c54-8f7c-c00098b2e0e1","name":"📘 Ghi chú kiến trúc"}],"connections":{"Telegram Trigger Gateway":{"main":[[{"node":"⚙️ Config","type":"main","index":0}]]},"⚙️ Config":{"main":[[{"node":"GW-01 Envelope","type":"main","index":0}]]},"GW-01 Envelope":{"main":[[{"node":"Loại update?","type":"main","index":0},{"node":"Audit Log (Docker)","type":"main","index":0},{"node":"Audit Log (Supabase)","type":"main","index":0}]]},"Loại update?":{"main":[[{"node":"GW-02 Auth Lookup","type":"main","index":0}],[{"node":"Check admin","type":"main","index":0}]]},"GW-02 Auth Lookup":{"main":[[{"node":"GW-02b Merge Auth","type":"main","index":0}]]},"GW-02b Merge Auth":{"main":[[{"node":"Trạng thái user?","type":"main","index":0}]]},"Trạng thái user?":{"main":[[{"node":"Tạo pending user","type":"main","index":0}],[{"node":"Nhắc đang chờ duyệt","type":"main","index":0}],[{"node":"Thông báo từ chối","type":"main","index":0}],[{"node":"GW-03 Router","type":"main","index":0}]]},"Tạo pending user":{"main":[[{"node":"Báo user chờ duyệt","type":"main","index":0},{"node":"Báo admin duyệt user","type":"main","index":0}]]},"GW-03 Router":{"main":[[{"node":"Route bot?","type":"main","index":0}]]},"Route bot?":{"main":[[{"node":"→ Sub: Telebot Main","type":"main","index":0}],[{"node":"→ Sub: Help Bot","type":"main","index":0}],[{"node":"→ Sub: Crawl Bot","type":"main","index":0}],[{"node":"Không có quyền bot này","type":"main","index":0}],[{"node":"Hướng dẫn lệnh","type":"main","index":0}]]},"Check admin":{"main":[[{"node":"Là admin?","type":"main","index":0}]]},"Là admin?":{"main":[[{"node":"Parse callback","type":"main","index":0}],[{"node":"Bỏ qua (không phải admin)","type":"main","index":0}]]},"Parse callback":{"main":[[{"node":"Approve hay Deny?","type":"main","index":0}]]},"Approve hay Deny?":{"main":[[{"node":"Approve: cấp quyền","type":"main","index":0}],[{"node":"Deny: từ chối user","type":"main","index":0}]]},"Approve: cấp quyền":{"main":[[{"node":"Xác nhận với admin","type":"main","index":0}]]},"Xác nhận với admin":{"main":[[{"node":"Báo user được duyệt","type":"main","index":0}]]},"Deny: từ chối user":{"main":[[{"node":"Báo user bị từ chối","type":"main","index":0}]]}},"settings":{"executionOrder":"v1"},"pinData":{},"meta":{"templateCredsSetupCompleted":true}}
+{
+  "name": "GW Gateway - Telegram (DEV)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -380,
+        0
+      ],
+      "id": "f3c3bf16-e0ef-4bc6-a898-9bb0a2af9a40",
+      "name": "Telegram Trigger Gateway",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      },
+      "webhookId": "9e5cefc0-af9b-4e9f-87f1-c94a1a353073"
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  CONFIG - s\u1eeda 1 ch\u1ed7, d\u00f9ng to\u00e0n workflow    \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map l\u1ec7nh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', help:'help_bot',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nh\u1eafn t\u1ef1 do (kh\u00f4ng l\u1ec7nh) route v\u1ec1 \u0111\u00e2u\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        0
+      ],
+      "id": "ead42395-b1a6-400f-8084-cee1446d01d9",
+      "name": "\u2699\ufe0f Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  GW-01: Chu\u1ea9n h\u00f3a update -> Envelope       \u2551\n// \u2551  request_id = correlation ID \u0111\u1ec3 debug      \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nconst upd = $('Telegram Trigger Gateway').first().json;\nconst reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nlet kind, m = null, user, chat, text = '', callback = null;\n\nif (upd.callback_query) {\n  kind = 'callback';\n  const cq = upd.callback_query;\n  user = cq.from;\n  chat = cq.message.chat;\n  callback = { id: cq.id, data: cq.data || '', message_id: cq.message.message_id };\n  text = cq.data || '';\n} else {\n  m = upd.message || upd.edited_message;\n  if (!m) return [];              // update l\u1ea1 -> b\u1ecf qua\n  kind = 'message';\n  user = m.from;\n  chat = m.chat;\n  text = m.text || m.caption || '';\n}\n\nconst command = (text.match(/^\\/(\\w+)/) || [])[1] || null;\n\nreturn [{ json: {\n  request_id: reqId,\n  platform: 'telegram',\n  kind,                                   // message | callback\n  user_id: String(user.id),\n  username: user.username || '',\n  display_name: [user.first_name, user.last_name].filter(Boolean).join(' '),\n  chat_id: String(chat.id),\n  text,\n  command,\n  callback,\n  has_media: !!(m && (m.photo || m.document || m.video)),\n  ts: new Date().toISOString(),\n  raw: upd\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        0
+      ],
+      "id": "a208b29c-86da-4820-9dfe-818077154873",
+      "name": "GW-01 Envelope"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO gateway.interaction_logs (request_id, platform, user_id, username, chat_id, direction, event, content, meta) VALUES ($1,'telegram',$2,$3,$4,'in',$5,$6,$7::jsonb)",
+        "options": {
+          "queryReplacement": "={{ $json.request_id }},{{ $json.user_id }},{{ $json.username }},{{ $json.chat_id }},{{ $json.kind }},{{ $json.text }},={{ JSON.stringify({command: $json.command, has_media: $json.has_media}) }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        240,
+        -220
+      ],
+      "id": "c24f82eb-5cd7-43d4-883d-0a9f9f2a0e90",
+      "name": "Audit Log (Docker)",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO gateway.interaction_logs (request_id, platform, user_id, username, chat_id, direction, event, content, meta) VALUES ($1,'telegram',$2,$3,$4,'in',$5,$6,$7::jsonb)",
+        "options": {
+          "queryReplacement": "={{ $json.request_id }},{{ $json.user_id }},{{ $json.username }},{{ $json.chat_id }},{{ $json.kind }},{{ $json.text }},={{ JSON.stringify({command: $json.command, has_media: $json.has_media}) }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        240,
+        -380
+      ],
+      "id": "cbddefe4-bc77-46ee-b91b-1dd117e7ac09",
+      "name": "Audit Log (Supabase)",
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_PG_CRED_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cc86e8af-efed-42be-bba1-619c845c93e8",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "message",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "829c5e72-350a-4519-b477-6c617fea4a96",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "callback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "callback"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        60
+      ],
+      "id": "b34c7d3a-7bf4-40d7-b702-bc87a5baa774",
+      "name": "Lo\u1ea1i update?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.status, u.role, COALESCE(array_agg(p.bot_key) FILTER (WHERE p.bot_key IS NOT NULL), '{}') AS bots FROM gateway.bot_users u LEFT JOIN gateway.bot_permissions p ON p.platform = u.platform AND p.user_id = u.user_id WHERE u.platform = 'telegram' AND u.user_id = $1 GROUP BY u.status, u.role",
+        "options": {
+          "queryReplacement": "={{ $json.user_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        480,
+        -40
+      ],
+      "id": "d6edcb79-c9bc-4dcc-94cd-1ec25ca3c463",
+      "name": "GW-02 Auth Lookup",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  GW-02b: G\u1ed9p envelope + k\u1ebft qu\u1ea3 auth      \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nconst env  = $('GW-01 Envelope').first().json;\nconst rows = $input.all().map(i => i.json).filter(r => r && r.status);\n\nlet state = 'new', bots = [], role = 'user';\nif (rows.length) {\n  const r = rows[0];\n  role = r.role;\n  bots = r.bots || [];\n  state = r.status === 'active'  ? 'active'\n        : r.status === 'pending' ? 'pending'\n        : 'denied';               // denied | banned\n}\nreturn [{ json: { ...env, auth: { state, role, bots } } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        -40
+      ],
+      "id": "c96522aa-5dbc-4b4f-832c-5eacabd0d254",
+      "name": "GW-02b Merge Auth"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4a4c8fae-00bb-4e50-a63a-1fa040cd9c25",
+                    "leftValue": "={{ $json.auth.state }}",
+                    "rightValue": "new",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "36b7024b-34e0-4865-918f-1dcb9b5d1921",
+                    "leftValue": "={{ $json.auth.state }}",
+                    "rightValue": "pending",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pending"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9611c422-551a-4800-8485-b9daa917b5e9",
+                    "leftValue": "={{ $json.auth.state }}",
+                    "rightValue": "denied",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "denied"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c00c6984-b64a-4536-a08e-b08c4b52ddea",
+                    "leftValue": "={{ $json.auth.state }}",
+                    "rightValue": "active",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "active"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        -40
+      ],
+      "id": "c43731b4-946b-40a2-a2b0-ef17ad5e47e8",
+      "name": "Tr\u1ea1ng th\u00e1i user?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO gateway.bot_users (user_id, platform, username, display_name) VALUES ($1, 'telegram', $2, $3) ON CONFLICT (platform, user_id) DO NOTHING",
+        "options": {
+          "queryReplacement": "={{ $json.user_id }},{{ $json.username }},{{ $json.display_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        -280
+      ],
+      "id": "d0f75abc-50b3-4047-9329-195517dbda21",
+      "name": "T\u1ea1o pending user",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('GW-02b Merge Auth').item.json.chat_id }}",
+        "text": "\ud83d\udd10 Xin ch\u00e0o! B\u1ea1n ch\u01b0a c\u00f3 quy\u1ec1n s\u1eed d\u1ee5ng h\u1ec7 th\u1ed1ng.\nY\u00eau c\u1ea7u c\u1ee7a b\u1ea1n \u0111\u00e3 \u0111\u01b0\u1ee3c g\u1eedi t\u1edbi qu\u1ea3n tr\u1ecb vi\u00ean, vui l\u00f2ng ch\u1edd ph\u00ea duy\u1ec7t.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        -360
+      ],
+      "id": "5b06988c-92c0-4187-9409-458ea7caf669",
+      "name": "B\u00e1o user ch\u1edd duy\u1ec7t",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('\u2699\ufe0f Config').first().json.ADMIN_CHAT_ID }}",
+        "text": "=\ud83c\udd95 USER M\u1edaI XIN QUY\u1ec0N\n\ud83d\udc64 {{ $('GW-02b Merge Auth').item.json.display_name }} (@{{ $('GW-02b Merge Auth').item.json.username }})\n\ud83c\udd94 {{ $('GW-02b Merge Auth').item.json.user_id }}\n\ud83d\udcac Tin nh\u1eafn \u0111\u1ea7u: {{ $('GW-02b Merge Auth').item.json.text }}\n\ud83d\udd17 request_id: {{ $('GW-02b Merge Auth').item.json.request_id }}\n\nCh\u1ecdn quy\u1ec1n c\u1ea5p cho user:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "\u2705 telebot_main",
+                    "additionalFields": {
+                      "callback_data": "=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:telebot_main"
+                    }
+                  },
+                  {
+                    "text": "\u2705 help_bot",
+                    "additionalFields": {
+                      "callback_data": "=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:help_bot"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "\u2705 crawl_bot",
+                    "additionalFields": {
+                      "callback_data": "=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:crawl_bot"
+                    }
+                  },
+                  {
+                    "text": "\u2705 T\u1ea4T C\u1ea2",
+                    "additionalFields": {
+                      "callback_data": "=ap:{{ $('GW-02b Merge Auth').item.json.user_id }}:ALL"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "\u26d4 T\u1eeb ch\u1ed1i",
+                    "additionalFields": {
+                      "callback_data": "=dn:{{ $('GW-02b Merge Auth').item.json.user_id }}:-"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        -200
+      ],
+      "id": "f5ba319b-71df-41e1-84e5-101e91c8028b",
+      "name": "B\u00e1o admin duy\u1ec7t user",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "\u23f3 Y\u00eau c\u1ea7u c\u1ee7a b\u1ea1n \u0111ang ch\u1edd qu\u1ea3n tr\u1ecb vi\u00ean ph\u00ea duy\u1ec7t. Vui l\u00f2ng quay l\u1ea1i sau.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        -80
+      ],
+      "id": "7727c506-d321-463c-b04a-ce2517751cb5",
+      "name": "Nh\u1eafc \u0111ang ch\u1edd duy\u1ec7t",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "\ud83d\udeab R\u1ea5t ti\u1ebfc, b\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n truy c\u1eadp h\u1ec7 th\u1ed1ng n\u00e0y. Li\u00ean h\u1ec7 qu\u1ea3n tr\u1ecb vi\u00ean n\u1ebfu c\u00f3 nh\u1ea7m l\u1eabn.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        60
+      ],
+      "id": "e156c5f3-0b96-46d8-90ce-c1934feac8c8",
+      "name": "Th\u00f4ng b\u00e1o t\u1eeb ch\u1ed1i",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  GW-03: L\u1ec7nh -> bot_key + check quy\u1ec1n     \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nconst cfg = $('\u2699\ufe0f Config').first().json;\nconst env = $input.first().json;\n\nconst bot = env.command ? (cfg.COMMAND_MAP[env.command] || null) : cfg.DEFAULT_BOT;\n\nlet route;\nif (!bot)                                route = 'unknown';\nelse if (!env.auth.bots.includes(bot))   route = 'no_permission';\nelse                                     route = bot;\n\nreturn [{ json: { ...env, bot_key: bot, route } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        200
+      ],
+      "id": "b6875384-d409-4ade-803a-20b5b0515dcd",
+      "name": "GW-03 Router"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "501e94b9-b743-47f0-a3cd-28758cee522d",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "telebot_main",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telebot_main"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "670d97a3-b074-42e3-8804-3654e04c3fcd",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "help_bot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help_bot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f75357b8-19a4-44f8-9565-032a1b6417a9",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "crawl_bot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "crawl_bot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "586eda55-9b8f-4abb-ae99-91fa44ea407e",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "no_permission",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "no_permission"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "784fba26-e791-4680-ad8a-16c0457a25e2",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "unknown",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unknown"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1320,
+        200
+      ],
+      "id": "3ab93430-5762-46d2-a741-a0fa87c675f3",
+      "name": "Route bot?"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_TELEBOT_MAIN_ID",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1560,
+        20
+      ],
+      "id": "dcd8f3ff-3d11-4745-9f97-f031d197da9f",
+      "name": "\u2192 Sub: Telebot Main",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_HELP_BOT_ID",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1560,
+        160
+      ],
+      "id": "32070ebd-a195-4f70-a32c-01ee80464684",
+      "name": "\u2192 Sub: Help Bot",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_CRAWL_BOT_ID",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1560,
+        300
+      ],
+      "id": "c21c8f72-eb58-4e5d-868a-db9d0991e0fc",
+      "name": "\u2192 Sub: Crawl Bot",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=\ud83d\udd12 B\u1ea1n ch\u01b0a \u0111\u01b0\u1ee3c c\u1ea5p quy\u1ec1n d\u00f9ng ch\u1ee9c n\u0103ng {{ $json.bot_key }}. Li\u00ean h\u1ec7 qu\u1ea3n tr\u1ecb vi\u00ean \u0111\u1ec3 \u0111\u01b0\u1ee3c c\u1ea5p th\u00eam.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        440
+      ],
+      "id": "6bde7e51-ec2a-4ab3-a3fb-2f7959d418d5",
+      "name": "Kh\u00f4ng c\u00f3 quy\u1ec1n bot n\u00e0y",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "\u2753 L\u1ec7nh kh\u00f4ng h\u1ee3p l\u1ec7. C\u00e1c l\u1ec7nh kh\u1ea3 d\u1ee5ng:\n/task - tra c\u1ee9u task\n/ask - h\u1ecfi tr\u1ee3 l\u00fd AI\n/sum - t\u00f3m t\u1eaft",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        580
+      ],
+      "id": "1988f5ec-8d77-4eb0-8c84-83a8e5ae48af",
+      "name": "H\u01b0\u1edbng d\u1eabn l\u1ec7nh",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT role FROM gateway.bot_users WHERE platform='telegram' AND user_id=$1 AND role='admin'",
+        "options": {
+          "queryReplacement": "={{ $json.user_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        480,
+        480
+      ],
+      "id": "a1a18a83-72d7-444f-b93f-fad72b7b42b6",
+      "name": "Check admin",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5bc18f7b-13f8-49ac-bac1-bb525bebc83b",
+              "leftValue": "={{ $json.role }}",
+              "rightValue": "admin",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        680,
+        480
+      ],
+      "id": "6546f96e-cecc-4115-8aeb-5d5d219decd1",
+      "name": "L\u00e0 admin?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ap:<uid>:<bot_key|ALL>  |  dn:<uid>:-\nconst env = $('GW-01 Envelope').first().json;\nconst [action, uid, bot] = (env.callback.data || '').split(':');\nreturn [{ json: { ...env, action, target_uid: uid, target_bot: bot || '' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        420
+      ],
+      "id": "b64d830c-d4ef-4547-ac1a-32d094164903",
+      "name": "Parse callback"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b63c8ec3-0b57-4816-a859-a76a72da93f7",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "ap",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "approve"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e726f409-8610-492f-9dc1-49465468f551",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "dn",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "deny"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1080,
+        420
+      ],
+      "id": "a6c94a46-6bef-44f2-9e22-71c5d48bcc31",
+      "name": "Approve hay Deny?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE gateway.bot_users SET status='active', updated_at=now() WHERE platform='telegram' AND user_id=$1; INSERT INTO gateway.bot_permissions (platform, user_id, bot_key, granted_by) SELECT 'telegram', $1, unnest(CASE WHEN $2='ALL' THEN string_to_array((SELECT value FROM gateway.config WHERE key='available_bots'), ',') ELSE ARRAY[$2] END), $3 ON CONFLICT DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ $json.target_uid }},{{ $json.target_bot }},{{ $json.user_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1320,
+        340
+      ],
+      "id": "e6ba6588-a8c3-48a0-884a-43dc4d0311b0",
+      "name": "Approve: c\u1ea5p quy\u1ec1n",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE gateway.bot_users SET status='denied', updated_at=now() WHERE platform='telegram' AND user_id=$1",
+        "options": {
+          "queryReplacement": "={{ $json.target_uid }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1320,
+        500
+      ],
+      "id": "81f23700-4f44-4686-b26a-68cb8a5bb537",
+      "name": "Deny: t\u1eeb ch\u1ed1i user",
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse callback').item.json.chat_id }}",
+        "text": "=\u2705 \u0110\u00e3 c\u1ea5p quy\u1ec1n [{{ $('Parse callback').item.json.target_bot }}] cho user {{ $('Parse callback').item.json.target_uid }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        340
+      ],
+      "id": "73727b1b-da44-45fb-8818-b5d889271499",
+      "name": "X\u00e1c nh\u1eadn v\u1edbi admin",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse callback').item.json.target_uid }}",
+        "text": "=\ud83c\udf89 B\u1ea1n \u0111\u00e3 \u0111\u01b0\u1ee3c c\u1ea5p quy\u1ec1n s\u1eed d\u1ee5ng h\u1ec7 th\u1ed1ng. G\u00f5 /help \u0111\u1ec3 xem c\u00e1c l\u1ec7nh.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        340
+      ],
+      "id": "fda7d485-dea2-4501-a670-db9f8cc2159c",
+      "name": "B\u00e1o user \u0111\u01b0\u1ee3c duy\u1ec7t",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse callback').item.json.target_uid }}",
+        "text": "\ud83d\udeab Y\u00eau c\u1ea7u truy c\u1eadp c\u1ee7a b\u1ea1n \u0111\u00e3 b\u1ecb t\u1eeb ch\u1ed1i.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        500
+      ],
+      "id": "06d0ff0d-c1e7-4822-ba53-62ac15dc9cf1",
+      "name": "B\u00e1o user b\u1ecb t\u1eeb ch\u1ed1i",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "\u26a0\ufe0f B\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n th\u1ef1c hi\u1ec7n thao t\u00e1c n\u00e0y.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        560
+      ],
+      "id": "5f0cbda7-2d20-47f0-8a43-f29b62e1e752",
+      "name": "B\u1ecf qua (kh\u00f4ng ph\u1ea3i admin)",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_TELEGRAM_DEV_BOT",
+          "name": "Telegram Dev Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## GATEWAY v1.0 \u2014 1 trigger cho m\u1ecdi bot\nLu\u1ed3ng: Trigger \u2192 Config \u2192 Envelope \u2192 (Audit \u2016 Switch)\n- message: Auth \u2192 Tr\u1ea1ng th\u00e1i \u2192 Router \u2192 Sub-workflow\n- callback: Check admin \u2192 Approve/Deny quy\u1ec1n\n\n### C\u1ea7n thay sau khi import\n1. Credential Telegram (bot DEV) \u1edf m\u1ecdi node Telegram\n2. Credential 'Supabase Postgres' \u1edf node Audit Log (Supabase)\n3. 3 node '\u2192 Sub:' \u2014 ch\u1ecdn \u0111\u00fang workflow ID sub-workflow\n4. ADMIN_CHAT_ID + COMMAND_MAP trong node \u2699\ufe0f Config\n\nrequest_id \u0111i xuy\u00ean su\u1ed1t \u2014 tra log: \nSELECT * FROM gateway.interaction_logs WHERE request_id='...'",
+        "height": 420,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -500
+      ],
+      "id": "c83a7309-8233-4c54-8f7c-c00098b2e0e1",
+      "name": "\ud83d\udcd8 Ghi ch\u00fa ki\u1ebfn tr\u00fac"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger Gateway": {
+      "main": [
+        [
+          {
+            "node": "\u2699\ufe0f Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\u2699\ufe0f Config": {
+      "main": [
+        [
+          {
+            "node": "GW-01 Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GW-01 Envelope": {
+      "main": [
+        [
+          {
+            "node": "Lo\u1ea1i update?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Audit Log (Docker)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Audit Log (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lo\u1ea1i update?": {
+      "main": [
+        [
+          {
+            "node": "GW-02 Auth Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GW-02 Auth Lookup": {
+      "main": [
+        [
+          {
+            "node": "GW-02b Merge Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GW-02b Merge Auth": {
+      "main": [
+        [
+          {
+            "node": "Tr\u1ea1ng th\u00e1i user?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tr\u1ea1ng th\u00e1i user?": {
+      "main": [
+        [
+          {
+            "node": "T\u1ea1o pending user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nh\u1eafc \u0111ang ch\u1edd duy\u1ec7t",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Th\u00f4ng b\u00e1o t\u1eeb ch\u1ed1i",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GW-03 Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "T\u1ea1o pending user": {
+      "main": [
+        [
+          {
+            "node": "B\u00e1o user ch\u1edd duy\u1ec7t",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "B\u00e1o admin duy\u1ec7t user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GW-03 Router": {
+      "main": [
+        [
+          {
+            "node": "Route bot?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route bot?": {
+      "main": [
+        [
+          {
+            "node": "\u2192 Sub: Telebot Main",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "\u2192 Sub: Help Bot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "\u2192 Sub: Crawl Bot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kh\u00f4ng c\u00f3 quy\u1ec1n bot n\u00e0y",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "H\u01b0\u1edbng d\u1eabn l\u1ec7nh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check admin": {
+      "main": [
+        [
+          {
+            "node": "L\u00e0 admin?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "L\u00e0 admin?": {
+      "main": [
+        [
+          {
+            "node": "Parse callback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "B\u1ecf qua (kh\u00f4ng ph\u1ea3i admin)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse callback": {
+      "main": [
+        [
+          {
+            "node": "Approve hay Deny?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve hay Deny?": {
+      "main": [
+        [
+          {
+            "node": "Approve: c\u1ea5p quy\u1ec1n",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Deny: t\u1eeb ch\u1ed1i user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve: c\u1ea5p quy\u1ec1n": {
+      "main": [
+        [
+          {
+            "node": "X\u00e1c nh\u1eadn v\u1edbi admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X\u00e1c nh\u1eadn v\u1edbi admin": {
+      "main": [
+        [
+          {
+            "node": "B\u00e1o user \u0111\u01b0\u1ee3c duy\u1ec7t",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deny: t\u1eeb ch\u1ed1i user": {
+      "main": [
+        [
+          {
+            "node": "B\u00e1o user b\u1ecb t\u1eeb ch\u1ed1i",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
