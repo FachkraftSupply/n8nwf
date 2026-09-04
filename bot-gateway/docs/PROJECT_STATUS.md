@@ -184,3 +184,41 @@ sub workflow (Execute Workflow Trigger, passthrough)
 2. Test kỹ nhánh view_file trước tiên (rủi ro cao nhất vì chưa test được Graph API response thật).
 3. Lấy Workflow ID, gắn vào Gateway node "→ Sub: Telebot Main".
 4. Khi nào làm "Bot System Main", quay lại lấy cụm node xử lý ảnh trong Telebot_main.json.
+
+
+## SQL SYNC + BACKUP (04/09/2026) — Có data thật để test Telebot ClickUp Reader
+Vấn đề: anh đã deploy xong Telebot_ClickUp_Reader.json nhưng chưa có data trong `clickup.tasks` để test.
+
+### Workflow mới: `SQL_ClickUp_to_Postgres_Sync.json`
+Commit: https://github.com/FachkraftSupply/n8nwf/commit/6ddac314ffc6827de990563ba5cc172633e3e72a
+File schema: `sql/02_clickup_tasks_schema.sql`
+10 node, config-driven (node "⚙️ Config" — điền list ID + tên custom field, KHÔNG cần sửa code khác):
+```
+Manual Trigger / Schedule (15 phút) -> ⚙️ Config
+  -> Ensure Schema (idempotent, CREATE TABLE IF NOT EXISTS clickup.tasks)
+  -> Split Out Lists -> Loop Over Lists -> ClickUp - Get Tasks -> Map Task -> Row -> Upsert Postgres -> (quay lại Loop)
+  -> khi xong: Notify Done (Telegram)
+```
+- Đọc custom field theo TÊN (không phải ID) qua hàm `getCF()` — tránh phải biết ID field, chỉ cần đúng tên
+  hiển thị trong ClickUp.
+- ⚠️ ClickUp MCP trong phiên chat này bị "No approval received" khi Claude thử gọi `clickup_get_custom_fields`
+  để lấy tên field thật — KHÔNG lấy được data live. Tên field trong node Config hiện là PHỎNG ĐOÁN dựa theo
+  tên cột đã dùng trong code Telebot cũ (`Phụ trách`, `DKPV`, `PVTC`, `VFS`, `Plan bay`, `Ngày bay`, `Youtube`,
+  `OneDrive`, `Link khác`, `Color`) — CẦN ANH KIỂM TRA LẠI cho khớp tên thật trong ClickUp trước khi chạy.
+- List ID đã điền sẵ n: List 2025 (`901805909593`), Orders (`901805909357`). Cần điền thêm List 2026 + 3 công
+  ty (ELMC/ELHZ/ELHT) nếu muốn đồng bộ đủ.
+- Node `ClickUp - Get Tasks` dùng native ClickUp node (`resource: task, operation: getAll`) — CHƯA TEST được
+  param chính xác (không chạy được n8n live trong phiên này), có thể cần chỉnh lại qua dropdown sau khi import.
+
+### Backup Postgres hàng ngày → OneDrive — ĐANG CHỜ ANH CHỌN PHƯƠNG ÁN
+Đã đề xuất 2 phương án (xem chat):
+- **A — pg_dump qua SSH**: đầy đủ nhất (phục hồi bằng `pg_restore` 1 lệnh), cần SSH credential trỏ Mac Mini.
+- **B — SQL export thuần n8n**: không cần hạ tầng thêm, export JSON/CSV qua Postgres node + nén zip + upload
+  OneDrive, phục hồi cần insert lại thủ công.
+Khuyến nghị: làm B trước (nhanh, không rủi ro hạ tầng), nâng cấp A sau nếu cần. CHƯA BUILD — chờ anh chọn.
+
+### Việc tiếp theo — CẦN TỪ ANH
+1. Kiểm tra/sửa tên custom field trong node "⚙️ Config" của SQL_ClickUp_to_Postgres_Sync.json cho khớp thật.
+2. Import + chạy thử (Manual Trigger) — kiểm tra `clickup.tasks` có data.
+3. Test lại Telebot ClickUp Reader với data thật.
+4. Chọn phương án backup A/B để Claude build.
