@@ -38,8 +38,8 @@ bot-gateway/
 | # | Test | Trạng thái |
 |---|---|---|
 | 1 | Admin route đúng | PASS |
-| 2 | User lạ -> chờ duyệt + admin nhận nút | Đang test lại sau fix parse_mode |
-| 3 | Admin bấm approve -> cả 2 bên nhận thông báo | Chưa test |
+| 2 | User lạ -> chờ duyệt + admin nhận nút | PASS (sau fix parse_mode) |
+| 3 | Admin bấm approve -> cả 2 bên nhận thông báo | PASS (sau fix chat_id + fix data Postgres phía admin) |
 | 4 | User được duyệt dùng lệnh | Chưa test |
 | 5 | User chưa có quyền bị chặn đúng cách | Chưa test |
 | 6 | Log ghi đủ cả 2 DB | Chưa verify lại |
@@ -80,3 +80,12 @@ workflows/new_architecture/sub_workflows_modernized/Elite_Help_Bot_GPT.json) th�
 - Bài học chung: BẤT KỲ lúc nào thêm node Postgres/DB query vào giữa luồng, node theo SAU nó
   không được đọc thẳng $json cho các field gốc (chat_id, user_id...) — phải tham chiếu ngược
   về node Envelope hoặc Merge Auth bằng $('TênNode').first().json.field.
+
+
+## Fix bổ sung (đã xong)
+- "Bỏ qua (không phải admin)" từng báo sai admin không phải admin do dữ liệu Postgres
+  (không phải lỗi workflow) — user đã tự sửa trực tiếp trên DB, đã hoạt động đúng.
+
+## Việc tiếp theo khi mở chat mới
+1. Test #4, #5, #6, #7 còn lại (xem docs/SETUP_PHASE_0_1.md mục Test nghiệm thu).
+2. Sau khi 7/7 test pass -> bắt đầu Giai đoạn 2 (chuyển Elite Help Bot GPT thành sub-workflow).
