@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// CAN CHINH SUA O DAY\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\", // xac nhan boi user - Space duy nhat trong workspace\n\n  // De trong = lay tu gateway.config (admin_chat_id). Dien vao = ghi de, vi du gui\n  // sang 1 group Telegram rieng thay vi nhan admin ca nhan.\n  notifyChatId: \"\",\n\n  // BAT/TAT che do test: gioi han nho de chay nhanh, khong can lay het DB\n  testMode: true,\n  testFolderLimit: 2,   // chi lay N folder dau (ke ca \"folderless lists\" tinh la 1 nhom)\n  testTaskLimit: 5,     // chi lay N task dau moi List\n\n  // Co lay comment de trich link OneDrive/Youtube trong lan full sync khong.\n  // Day la phan ton API nhieu nhat (1 call/task). Tat neu chi muon test nhanh cot co ban.\n  fetchCommentsInFullSync: true,\n\n  // Map ten cot Postgres -> TEN custom field trong ClickUp (khong phai ID) - CAN KIEM TRA LAI\n  fieldNameMap: {\n    phu_trach:     \"Phụ trách\",\n    dkpv:          \"DKPV\",\n    pvtc:          \"PVTC\",\n    vfs:           \"VFS\",\n    planbay:       \"Plan bay\",\n    ngaybay:       \"Ngày bay\",\n    color:         \"Color\",\n  }\n};\n\nreturn [{ json: config }];\n"
+        "jsCode": "\n// CAN CHINH SUA O DAY\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"9018351620\", // QUAY VE gia tri nay - 90183192291 bi ClickUp tu choi \"Space ID invalid\", con 9018351620 da chay thanh cong o Get Folders lan test truoc\n\n  // De trong = lay tu gateway.config (admin_chat_id). Dien vao = ghi de, vi du gui\n  // sang 1 group Telegram rieng thay vi nhan admin ca nhan.\n  notifyChatId: \"\",\n\n  // BAT/TAT che do test: gioi han nho de chay nhanh, khong can lay het DB\n  testMode: true,\n  testFolderLimit: 2,   // chi lay N folder dau (ke ca \"folderless lists\" tinh la 1 nhom)\n  testTaskLimit: 5,     // chi lay N task dau moi List\n\n  // Co lay comment de trich link OneDrive/Youtube trong lan full sync khong.\n  // Day la phan ton API nhieu nhat (1 call/task). Tat neu chi muon test nhanh cot co ban.\n  fetchCommentsInFullSync: true,\n\n  // Map ten cot Postgres -> TEN custom field trong ClickUp (khong phai ID) - CAN KIEM TRA LAI\n  fieldNameMap: {\n    phu_trach:     \"Phụ trách\",\n    dkpv:          \"DKPV\",\n    pvtc:          \"PVTC\",\n    vfs:           \"VFS\",\n    planbay:       \"Plan bay\",\n    ngaybay:       \"Ngày bay\",\n    color:         \"Color\",\n  }\n};\n\nreturn [{ json: config }];\n"
       },
       "id": "f0393c7d-69cd-4cf2-92b0-550fc7b86ede",
       "name": "⚙️ Config",
@@ -343,6 +343,26 @@
           "name": "Telegram Bot (PROD)"
         }
       }
+    },
+    {
+      "parameters": {
+        "resource": "space",
+        "operation": "getAll",
+        "team": {
+          "__rl": true,
+          "value": "={{ $('⚙️ Config').first().json.team_id }}",
+          "mode": "id"
+        },
+        "returnAll": true
+      },
+      "id": "80bb50ee-100e-4092-98ca-2a1bab10d03a",
+      "name": "🔍 DEBUG - Liệt kê Space thật (xoá sau khi xong)",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        -3360,
+        700
+      ]
     }
   ],
   "connections": {
@@ -388,6 +408,11 @@
           },
           {
             "node": "Ensure Schema (idempotent)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "🔍 DEBUG - Liệt kê Space thật (xoá sau khi xong)",
             "type": "main",
             "index": 0
           }
