@@ -1727,8 +1727,7 @@
         1136
       ],
       "id": "667cfe0b-ff71-4e6e-8940-a546a67249c1",
-      "name": "Code",
-      "disabled": true
+      "name": "Code"
     },
     {
       "parameters": {
@@ -2264,6 +2263,19 @@
       ],
       "id": "f290e89e-1ac8-4a8a-be6d-4842507505fa",
       "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Adapter Gateway: chuan hoa Message Envelope (spec ARCHITECTURE.md muc 3)\n// thanh shape Telegram update cu (message / callback_query) ma node 'Code'\n// (da co san, dang bi disable) dang can de tinh route/command/params/taskId.\n// Giu nguyen toan bo field envelope goc bang cach spread ra root truoc,\n// de request_id/platform/auth/bot_key van con trong originalData khi debug.\nconst items = $input.all();\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const out = { ...env };\n  if (isCallback) {\n    out.callback_query = {\n      id: env.callback?.id,\n      data: env.callback?.data,\n      message: {\n        chat: { id: env.chat_id },\n        message_id: env.callback?.message_id\n      }\n    };\n  } else {\n    out.message = {\n      text: env.text || '',\n      chat: { id: env.chat_id },\n      message_id: env.raw?.message_id ?? null,\n      from: { id: env.user_id, username: env.username }\n    };\n  }\n  return { json: out };\n});\n"
+      },
+      "id": "846791bd-12cf-4eda-aaa2-6bd7ee0a3d9c",
+      "name": "Envelope → Legacy Shape",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        960
+      ]
     }
   ],
   "connections": {
@@ -2782,7 +2794,13 @@
     },
     "Code": {
       "main": [
-        []
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "extract id": {
@@ -2976,7 +2994,7 @@
             "index": 0
           },
           {
-            "node": "Code",
+            "node": "Envelope → Legacy Shape",
             "type": "main",
             "index": 0
           }
@@ -2988,6 +3006,17 @@
         [
           {
             "node": "Check if Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope → Legacy Shape": {
+      "main": [
+        [
+          {
+            "node": "Code",
             "type": "main",
             "index": 0
           }
