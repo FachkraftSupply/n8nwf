@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// CAN CHINH SUA O DAY\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\", // xac nhan boi user - Space duy nhat trong workspace\n\n  // BAT/TAT che do test: gioi han nho de chay nhanh, khong can lay het DB\n  testMode: true,\n  testFolderLimit: 2,   // chi lay N folder dau (ke ca \"folderless lists\" tinh la 1 nhom)\n  testTaskLimit: 5,     // chi lay N task dau moi List\n\n  // Co lay comment de trich link OneDrive/Youtube trong lan full sync khong.\n  // Day la phan ton API nhieu nhat (1 call/task). Tat neu chi muon test nhanh cot co ban.\n  fetchCommentsInFullSync: true,\n\n  // Map ten cot Postgres -> TEN custom field trong ClickUp (khong phai ID) - CAN KIEM TRA LAI\n  fieldNameMap: {\n    phu_trach:     \"Phụ trách\",\n    dkpv:          \"DKPV\",\n    pvtc:          \"PVTC\",\n    vfs:           \"VFS\",\n    planbay:       \"Plan bay\",\n    ngaybay:       \"Ngày bay\",\n    color:         \"Color\",\n  }\n};\n\nreturn [{ json: config }];\n"
+        "jsCode": "\n// CAN CHINH SUA O DAY\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\", // xac nhan boi user - Space duy nhat trong workspace\n\n  // De trong = lay tu gateway.config (admin_chat_id). Dien vao = ghi de, vi du gui\n  // sang 1 group Telegram rieng thay vi nhan admin ca nhan.\n  notifyChatId: \"\",\n\n  // BAT/TAT che do test: gioi han nho de chay nhanh, khong can lay het DB\n  testMode: true,\n  testFolderLimit: 2,   // chi lay N folder dau (ke ca \"folderless lists\" tinh la 1 nhom)\n  testTaskLimit: 5,     // chi lay N task dau moi List\n\n  // Co lay comment de trich link OneDrive/Youtube trong lan full sync khong.\n  // Day la phan ton API nhieu nhat (1 call/task). Tat neu chi muon test nhanh cot co ban.\n  fetchCommentsInFullSync: true,\n\n  // Map ten cot Postgres -> TEN custom field trong ClickUp (khong phai ID) - CAN KIEM TRA LAI\n  fieldNameMap: {\n    phu_trach:     \"Phụ trách\",\n    dkpv:          \"DKPV\",\n    pvtc:          \"PVTC\",\n    vfs:           \"VFS\",\n    planbay:       \"Plan bay\",\n    ngaybay:       \"Ngày bay\",\n    color:         \"Color\",\n  }\n};\n\nreturn [{ json: config }];\n"
       },
       "id": "f0393c7d-69cd-4cf2-92b0-550fc7b86ede",
       "name": "⚙️ Config",
@@ -69,7 +69,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst cfg = $('⚙️ Config').first().json;\nconst adminChatId = $json.admin_chat_id;\nconst now = new Date();\nconst text = `🚀 <b>Bắt đầu đồng bộ ClickUp → Postgres (Full Reconcile)</b>\\n` +\n  `🕒 Thời gian bắt đầu: ${now.toLocaleString('vi-VN')}\\n` +\n  `${cfg.testMode ? '⚠️ Đang chạy TEST MODE (giới hạn dữ liệu)' : '📦 Chạy đầy đủ toàn bộ dữ liệu'}`;\nreturn [{ json: { chatId: adminChatId, text, startTime: now.toISOString() } }];\n"
+        "jsCode": "\nconst cfg = $('⚙️ Config').first().json;\nconst adminChatId = $json.admin_chat_id;\nconst chatId = cfg.notifyChatId || adminChatId;\nconst now = new Date();\nconst text = `🚀 <b>Bắt đầu đồng bộ ClickUp → Postgres (Full Reconcile)</b>\\n` +\n  `🕒 Thời gian bắt đầu: ${now.toLocaleString('vi-VN')}\\n` +\n  `${cfg.testMode ? '⚠️ Đang chạy TEST MODE (giới hạn dữ liệu)' : '📦 Chạy đầy đủ toàn bộ dữ liệu'}`;\nreturn [{ json: { chatId, text, startTime: now.toISOString() } }];\n"
       },
       "id": "0023e0e8-0823-47d0-afce-68ae495fc5c3",
       "name": "Build Notify Start",
@@ -190,13 +190,12 @@
       "parameters": {
         "resource": "task",
         "operation": "getAll",
-        "team": {
+        "list": {
           "__rl": true,
-          "value": "={{ $('⚙️ Config').first().json.team_id }}",
+          "value": "={{ $json.listId }}",
           "mode": "id"
         },
         "filters": {
-          "list_id": "={{ $json.listId }}",
           "include_closed": true,
           "subtasks": true
         },
@@ -310,7 +309,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst staticData = $getWorkflowStaticData('global');\nconst stats = staticData.syncStats || { lists: [], totalTasks: 0, startedAt: null };\nconst admin = $('Lay Admin Chat ID').first().json;\nconst now = new Date();\nconst durationSec = stats.startedAt ? Math.round((now - new Date(stats.startedAt)) / 1000) : null;\n\nconst listLines = stats.lists.map(l => `  • ${l.listName}: ${l.taskCount} task`).join('\\n');\nconst text = `✅ <b>Đồng bộ ClickUp → Postgres HOÀN TẤT</b>\\n\\n` +\n  `📋 Các List đã đồng bộ:\\n${listLines || '  (không có)'}\\n\\n` +\n  `📊 Tổng số task: <b>${stats.totalTasks}</b>\\n` +\n  `🕒 Kết thúc lúc: ${now.toLocaleString('vi-VN')}\\n` +\n  (durationSec !== null ? `⏱️ Thời gian chạy: ${durationSec}s\\n` : '') +\n  `#full_reconcile_done`;\n\ndelete staticData.syncStats;\n\nreturn [{ json: { chatId: admin.admin_chat_id, text } }];\n"
+        "jsCode": "\nconst cfg = $('⚙️ Config').first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst stats = staticData.syncStats || { lists: [], totalTasks: 0, startedAt: null };\nconst admin = $('Lay Admin Chat ID').first().json;\nconst chatId = cfg.notifyChatId || admin.admin_chat_id;\nconst now = new Date();\nconst durationSec = stats.startedAt ? Math.round((now - new Date(stats.startedAt)) / 1000) : null;\n\nconst listLines = stats.lists.map(l => `  • ${l.listName}: ${l.taskCount} task`).join('\\n');\nconst text = `✅ <b>Đồng bộ ClickUp → Postgres HOÀN TẤT</b>\\n\\n` +\n  `📋 Các List đã đồng bộ:\\n${listLines || '  (không có)'}\\n\\n` +\n  `📊 Tổng số task: <b>${stats.totalTasks}</b>\\n` +\n  `🕒 Kết thúc lúc: ${now.toLocaleString('vi-VN')}\\n` +\n  (durationSec !== null ? `⏱️ Thời gian chạy: ${durationSec}s\\n` : '') +\n  `#full_reconcile_done`;\n\ndelete staticData.syncStats;\nreturn [{ json: { chatId, text } }];\n"
       },
       "id": "cb0930a1-3509-457d-aa14-cdfe28e567b4",
       "name": "Build Notify Done",
