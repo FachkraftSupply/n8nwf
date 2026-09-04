@@ -1068,7 +1068,7 @@
       "name": "Approve: cấp quyền (Supabase)",
       "credentials": {
         "postgres": {
-          "id": "SUPABASE_PG_CRED_ID",
+          "id": "hO4yfw7ailV7jHAv",
           "name": "Supabase Postgres"
         }
       },
@@ -1092,7 +1092,7 @@
       "name": "Deny: từ chối user (Supabase)",
       "credentials": {
         "postgres": {
-          "id": "SUPABASE_PG_CRED_ID",
+          "id": "hO4yfw7ailV7jHAv",
           "name": "Supabase Postgres"
         }
       },
