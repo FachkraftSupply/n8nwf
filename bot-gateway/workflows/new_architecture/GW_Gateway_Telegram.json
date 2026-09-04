@@ -414,8 +414,7 @@
           ]
         },
         "additionalFields": {
-          "appendAttribution": false,
-          "parse_mode": ""
+          "appendAttribution": false
         }
       },
       "type": "n8n-nodes-base.telegram",
