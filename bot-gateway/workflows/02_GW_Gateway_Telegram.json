@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  CONFIG - s\u1eeda 1 ch\u1ed7, d\u00f9ng to\u00e0n workflow    \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map l\u1ec7nh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', help:'help_bot',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nh\u1eafn t\u1ef1 do (kh\u00f4ng l\u1ec7nh) route v\u1ec1 \u0111\u00e2u\n}}];"
+        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  CONFIG - s\u1eeda 1 ch\u1ed7, d\u00f9ng to\u00e0n workflow    \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map l\u1ec7nh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', help:'help_bot',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nh\u1eafn t\u1ef1 do (kh\u00f4ng l\u1ec7nh) route v\u1ec1 \u0111\u00e2u\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  GW-01: Chu\u1ea9n h\u00f3a update -> Envelope       \u2551\n// \u2551  request_id = correlation ID \u0111\u1ec3 debug      \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nconst upd = $('Telegram Trigger Gateway').first().json;\nconst reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nlet kind, m = null, user, chat, text = '', callback = null;\n\nif (upd.callback_query) {\n  kind = 'callback';\n  const cq = upd.callback_query;\n  user = cq.from;\n  chat = cq.message.chat;\n  callback = { id: cq.id, data: cq.data || '', message_id: cq.message.message_id };\n  text = cq.data || '';\n} else {\n  m = upd.message || upd.edited_message;\n  if (!m) return [];              // update l\u1ea1 -> b\u1ecf qua\n  kind = 'message';\n  user = m.from;\n  chat = m.chat;\n  text = m.text || m.caption || '';\n}\n\nconst command = (text.match(/^\\/(\\w+)/) || [])[1] || null;\n\nreturn [{ json: {\n  request_id: reqId,\n  platform: 'telegram',\n  kind,                                   // message | callback\n  user_id: String(user.id),\n  username: user.username || '',\n  display_name: [user.first_name, user.last_name].filter(Boolean).join(' '),\n  chat_id: String(chat.id),\n  text,\n  command,\n  callback,\n  has_media: !!(m && (m.photo || m.document || m.video)),\n  ts: new Date().toISOString(),\n  raw: upd\n}}];"
+        "jsCode": "// \u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n// \u2551  GW-01: Chu\u1ea9n h\u00f3a update -> Envelope       \u2551\n// \u2551  request_id = correlation ID \u0111\u1ec3 debug      \u2551\n// \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\nconst upd = $('Telegram Trigger Gateway').first().json;\nconst reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nlet kind, m = null, user, chat, text = '', callback = null;\n\nif (upd.callback_query) {\n  kind = 'callback';\n  const cq = upd.callback_query;\n  user = cq.from;\n  chat = cq.message.chat;\n  callback = { id: cq.id, data: cq.data || '', message_id: cq.message.message_id };\n  text = cq.data || '';\n} else {\n  m = upd.message || upd.edited_message;\n  if (!m) return [];              // update l\u1ea1 -> b\u1ecf qua\n  kind = 'message';\n  user = m.from;\n  chat = m.chat;\n  text = m.text || m.caption || '';\n}\n\nconst command = (text.match(/^\\/(\\w+)/) || [])[1] || null;\n\nreturn [{ json: {\n  request_id: reqId,\n  platform: 'telegram',\n  kind,                                   // message | callback\n  user_id: String(user.id),\n  username: user.username || '',\n  display_name: [user.first_name, user.last_name].filter(Boolean).join(' '),\n  chat_id: String(chat.id),\n  text,\n  command,\n  callback,\n  has_media: !!(m && (m.photo || m.document || m.video)),\n  ts: new Date().toISOString(),\n  raw: upd\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -56,7 +56,7 @@
         "operation": "executeQuery",
         "query": "INSERT INTO gateway.interaction_logs (request_id, platform, user_id, username, chat_id, direction, event, content, meta) VALUES ($1,'telegram',$2,$3,$4,'in',$5,$6,$7::jsonb)",
         "options": {
-          "queryReplacement": "={{ $json.request_id }},{{ $json.user_id }},{{ $json.username }},{{ $json.chat_id }},{{ $json.kind }},{{ $json.text }},={{ JSON.stringify({command: $json.command, has_media: $json.has_media}) }}"
+          "queryReplacement": "={{ [$json.request_id, $json.user_id, $json.username, $json.chat_id, $json.kind, $json.text, JSON.stringify({command: $json.command, has_media: $json.has_media})] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -80,7 +80,7 @@
         "operation": "executeQuery",
         "query": "INSERT INTO gateway.interaction_logs (request_id, platform, user_id, username, chat_id, direction, event, content, meta) VALUES ($1,'telegram',$2,$3,$4,'in',$5,$6,$7::jsonb)",
         "options": {
-          "queryReplacement": "={{ $json.request_id }},{{ $json.user_id }},{{ $json.username }},{{ $json.chat_id }},{{ $json.kind }},{{ $json.text }},={{ JSON.stringify({command: $json.command, has_media: $json.has_media}) }}"
+          "queryReplacement": "={{ [$json.request_id, $json.user_id, $json.username, $json.chat_id, $json.kind, $json.text, JSON.stringify({command: $json.command, has_media: $json.has_media})] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -167,7 +167,7 @@
         "operation": "executeQuery",
         "query": "SELECT u.status, u.role, COALESCE(array_agg(p.bot_key) FILTER (WHERE p.bot_key IS NOT NULL), '{}') AS bots FROM gateway.bot_users u LEFT JOIN gateway.bot_permissions p ON p.platform = u.platform AND p.user_id = u.user_id WHERE u.platform = 'telegram' AND u.user_id = $1 GROUP BY u.status, u.role",
         "options": {
-          "queryReplacement": "={{ $json.user_id }}"
+          "queryReplacement": "={{ [$json.user_id] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -313,7 +313,7 @@
         "operation": "executeQuery",
         "query": "INSERT INTO gateway.bot_users (user_id, platform, username, display_name) VALUES ($1, 'telegram', $2, $3) ON CONFLICT (platform, user_id) DO NOTHING",
         "options": {
-          "queryReplacement": "={{ $json.user_id }},{{ $json.username }},{{ $json.display_name }}"
+          "queryReplacement": "={{ [$json.user_id, $json.username, $json.display_name] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -743,7 +743,7 @@
         "operation": "executeQuery",
         "query": "SELECT role FROM gateway.bot_users WHERE platform='telegram' AND user_id=$1 AND role='admin'",
         "options": {
-          "queryReplacement": "={{ $json.user_id }}"
+          "queryReplacement": "={{ [$json.user_id] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -875,7 +875,7 @@
         "operation": "executeQuery",
         "query": "UPDATE gateway.bot_users SET status='active', updated_at=now() WHERE platform='telegram' AND user_id=$1; INSERT INTO gateway.bot_permissions (platform, user_id, bot_key, granted_by) SELECT 'telegram', $1, unnest(CASE WHEN $2='ALL' THEN string_to_array((SELECT value FROM gateway.config WHERE key='available_bots'), ',') ELSE ARRAY[$2] END), $3 ON CONFLICT DO NOTHING;",
         "options": {
-          "queryReplacement": "={{ $json.target_uid }},{{ $json.target_bot }},{{ $json.user_id }}"
+          "queryReplacement": "={{ [$json.target_uid, $json.target_bot, $json.user_id] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -898,7 +898,7 @@
         "operation": "executeQuery",
         "query": "UPDATE gateway.bot_users SET status='denied', updated_at=now() WHERE platform='telegram' AND user_id=$1",
         "options": {
-          "queryReplacement": "={{ $json.target_uid }}"
+          "queryReplacement": "={{ [$json.target_uid] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
