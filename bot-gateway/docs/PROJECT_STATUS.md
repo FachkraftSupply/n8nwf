@@ -96,6 +96,44 @@ workflows/new_architecture/sub_workflows_modernized/Elite_Help_Bot_GPT.json) th�
 - "Bỏ qua (không phải admin)" từng báo sai admin không phải admin do dữ liệu Postgres
   (không phải lỗi workflow) — user đã tự sửa trực tiếp trên DB, đã hoạt động đúng.
 
+## ĐỔI ƯU TIÊN (04/09/2026) — ClickUp (Telebot Main) làm trước Help Bot
+Theo yêu cầu: ưu tiên hoàn thiện sub-workflow ClickUp (Telebot Main) trước, Help Bot GPT tạm gác lại
+sau bước 1-2 (đã xong phần code, chỉ còn thiếu workflow ID thật để gắn vào Gateway — xem mục phía trên).
+
+### Telebot Main (ClickUp bot) — tiến độ
+File `Telebot_main.json` PHỨC TẠP HƠN Help Bot: 71 node, đã có sẵn hạ tầng làm dở từ trước:
+- Node `sub workflow` (Execute Workflow Trigger, inputSource=passthrough) — đã có sẵn, không cần thêm.
+- Node `Code` — logic tính route y hệt `Phân tích lệnh` gốc nhưng đọc thẳng `$input` (không phụ thuộc
+  node `Trigger Prod`) — TRƯỚC ĐÓ bị `disabled: true` và output nối vào chỗ trống, không dùng được.
+- Node `zalo code` — thử nghiệm dở cho Zalo, đọc sai shape (`body.message`), chỉ phủ 1/8 nhánh Switch
+  qua node `If` — KHÔNG ĐỤNG TỚI, để nguyên cho việc khác.
+- Node `Phân tích lệnh` gốc: hard-code `$('Trigger Prod').item.json` → KHÔNG dùng được khi gọi qua
+  sub-workflow (Trigger Prod chưa chạy trong execution đó → lỗi "Referenced node is not part of input").
+
+✅ ĐÃ SỬA (commit https://github.com/FachkraftSupply/n8nwf/commit/f1644e822edc5184ac113f3149c9d32678925970):
+1. Thêm node mới "Envelope → Legacy Shape": nhận Message Envelope (spec mục 3 ARCHITECTURE.md), dựng lại
+   `message.{text,chat.id,message_id,from.id,from.username}` hoặc `callback_query.{id,data,message.chat.id,
+   message.message_id}` tùy `kind`, spread nguyên envelope gốc ra root để giữ request_id/platform/auth/
+   bot_key trong `originalData` phục vụ debug.
+2. Bật lại node `Code` (xoá `disabled: true`).
+3. Nối lại: `sub workflow` → `Envelope → Legacy Shape` → `Code` → `Switch` (đúng đích mà `Phân tích lệnh`
+   đang nối tới) — tái sử dụng 100% pipeline `task`/`stat`/`help`/`chitiet`/`taotask_td`/`taotask_tc` phía
+   sau, không viết lại gì. Nhánh `zalo code` giữ nguyên, không đụng.
+
+⚠️ LƯU Ý AN TOÀN khi test: route `taotask_td`/`taotask_tc` gọi thẳng node `cr_task_hs`/`cr_task_dh`
+(n8n-nodes-base.clickUp) — TẠO TASK THẬT trên ClickUp List ID `901805909593` (hoặc list liên quan).
+Khi nghiệm thu qua Gateway, nên test theo thứ tự: `/help` → `/task <id có sẵn>` → `/stat` → `chitiet_<id>`
+TRƯỚC, để `/taotask` cuối cùng và xoá/dọn task test sau khi xong.
+
+### Việc tiếp theo — CẦN TỪ ANH
+1. CẦN workflow ID (hoặc link) thật của "Telebot main" trên n8n live → gắn vào node "→ Sub: Telebot Main"
+   trong Gateway (đang placeholder REPLACE_TELEBOT_MAIN_ID).
+2. CẦN workflow ID thật của "Elite Help Bot GPT" (đang gác lại, xem mục Giai đoạn 2 phía trên) — có thể
+   gửi cùng lúc.
+3. Sau khi có ID: Claude gắn cả 2 vào Gateway, commit, anh import lại Gateway trên n8n live rồi test
+   theo checklist (xem chat) cho từng sub-workflow riêng.
+
 ## Việc tiếp theo khi mở chat mới
-1. Test #4, #5, #6, #7 còn lại (xem docs/SETUP_PHASE_0_1.md mục Test nghiệm thu).
-2. Sau khi 7/7 test pass -> bắt đầu Giai đoạn 2 (chuyển Elite Help Bot GPT thành sub-workflow).
+1. Test #4, #5, #6, #7 còn lại (xem docs/SETUP_PHASE_0_1.md mục Test nghiệm thu) — nếu chưa làm.
+2. Giai đoạn 2 đang ưu tiên ClickUp (Telebot Main) — xem mục "ĐỔI ƯU TIÊN" phía trên để biết đang chờ gì.
+3. Help Bot GPT: code đã xong bước 1-2, chỉ còn thiếu workflow ID thật (mục Giai đoạn 2 phía trên).
