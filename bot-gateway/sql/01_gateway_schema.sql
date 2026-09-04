@@ -69,18 +69,18 @@ CREATE TABLE IF NOT EXISTS gateway.config (
 -- SEED — sửa ID admin nếu cần rồi chạy
 -- ============================================================================
 INSERT INTO gateway.bot_users (user_id, platform, display_name, status, role)
-VALUES ('7030500584', 'telegram', 'Admin', 'active', 'admin')
+VALUES ('975005174', 'telegram', 'Admin', 'active', 'admin')
 ON CONFLICT (platform, user_id) DO UPDATE SET role = 'admin', status = 'active';
 
 -- Admin có full quyền mọi bot
 INSERT INTO gateway.bot_permissions (platform, user_id, bot_key, granted_by)
 VALUES
-  ('telegram', '7030500584', 'telebot_main', 'seed'),
-  ('telegram', '7030500584', 'help_bot',     'seed'),
-  ('telegram', '7030500584', 'crawl_bot',    'seed')
+  ('telegram', '975005174', 'telebot_main', 'seed'),
+  ('telegram', '975005174', 'help_bot',     'seed'),
+  ('telegram', '975005174', 'crawl_bot',    'seed')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO gateway.config (key, value) VALUES
-  ('admin_chat_id', '7030500584'),
+  ('admin_chat_id', '975005174'),
   ('available_bots', 'telebot_main,help_bot,crawl_bot')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
