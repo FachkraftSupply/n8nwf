@@ -343,26 +343,6 @@
           "name": "Telegram Bot (PROD)"
         }
       }
-    },
-    {
-      "parameters": {
-        "resource": "space",
-        "operation": "getAll",
-        "team": {
-          "__rl": true,
-          "value": "={{ $('⚙️ Config').first().json.team_id }}",
-          "mode": "id"
-        },
-        "returnAll": true
-      },
-      "id": "80bb50ee-100e-4092-98ca-2a1bab10d03a",
-      "name": "🔍 DEBUG - Liệt kê Space thật (xoá sau khi xong)",
-      "type": "n8n-nodes-base.clickUp",
-      "typeVersion": 1,
-      "position": [
-        -3360,
-        700
-      ]
     }
   ],
   "connections": {
@@ -408,11 +388,6 @@
           },
           {
             "node": "Ensure Schema (idempotent)",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "🔍 DEBUG - Liệt kê Space thật (xoá sau khi xong)",
             "type": "main",
             "index": 0
           }
