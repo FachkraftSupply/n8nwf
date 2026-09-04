@@ -138,6 +138,6 @@ chạy nguyên trạng trong toàn bộ quá trình. Gateway build trên **bot T
 | 0 | Chạy DDL trên 2 DB, tạo bot dev, seed admin | SQL chạy không lỗi trên cả 2 DB |
 | 1 | Import Gateway + Error Handler, gắn credential, test luồng approve | User lạ nhắn bot dev → approve → dùng được |
 | 2 | Chuyển Elite Help Bot thành sub-workflow (thêm Execute Workflow Trigger nhận Envelope) | Bot dev trả lời đúng như bot prod |
-| 3 | Chuyển Telebot main, Crawl Bot tương tự; chạy song song 1-2 tuần, so log | Log 2 hệ khớp, không lỗi mới |
+| 3 | Đập đi làm lại Telebot Main -> "Telebot ClickUp Reader" (workflow mới, gọn hơn, bỏ /taotask + zalo + xử lý ảnh); chuyển Crawl Bot tương tự; chạy song song 1-2 tuần, so log | Log 2 hệ khớp, không lỗi mới |
 | 4 | Cutover: đổi credential trigger Gateway sang bot prod; TẮT trigger các workflow cũ nhưng GIỮ workflow 30 ngày | Rollback = đổi lại credential (< 1 phút) |
 | 5 | Xoá workflow cũ, cập nhật tài liệu này | — |

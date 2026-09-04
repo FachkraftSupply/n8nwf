@@ -11,7 +11,10 @@ chạy trên n8n self-hosted + Postgres Docker + Supabase (dual storage).
 | `workflows/original/` | 5 workflow production NGUYÊN BẢN, chưa sửa gì |
 | `workflows/new_architecture/GW_Gateway_Telegram.json` | Workflow Gateway (import vào n8n) |
 | `workflows/new_architecture/GW_Error_Handler.json` | Error handler toàn cục |
-| `workflows/new_architecture/sub_workflows_modernized/` | 5 workflow trên đã nâng n8n 2.37.7 + dual storage, sẽ nối vào Gateway |
+| `workflows/new_architecture/sub_workflows_modernized/` | 5 workflow gốc đã nâng n8n 2.37.7 (Telebot_main, Telebot_sql, Elite_Help_Bot_GPT, Elite_Crawl_Bot, BACKUP_N8N) — sẽ nối vào Gateway |
+| `workflows/new_architecture/sub_workflows_modernized/Elite_Help_Bot_GPT.json` | ✅ Đã nhận Message Envelope từ Gateway (Phase 2), chờ workflow ID thật để gắn vào Gateway |
+| `workflows/new_architecture/sub_workflows_modernized/Telebot_main.json` | ⚠️ KHÔNG dùng nữa (chưa từng import n8n) — giữ lại chỉ để tham khảo logic xử lý ảnh khi build "Bot System Main" sau này |
+| `workflows/new_architecture/sub_workflows_modernized/Telebot_ClickUp_Reader.json` | ✅ Thay thế Telebot_main.json — bot ClickUp mới (26 node, help/tìm task/chi tiết task/xem file OneDrive), chưa import n8n |
 | `docs/GUIDE_DEPLOY_DATABASE.md` | 👈 BẮT ĐẦU TỪ ĐÂY — triển khai DB cho người mới |
 | `docs/BOT_INVENTORY.md` | Ánh xạ 8 bot Telegram hiện có vào vai trò trong Gateway |
 | `docs/SETUP_PHASE_0_1.md` | Import workflow + 7 test nghiệm thu |
