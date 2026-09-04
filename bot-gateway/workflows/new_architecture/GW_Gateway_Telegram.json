@@ -1024,6 +1024,79 @@
       ],
       "id": "c83a7309-8233-4c54-8f7c-c00098b2e0e1",
       "name": "📘 Ghi chú kiến trúc"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO gateway.bot_users (user_id, platform, username, display_name) VALUES ($1, 'telegram', $2, $3) ON CONFLICT (platform, user_id) DO NOTHING",
+        "options": {
+          "queryReplacement": "={{ [$json.user_id, $json.username, $json.display_name] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        -100
+      ],
+      "id": "17cb46d0-e4a8-444b-a975-ac147682682d",
+      "name": "Tạo pending user (Supabase)",
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_PG_CRED_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE gateway.bot_users SET status='active', updated_at=now() WHERE platform='telegram' AND user_id=$1; INSERT INTO gateway.bot_permissions (platform, user_id, bot_key, granted_by) SELECT 'telegram', $1, unnest(CASE WHEN $2='ALL' THEN string_to_array((SELECT value FROM gateway.config WHERE key='available_bots'), ',') ELSE ARRAY[$2] END), $3 ON CONFLICT DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ [$json.target_uid, $json.target_bot, $json.user_id] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1320,
+        520
+      ],
+      "id": "db9d313e-5c7b-4b3b-9de5-b776dc64a313",
+      "name": "Approve: cấp quyền (Supabase)",
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_PG_CRED_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE gateway.bot_users SET status='denied', updated_at=now() WHERE platform='telegram' AND user_id=$1",
+        "options": {
+          "queryReplacement": "={{ [$json.target_uid] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1320,
+        680
+      ],
+      "id": "889fd4e5-f497-4182-ab01-c33b5d8f7597",
+      "name": "Deny: từ chối user (Supabase)",
+      "credentials": {
+        "postgres": {
+          "id": "SUPABASE_PG_CRED_ID",
+          "name": "Supabase Postgres"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -1115,6 +1188,11 @@
         [
           {
             "node": "Tạo pending user",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tạo pending user (Supabase)",
             "type": "main",
             "index": 0
           }
@@ -1255,11 +1333,21 @@
             "node": "Approve: cấp quyền",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Approve: cấp quyền (Supabase)",
+            "type": "main",
+            "index": 0
           }
         ],
         [
           {
             "node": "Deny: từ chối user",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Deny: từ chối user (Supabase)",
             "type": "main",
             "index": 0
           }
