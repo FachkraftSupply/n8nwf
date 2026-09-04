@@ -215,7 +215,7 @@ Manual Trigger / Schedule (15 phút) -> ⚙️ Config
 - **A — pg_dump qua SSH**: đầy đủ nhất (phục hồi bằng `pg_restore` 1 lệnh), cần SSH credential trỏ Mac Mini.
 - **B — SQL export thuần n8n**: không cần hạ tầng thêm, export JSON/CSV qua Postgres node + nén zip + upload
   OneDrive, phục hồi cần insert lại thủ công.
-Khuyến nghị: làm B trước (nhanh, không rủi ro hạ tầng), nâng cấp A sau nếu cần. CHƯA BUILD — chờ anh chọn.
+Khuyến nghị: làm B trước (nhanh, không rủi ro hạ tầng), nâng cấp A sau nếu cần. QUYẾT ĐỊNH (04/09/2026): làm Phương án B, nhưng DỜI sang Phase 3 (sau khi Phase 2c — SQL Sync có data thật — xong trước). Hiện đang ở Phase 2c: import & chạy thử SQL Sync.
 
 ### Việc tiếp theo — CẦN TỪ ANH
 1. Kiểm tra/sửa tên custom field trong node "⚙️ Config" của SQL_ClickUp_to_Postgres_Sync.json cho khớp thật.
