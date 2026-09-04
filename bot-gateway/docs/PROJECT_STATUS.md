@@ -217,8 +217,70 @@ Manual Trigger / Schedule (15 phút) -> ⚙️ Config
   OneDrive, phục hồi cần insert lại thủ công.
 Khuyến nghị: làm B trước (nhanh, không rủi ro hạ tầng), nâng cấp A sau nếu cần. QUYẾT ĐỊNH (04/09/2026): làm Phương án B, nhưng DỜI sang Phase 3 (sau khi Phase 2c — SQL Sync có data thật — xong trước). Hiện đang ở Phase 2c: import & chạy thử SQL Sync.
 
+### THAY THẾ (04/09/2026) — Tách 2 luồng theo yêu cầu mới, dùng native ClickUp node
+`SQL_ClickUp_to_Postgres_Sync.json` (10 node, 1 luồng poll+full) KHÔNG dùng nữa — thay bằng 2 file mới,
+tách rõ Full Reconcile / Live Update, đúng tinh thần "ưu tiên native ClickUp node" + rate-limit + trích
+link từ comment. Commit: https://github.com/FachkraftSupply/n8nwf/commit/58123403ff985f9ef20f68bef93b4becb741d036
+
+#### `SQL_ClickUp_Full_Reconcile.json` (19 node) — Schedule 5 ngày/lần, 1h sáng + Manual Trigger test
+```
+Schedule/Manual → Config (space_id=9018351620, testMode, fieldNameMap)
+  → Lấy Admin Chat ID (SELECT tu gateway.config, KHÔNG hardcode) → Notify Start
+  → ClickUp: Get all folders (theo Space, tra ve luon lists[] long trong) ┐
+  → ClickUp: Get all lists (folderless, theo Space)                       ┴→ Merge (combine, cho ca 2 nhanh xong)
+  → Gộp danh sách List (khu trung, ap dung testMode/testFolderLimit)
+  → Ensure Schema (idempotent)
+  → Split Out Lists → Loop Over Lists
+      → ClickUp: Get Tasks (native, returnAll tat khi testMode, limit=testTaskLimit)
+      → Limit (test mode) — lop an toan thu 2, khong phu thuoc field "limit" cua ClickUp node dung dung ten
+      → Map Task + Trich Link Comment (Code, runOnceForEachItem):
+          goi truc tiep GET /task/{id}/comment qua this.helpers.httpRequestWithAuthentication('clickUpApi', ...)
+          KHONG can node ClickUp rieng / vong lap long nhau. Trich link tu CA
+          comment[].attributes.link (hyperlink co anchor text khac URL) LAN regex tren comment_text.
+          Co delay 350ms/task khi khong test mode (chong 429, gioi han 100 req/phut).
+      → Upsert Postgres → Ghi thống kê (staticData tich luy) → quay lai Loop
+  → Notify Done: liet ke List + so task/List + tong so task + thoi gian chay
+```
+⚠️ CHƯA TEST được node `ClickUp - Get Folders`/`Get Folderless Lists`/`Get Tasks` (resource/operation/param
+đúng tên) trên n8n live — ClickUp MCP trong phiên chat bị "No approval received" liên tục, không verify được.
+Cần kiểm tra kỹ khi import, có thể phải chỉnh lại qua dropdown.
+
+#### `SQL_ClickUp_Live_Update.json` (23 node) — ClickUp Trigger (webhook, KHÔNG poll)
+```
+ClickUp Trigger (native, scope Space 9018351620, event: Task Updated + Task Comment Posted/Updated)
+  → Lấy Admin Chat ID (song song)
+  → Phân tích Webhook Payload (đọc history_items, xác định field đổi + before/after có sẵn miễn phí)
+  → Là comment event?
+      true → Đọc lại Comment + Trích Link → Update Postgres (UPDATE trực tiếp onedrive/youtube_link,
+             COALESCE giữ giá trị cũ nếu không tìm thấy link mới) → Build Notify (comment) → Telegram
+      false → Split Out Updates → Lọc cột hợp lệ (whitelist 10 cột, chống SQL injection qua tên cột động)
+             → Switch theo tên cột → 1 trong 10 node "Update: <cột>" (UPDATE thẳng, KHÔNG gọi lại
+               ClickUp API — dùng luôn giá trị `after` có sẵn trong webhook, tiết kiệm toàn bộ quota
+               API cho các thay đổi field thường) → Build Notify (field) → Telegram
+```
+Mẫu thông báo (đã rút gọn theo yêu cầu — bỏ "Trước", chỉ giữ giá trị mới + tên task + người thực hiện):
+```
+🔄 Thông báo CẬP NHẬT Task
+🔧 Thay đổi:
+📝 Trường "<field>" được cập nhật bởi <user>
+✅ Giá trị mới: <after>
+📦 Thông tin:
+🆔 ID: <id>  📌 Tên: <name>  🔗 Link: <url>
+🕒 Cập nhật lúc: <timestamp> #task_updated
+```
+⚠️ CHƯA TEST được: (1) node `ClickUp Trigger` tự đăng ký webhook đúng scope Space hay không (cần xác
+nhận sau khi active workflow), (2) map `FIELD_TO_COLUMN` trong "Phân tích Webhook Payload" mới chỉ có
+status/name/content — CẦN BỔ SUNG cho custom field (webhook trả field dạng ID/uuid, cần đọc thêm object
+`custom_field` trong history_item để map đúng, phần này chưa hoàn chỉnh, cần 1 payload thật để tinh chỉnh).
+
+### Backup Postgres hàng ngày → OneDrive
+QUYẾT ĐỊNH: làm Phương án B (SQL export thuần n8n, xem chat), DỜI sang Phase 3 (sau khi 2 luồng SQL Sync
+ở trên chạy ổn định).
+
 ### Việc tiếp theo — CẦN TỪ ANH
-1. Kiểm tra/sửa tên custom field trong node "⚙️ Config" của SQL_ClickUp_to_Postgres_Sync.json cho khớp thật.
-2. Import + chạy thử (Manual Trigger) — kiểm tra `clickup.tasks` có data.
-3. Test lại Telebot ClickUp Reader với data thật.
-4. Chọn phương án backup A/B để Claude build.
+1. Import cả 2 workflow mới vào n8n (Full Reconcile + Live Update).
+2. Chạy Full Reconcile bằng Manual Trigger (testMode=true có sẵn) — sửa lỗi node ClickUp nếu n8n báo sai
+   param, kiểm tra `clickup.tasks` có data.
+3. Active Live Update, thử sửa 1 task/comment trên ClickUp, xem thông báo Telegram + Postgres có cập nhật.
+4. Test lại Telebot ClickUp Reader với data thật.
+5. Bổ sung map custom field trong "Phân tích Webhook Payload" khi có payload thật để tham khảo.
