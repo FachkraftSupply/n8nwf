@@ -76,6 +76,134 @@ Phải thấy 1 dòng: `7030500584 | admin | active`. Xong Phần A. ✅
 
 ---
 
+## PHẦN A' — LÀM Ở PHẦN A BẰNG pgAdmin (thay vì gõ lệnh Terminal)
+
+> Bỏ qua phần này nếu anh đã làm xong A1–A4 bằng Terminal. Đây là cách làm tương đương
+> nhưng dùng giao diện đồ họa — hợp với người không quen dòng lệnh. Chọn **1 trong 2
+> cách** bên dưới tùy Postgres của anh có "mở cổng ra ngoài" hay không.
+
+### A'.0 Xác định cổng Postgres có được mở ra ngoài container không
+
+Trên Mac Mini, mở file `docker-compose.yml` của stack n8n, tìm service Postgres, xem có
+đoạn `ports:` không:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"      # <-- CÓ dòng này = cổng đã mở ra ngoài, dùng CÁCH 1
+    environment:
+      POSTGRES_USER: n8n
+      ...
+```
+
+- **Có dòng `ports:`** → dùng **Cách 1** (kết nối thẳng, đơn giản nhất).
+- **Không có** (chỉ có `expose:` hoặc không có gì) → Postgres chỉ tự nói chuyện được
+  với các container khác trong cùng mạng Docker (n8n), không nghe từ bên ngoài — an
+  toàn hơn nhưng cần **Cách 2** (chạy pgAdmin dạng container trong cùng mạng).
+
+> Khuyến nghị bảo mật: KHÔNG mở cổng 5432 ra Internet công khai (chỉ mở trong mạng nội
+> bộ / localhost là đủ để dùng pgAdmin Desktop qua Cách 1).
+
+---
+
+### CÁCH 1 — pgAdmin Desktop (khi cổng 5432 đã mở, dùng khi pgAdmin chạy trên máy tính của anh)
+
+**Bước 1 — Cài đặt**
+1. Vào https://www.pgadmin.org/download/ → chọn đúng hệ điều hành máy anh đang dùng
+   (macOS / Windows) → tải và cài như phần mềm bình thường.
+2. Mở pgAdmin lần đầu, nó sẽ hỏi đặt **Master Password** (mật khẩu mở app, khác mật
+   khẩu database) — đặt và ghi nhớ.
+
+**Bước 2 — Đăng ký kết nối tới Postgres Docker**
+1. Trong pgAdmin, cây bên trái → chuột phải vào **Servers** → **Register** → **Server...**
+2. Tab **General**: ô **Name** đặt tùy ý, ví dụ `Elite Gateway - Docker Postgres`.
+3. Tab **Connection**:
+   - **Host name/address**: nếu pgAdmin chạy TRÊN CHÍNH Mac Mini → gõ `localhost`.
+     Nếu pgAdmin chạy trên máy khác trong cùng mạng LAN → gõ IP của Mac Mini
+     (vd `192.168.1.50`, xem bằng `ifconfig` trên Mac Mini).
+   - **Port**: `5432` (hoặc số cổng bên trái dấu `:` trong `ports: "5432:5432"` nếu khác).
+   - **Maintenance database**: tên DB, ví dụ `n8n` (lấy từ `POSTGRES_DB` trong compose).
+   - **Username**: `n8n` (lấy từ `POSTGRES_USER`).
+   - **Password**: giá trị `POSTGRES_PASSWORD` trong file compose → tick **Save password**.
+4. Bấm **Save**. Nếu hiện lỗi `connection refused` → cổng chưa mở đúng, quay lại A'.0
+   hoặc dùng Cách 2.
+
+**Bước 3 — Chạy file schema**
+1. Cây bên trái: bung `Elite Gateway - Docker Postgres` → `Databases` → chọn đúng DB
+   (vd `n8n`).
+2. Menu trên cùng → **Tools** → **Query Tool** (hoặc icon hình tia sét ⚡).
+3. Mở file `01_gateway_schema.sql` bằng trình soạn thảo bất kỳ → Select All (Cmd/Ctrl+A)
+   → Copy → dán vào ô Query Tool vừa mở.
+4. Bấm nút **▶ Execute/Refresh** (hoặc phím **F5**).
+5. Panel **Messages** phía dưới hiện các dòng `CREATE SCHEMA`, `CREATE TABLE`... và cuối
+   cùng `Query returned successfully` → đúng. Có dòng đỏ `ERROR` → chụp màn hình gửi lại.
+
+**Bước 4 — Kiểm tra**
+1. Cây bên trái: bung `Databases` → DB của anh → `Schemas` → phải thấy schema mới
+   tên **`gateway`** → bung tiếp `Tables` → thấy 4 bảng: `bot_users`, `bot_permissions`,
+   `interaction_logs`, `config`.
+2. Chuột phải bảng `bot_users` → **View/Edit Data** → **All Rows** → phải thấy 1 dòng
+   `user_id = 7030500584, role = admin, status = active`.
+
+---
+
+### CÁCH 2 — pgAdmin chạy dạng container trong cùng mạng Docker (khi KHÔNG mở cổng 5432)
+
+An toàn hơn vì không cần mở cổng Postgres ra ngoài. Thêm pgAdmin làm 1 service nữa
+ngay trong file `docker-compose.yml` hiện có của n8n.
+
+**Bước 1 — Thêm service vào docker-compose.yml**
+
+Mở file `docker-compose.yml`, thêm đoạn sau vào cùng cấp với service `postgres` hiện có
+(giữ nguyên indent 2 dấu cách, đặt trong cùng `services:`):
+
+```yaml
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: doi-mat-khau-nay
+    ports:
+      - "127.0.0.1:5050:80"   # chỉ nghe từ chính Mac Mini, không lộ ra ngoài
+    networks:
+      - default                # phải TRÙNG tên network mà service postgres đang dùng
+```
+
+> Nếu file compose của anh đặt tên network riêng cho Postgres/n8n (xem trong khối
+> `networks:` ở cuối file), sửa `default` thành đúng tên đó để pgAdmin nằm chung mạng.
+
+**Bước 2 — Khởi động**
+
+```bash
+cd <thư mục chứa docker-compose.yml>
+docker compose up -d pgadmin
+```
+
+**Bước 3 — Mở pgAdmin qua trình duyệt**
+
+Trên chính Mac Mini, mở trình duyệt vào `http://localhost:5050` → đăng nhập bằng
+`PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` vừa đặt.
+
+> Truy cập từ máy khác (không phải Mac Mini)? Vì cổng bị giới hạn `127.0.0.1` (chỉ
+> localhost) cho an toàn, hãy SSH tunnel từ máy anh vào Mac Mini:
+> `ssh -L 5050:localhost:5050 <user>@<ip-mac-mini>` rồi mở `http://localhost:5050`
+> trên trình duyệt máy anh như bình thường.
+
+**Bước 4 — Đăng ký server (giống Cách 1 nhưng Host khác)**
+
+Làm y hệt "Bước 2" của Cách 1, chỉ khác duy nhất 1 ô:
+- **Host name/address**: gõ đúng **tên service** Postgres trong docker-compose, ví dụ
+  `postgres` (không phải `localhost` — vì pgAdmin giờ ở trong mạng Docker, nó gọi
+  Postgres bằng tên service).
+- Port vẫn là cổng NỘI BỘ container, thường là `5432` (không phải cổng map ra ngoài).
+
+Sau đó **Bước 3 và Bước 4 giống hệt Cách 1** (mở Query Tool, dán SQL, Execute, kiểm tra).
+
+---
+
 ## PHẦN B — SUPABASE (cloud)
 
 ### B1. Tạo project (bỏ qua nếu đã có)
