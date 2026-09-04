@@ -55,10 +55,20 @@ bot-gateway/
 ## VIỆC TIẾP THEO — Giai đoạn 2
 Chuyển Elite Help Bot GPT (đã có bản modernized trong
 workflows/new_architecture/sub_workflows_modernized/Elite_Help_Bot_GPT.json) thành sub-workflow:
-1. Thêm Execute Workflow Trigger nhận Message Envelope (spec: docs/ARCHITECTURE.md mục 3).
-2. Giữ nguyên logic AI Agent bên trong.
-3. Gắn workflow ID thật vào node "→ Sub: Help Bot" trong Gateway (đang placeholder REPLACE_HELP_BOT_ID).
-4. Production Elite Help Bot GPT (trigger cũ) vẫn chạy song song, không tắt.
+1. ✅ XONG — Đã nối "When Executed by Another Workflow" (đã có sẵn trong file, trước đó bị bỏ trơ,
+   nối thẳng qua node phân tích intent bỏ qua toàn bộ logic) qua node Code mới "Envelope → Legacy Shape"
+   rồi mới vào "SET ENV" → Code1 (giữ 100% luồng cũ). Node adapter chỉ map field Envelope (mục 3
+   ARCHITECTURE.md: text/chat_id/user_id/username) thành object `message.{text,chat.id,from.id,from.username}`
+   mà Code1 đang parse, đồng thời spread nguyên envelope gốc (request_id, platform, auth, bot_key, route,
+   callback, raw...) ra root để không mất Correlation ID khi đi tiếp xuống AI Agent.
+   Commit: https://github.com/FachkraftSupply/n8nwf/commit/9262e2d6f50fbacac69ba8cb33b050059f71f395
+2. ✅ Giữ nguyên 100% logic AI Agent / Notion / Switch (Intent) bên trong — không đụng.
+3. ⏳ ĐANG CHỜ — Gắn workflow ID thật vào node "→ Sub: Help Bot" trong Gateway (đang placeholder
+   REPLACE_HELP_BOT_ID). CẦN anh cung cấp workflow ID (hoặc URL) thật của "Elite Help Bot GPT" trên n8n live
+   — Claude không có tool truy vấn n8n API trực tiếp trong phiên này (chỉ có Composio GitHub + Supabase MCP),
+   không tự suy ra được ID.
+4. Production Elite Help Bot GPT (trigger cũ, Telegram Trigger1 / Telegram Trigger PROD) vẫn chạy song song,
+   không tắt — chưa động tới, chỉ thêm nhánh mới.
 
 ## Quy tắc làm việc để tránh phình context
 - KHÔNG dán lại toàn bộ nội dung file JSON lớn vào chat để sửa 1-2 trường.
