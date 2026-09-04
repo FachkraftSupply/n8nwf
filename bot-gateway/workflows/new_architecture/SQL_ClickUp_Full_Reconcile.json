@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// CAN CHINH SUA O DAY\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"9018351620\", // xac nhan boi user - Space duy nhat trong workspace\n\n  // BAT/TAT che do test: gioi han nho de chay nhanh, khong can lay het DB\n  testMode: true,\n  testFolderLimit: 2,   // chi lay N folder dau (ke ca \"folderless lists\" tinh la 1 nhom)\n  testTaskLimit: 5,     // chi lay N task dau moi List\n\n  // Co lay comment de trich link OneDrive/Youtube trong lan full sync khong.\n  // Day la phan ton API nhieu nhat (1 call/task). Tat neu chi muon test nhanh cot co ban.\n  fetchCommentsInFullSync: true,\n\n  // Map ten cot Postgres -> TEN custom field trong ClickUp (khong phai ID) - CAN KIEM TRA LAI\n  fieldNameMap: {\n    phu_trach:     \"Phụ trách\",\n    dkpv:          \"DKPV\",\n    pvtc:          \"PVTC\",\n    vfs:           \"VFS\",\n    planbay:       \"Plan bay\",\n    ngaybay:       \"Ngày bay\",\n    color:         \"Color\",\n  }\n};\n\nreturn [{ json: config }];\n"
+        "jsCode": "\n// CAN CHINH SUA O DAY\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\", // xac nhan boi user - Space duy nhat trong workspace\n\n  // BAT/TAT che do test: gioi han nho de chay nhanh, khong can lay het DB\n  testMode: true,\n  testFolderLimit: 2,   // chi lay N folder dau (ke ca \"folderless lists\" tinh la 1 nhom)\n  testTaskLimit: 5,     // chi lay N task dau moi List\n\n  // Co lay comment de trich link OneDrive/Youtube trong lan full sync khong.\n  // Day la phan ton API nhieu nhat (1 call/task). Tat neu chi muon test nhanh cot co ban.\n  fetchCommentsInFullSync: true,\n\n  // Map ten cot Postgres -> TEN custom field trong ClickUp (khong phai ID) - CAN KIEM TRA LAI\n  fieldNameMap: {\n    phu_trach:     \"Phụ trách\",\n    dkpv:          \"DKPV\",\n    pvtc:          \"PVTC\",\n    vfs:           \"VFS\",\n    planbay:       \"Plan bay\",\n    ngaybay:       \"Ngày bay\",\n    color:         \"Color\",\n  }\n};\n\nreturn [{ json: config }];\n"
       },
       "id": "f0393c7d-69cd-4cf2-92b0-550fc7b86ede",
       "name": "⚙️ Config",
@@ -49,7 +49,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT admin_chat_id FROM gateway.config LIMIT 1;",
+        "query": "SELECT value AS admin_chat_id FROM gateway.config WHERE key = 'admin_chat_id' LIMIT 1;",
         "options": {}
       },
       "id": "ee792f5d-1530-4c88-9f09-a310d5c1565a",
@@ -174,8 +174,7 @@
     },
     {
       "parameters": {
-        "mode": "combine",
-        "combineBy": "combineAll",
+        "mode": "append",
         "options": {}
       },
       "id": "ccf8154c-f0e0-4836-a02e-bb3976bc9fc4",

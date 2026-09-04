@@ -10,7 +10,7 @@
         },
         "space": {
           "__rl": true,
-          "value": "9018351620",
+          "value": "90183192291",
           "mode": "id"
         },
         "events": [
@@ -630,7 +630,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT admin_chat_id FROM gateway.config LIMIT 1;",
+        "query": "SELECT value AS admin_chat_id FROM gateway.config WHERE key = 'admin_chat_id' LIMIT 1;",
         "options": {}
       },
       "id": "cf01606b-4e32-4f4a-bd5d-60d6aa0c95c4",
