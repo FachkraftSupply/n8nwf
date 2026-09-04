@@ -989,7 +989,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
+        "chatId": "={{ $('GW-01 Envelope').first().json.chat_id }}",
         "text": "⚠️ Bạn không có quyền thực hiện thao tác này.",
         "additionalFields": {
           "appendAttribution": false
