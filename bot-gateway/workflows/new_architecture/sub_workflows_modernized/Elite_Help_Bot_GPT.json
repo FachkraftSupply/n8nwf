@@ -1022,6 +1022,19 @@
       ],
       "id": "e94bff86-8df9-446d-beb5-dfd124013386",
       "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Adapter Gateway: chuan hoa Message Envelope (spec ARCHITECTURE.md muc 3)\n// thanh shape update Telegram cu ma Code1 (parse intent) dang ky vong.\n// Giu nguyen toan bo field envelope goc (request_id, platform, auth, bot_key,\n// route, callback, raw...) de khong mat Correlation ID va context auth khi\n// di tiep xuong AI Agent. Chi them key 'message' gia lap Telegram update.\nconst items = $input.all();\nreturn items.map(it => {\n  const env = it.json ?? {};\n  return {\n    json: {\n      ...env,\n      message: {\n        text: env.text || '',\n        chat: { id: env.chat_id },\n        from: { id: env.user_id, username: env.username }\n      }\n    }\n  };\n});\n"
+      },
+      "id": "06ce4c2b-8436-4855-a2da-6ed5c8c0406b",
+      "name": "Envelope → Legacy Shape",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1680,
+        -176
+      ]
     }
   ],
   "connections": {
@@ -1341,7 +1354,18 @@
       "main": [
         [
           {
-            "node": "Get many child blocks",
+            "node": "Envelope → Legacy Shape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envelope → Legacy Shape": {
+      "main": [
+        [
+          {
+            "node": "SET ENV",
             "type": "main",
             "index": 0
           }
