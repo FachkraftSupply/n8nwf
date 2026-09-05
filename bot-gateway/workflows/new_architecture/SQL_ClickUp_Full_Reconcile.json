@@ -110,7 +110,7 @@
         "operation": "getAll",
         "space": {
           "__rl": true,
-          "value": "={{ $('⚙️ Config').first().json.space_id }}",
+          "value": "={{ $('⚙️ Config').first().json.space_id.toNumber() }}",
           "mode": "id"
         },
         "returnAll": true
@@ -130,7 +130,7 @@
         "operation": "getAll",
         "space": {
           "__rl": true,
-          "value": "={{ $('⚙️ Config').first().json.space_id }}",
+          "value": "={{ $('⚙️ Config').first().json.space_id.toNumber() }}",
           "mode": "id"
         },
         "folderless": true,
@@ -192,7 +192,7 @@
         "operation": "getAll",
         "list": {
           "__rl": true,
-          "value": "={{ $json.listId }}",
+          "value": "={{ $json.listId.toNumber() }}",
           "mode": "id"
         },
         "filters": {
