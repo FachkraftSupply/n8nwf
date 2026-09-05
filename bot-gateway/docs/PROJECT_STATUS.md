@@ -3,6 +3,7 @@
 > Đọc file này (hoặc link GitHub của nó) vào đầu chat mới để Claude nắm được ngữ cảnh
 > mà không cần lại lịch sử debug dài ở phiên trước.
 > Lịch sử thay đổi chi tiết theo ngày: xem `docs/CHANGELOG.md`.
+> Hướng dẫn vận hành chi tiết SQL ClickUp Sync (Full Reconcile + Live Update): xem `docs/GUIDE_SQL_CLICKUP_SYNC.md`.
 
 ## Repo
 `FachkraftSupply/n8nwf`, folder `bot-gateway/` — kết nối GitHub qua Composio (OAuth, không dùng token).
@@ -15,6 +16,7 @@ bot-gateway/
 │   ├── CHANGELOG.md          <- lịch sử thay đổi chi tiết theo ngày
 │   ├── PROJECT_STATUS.md     <- file này
 │   ├── ARCHITECTURE.md, BOT_INVENTORY.md, GUIDE_DEPLOY_DATABASE.md, SETUP_PHASE_0_1.md
+│   ├── GUIDE_SQL_CLICKUP_SYNC.md    <- huong dan van hanh Full Reconcile + Live Update
 ├── sql/
 │   ├── 01_gateway_schema.sql
 │   └── 02_clickup_tasks_schema.sql
@@ -23,7 +25,7 @@ bot-gateway/
 └── workflows/new_architecture/
     ├── GW_Gateway_Telegram.json       (Gateway, đang chạy trên bot DEV)
     ├── GW_Error_Handler.json
-    ├── SQL_ClickUp_Full_Reconcile.json    <- ✅ ĐANG DÙNG, đã test xong, 18 node
+    ├── SQL_ClickUp_Full_Reconcile.json    <- ✅ HOÀN TẤT (21 node, có chống rate-limit)
     ├── SQL_ClickUp_Live_Update.json       <- ⚠️ CHƯA TEST, khả năng cần fix giống Full Reconcile
     └── sub_workflows_modernized/
         ├── Elite_Help_Bot_GPT.json        (✅ nhận Envelope, chờ Workflow ID để gắn Gateway)
@@ -73,7 +75,7 @@ bot-gateway/
 | 0-1 | Schema DB + Gateway + Error Handler | ✅ Xong (7/7 test) |
 | 2 | Help Bot GPT nhận Envelope | ✅ Code xong, ⏳ chờ Workflow ID thật để gắn Gateway |
 | 2b | Telebot ClickUp Reader (đọc/tìm task + xem file) | ✅ Đã deploy, chờ gắn Workflow ID vào Gateway |
-| 2c | SQL Sync ClickUp ↔ Postgres | ✅ Full Reconcile đã test xong; ⏳ Live Update (webhook) CHƯA test |
+| 2c | SQL Sync ClickUp ↔ Postgres | ✅ Full Reconcile HOÀN TẤT (kèm chống rate-limit); 🔵 Live Update (webhook) ĐANG TEST |
 | 3 | Backup Postgres → OneDrive (Phương án B — SQL export thuần n8n) | Chưa bắt đầu |
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
 | 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
@@ -82,11 +84,9 @@ bot-gateway/
 | — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
 ## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên)
-1. **Đang làm**: test `SQL_ClickUp_Live_Update.json` sau khi fix tham số phẳng cho ClickUp Trigger
-   (commit 0f78891) — active workflow, thử sửa 1 task/comment trên ClickUp, xem execution + Postgres +
+1. **Đang làm**: test `SQL_ClickUp_Live_Update.json` (đã fix tham số phẳng cho ClickUp Trigger, commit
+   0f78891) — active workflow, thử sửa 1 task/comment trên ClickUp, xem execution + Postgres +
    Telegram.
-2. **Kế tiếp**: áp dụng giải pháp rate-limit cho Full Reconcile khi lấy comment (xem thiết kế trong
-   CHANGELOG/chat 05/09/2026) trước khi chạy full (testMode=false) trên List lớn.
 3. Hoàn thiện tính năng `/sync` (đã code xong, CHƯA TEST — file
    `Telebot_ClickUp_Reader_v2_with_sync.json`):
    - Test 3 bước: chọn Folder → chọn List → lưu `clickup.sync_targets`.
