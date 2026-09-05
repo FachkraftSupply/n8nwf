@@ -1,7 +1,8 @@
 # PROJECT STATUS — Bot Gateway (bàn giao sang phiên chat mới)
 
-> Dán file này (hoặc link GitHub của nó) vào đầu chat mới để Claude nắm đủ ngữ cảnh
-> mà không cần đọc lại lịch sử debug dài ở phiên trước.
+> Đọc file này (hoặc link GitHub của nó) vào đầu chat mới để Claude nắm được ngữ cảnh
+> mà không cần lại lịch sử debug dài ở phiên trước.
+> Lịch sử thay đổi chi tiết theo ngày: xem `docs/CHANGELOG.md`.
 
 ## Repo
 `FachkraftSupply/n8nwf`, folder `bot-gateway/` — kết nối GitHub qua Composio (OAuth, không dùng token).
@@ -10,348 +11,78 @@
 ```
 bot-gateway/
 ├── README.md
-├── sql/01_gateway_schema.sql
-├── workflows/
-│   ├── original/                          5 workflow production NGUYÊN BẢN
-│   └── new_architecture/
-│       ├── GW_Gateway_Telegram.json       workflow Gateway (đang chạy trên n8n)
-│       ├── GW_Error_Handler.json
-│       └── sub_workflows_modernized/      5 workflow đã nâng n8n 2.37.7 + dual storage
-└── docs/ (ARCHITECTURE, BOT_INVENTORY, GUIDE_DEPLOY_DATABASE, SETUP_PHASE_0_1, PROJECT_STATUS)
+├── docs/
+│   ├── CHANGELOG.md          <- lịch sử thay đổi chi tiết theo ngày
+│   ├── PROJECT_STATUS.md     <- file này
+│   ├── ARCHITECTURE.md, BOT_INVENTORY.md, GUIDE_DEPLOY_DATABASE.md, SETUP_PHASE_0_1.md
+├── sql/
+│   ├── 01_gateway_schema.sql
+│   └── 02_clickup_tasks_schema.sql
+├── original/                 5 workflow production NGUYÊN BẢN (tham khảo, không sửa)
+│   └── Telebot_sql.json      <- QUAN TRỌNG: mẫu tham số ClickUp node ĐÚNG (xem bên dưới)
+└── workflows/new_architecture/
+    ├── GW_Gateway_Telegram.json       (Gateway, đang chạy trên bot DEV)
+    ├── GW_Error_Handler.json
+    ├── SQL_ClickUp_Full_Reconcile.json    <- ✅ ĐANG DÙNG, đã test xong, 18 node
+    ├── SQL_ClickUp_Live_Update.json       <- ⚠️ CHƯA TEST, khả năng cần fix giống Full Reconcile
+    └── sub_workflows_modernized/
+        ├── Elite_Help_Bot_GPT.json        (✅ nhận Envelope, chờ Workflow ID để gắn Gateway)
+        ├── Telebot_ClickUp_Reader.json    (✅ đã deploy, đọc/tìm task + xem file OneDrive)
+        └── Telebot_main.json              (⚠️ KHÔNG dùng nữa, giữ tham khảo logic xử lý ảnh)
 ```
 
-## Đã HOÀN THÀNH (Giai đoạn 0–1)
-- Schema `gateway` (4 bảng) đã tạo trên CẢ Postgres Docker (`n8n_stack-postgres-1`, db `n8n`)
-  và Supabase (project "Telegram authentication DB", ref `nlgmkfqtmarsdcqismzz`).
-- Admin ID đúng: **`975005174`**, đồng bộ 2 DB + workflow.
-- Đã import + gắn credential đủ (`Telegram Dev Bot`, `Telegram System Bot`, `Supabase Postgres`).
-- Đã sửa lỗi cú pháp `queryReplacement` (phải dùng dạng mảng `={{ [$json.a, $json.b] }}`,
-  không phải `={{ $json.a }},{{ $json.b }}`) ở 4 node Postgres đa tham số.
-- Đã sửa lỗi Telegram "can't parse entities": node "Báo admin duyệt user" chèn username/text
-  tự do của user vào tin nhắn có parse_mode Markdown mặc định -> ký tự _ * [ ] trong nội dung
-  user gõ làm Telegram từ chối gửi. Đã set parse_mode='' (None) cho node này trên GitHub
-  (commit cb1207f) — CẦN ANH TỰ SỬA field tương ứng trong n8n UI nếu workflow đang chạy
-  chưa đồng bộ lại từ repo (Additional Fields -> Parse Mode -> None).
-- Test #1 (admin route đúng) PASS.
+## QUY TẮC LÀM VIỆC (áp dụng cho mọi phiên chat)
+- Sửa file JSON lớn: dùng Composio remote workbench (fetch GitHub → sửa Python trong sandbox → commit),
+  không dán nguyên workflow vào chat.
+- **Khi đang debug/thử nghiệm 1 thay đổi:** KHÔNG tự động commit vào file chính trên GitHub. Chỉ đưa
+  nội dung node cần sửa (JSON đầy đủ nếu node thường, chỉ code nếu Code node) để user tự copy/paste
+  test trong n8n. Chỉ commit sau khi user xác nhận chạy ổn.
+- Thay đổi lớn/rủi ro cao: cân nhắc commit thành file `_v2`/`_wip` riêng trước, merge vào file chính
+  sau khi xác nhận — tránh phải rollback file đang dùng.
+- Khi rút gọn/đơn giản hoá 1 workflow: LUÔN đối chiếu checklist tính năng bản trước để không bỏ sót
+  (từng quên node Notify Start khi đơn giản hoá SQL sync — xem CHANGELOG 2026-09-05).
+- Luôn cập nhật CHANGELOG.md + file này sau khi 1 thay đổi được xác nhận thành công.
 
-## Đang làm dở — 7 test nghiệm thu (`docs/SETUP_PHASE_0_1.md`)
-| # | Test | Trạng thái |
-|---|---|---|
-| 1 | Admin route đúng | PASS |
-| 2 | User lạ -> chờ duyệt + admin nhận nút | PASS (sau fix parse_mode) |
-| 3 | Admin bấm approve -> cả 2 bên nhận thông báo | PASS (sau fix chat_id + fix data Postgres phía admin) |
-| 4 | User được duyệt dùng lệnh | Chưa test |
-| 5 | User chưa có quyền bị chặn đúng cách | Chưa test |
-| 6 | Log ghi đủ cả 2 DB | Chưa verify lại |
-| 7 | Non-admin bấm nút approve bị chặn | Chưa test |
+## ⚠️ GHI NHỚ KỸ THUẬT QUAN TRỌNG NHẤT (tránh lặp lại lỗi đã tốn nhiều vòng debug)
 
-## Bot inventory (chi tiết: docs/BOT_INVENTORY.md)
-- @elite_n8n_test_bot -> Gateway DEV (đang dùng)
-- @Elite_clickup_bot -> Gateway PROD (Giai đoạn 4 - cutover)
-- @elite_n8n_system_bot -> kênh Error Handler
-- @Elite_system_bot (backup_data) -> output crawl_bot + BACKUP N8N
-- @elite_tele_help_bot -> nghỉ hưu dần, gộp vào Gateway (bot_key: help_bot)
-
-## VIỆC TIẾP THEO — Giai đoạn 2
-Chuyển Elite Help Bot GPT (đã có bản modernized trong
-workflows/new_architecture/sub_workflows_modernized/Elite_Help_Bot_GPT.json) thành sub-workflow:
-1. ✅ XONG — Đã nối "When Executed by Another Workflow" (đã có sẵn trong file, trước đó bị bỏ trơ,
-   nối thẳng qua node phân tích intent bỏ qua toàn bộ logic) qua node Code mới "Envelope → Legacy Shape"
-   rồi mới vào "SET ENV" → Code1 (giữ 100% luồng cũ). Node adapter chỉ map field Envelope (mục 3
-   ARCHITECTURE.md: text/chat_id/user_id/username) thành object `message.{text,chat.id,from.id,from.username}`
-   mà Code1 đang parse, đồng thời spread nguyên envelope gốc (request_id, platform, auth, bot_key, route,
-   callback, raw...) ra root để không mất Correlation ID khi đi tiếp xuống AI Agent.
-   Commit: https://github.com/FachkraftSupply/n8nwf/commit/9262e2d6f50fbacac69ba8cb33b050059f71f395
-2. ✅ Giữ nguyên 100% logic AI Agent / Notion / Switch (Intent) bên trong — không đụng.
-3. ⏳ ĐANG CHỜ — Gắn workflow ID thật vào node "→ Sub: Help Bot" trong Gateway (đang placeholder
-   REPLACE_HELP_BOT_ID). CẦN anh cung cấp workflow ID (hoặc URL) thật của "Elite Help Bot GPT" trên n8n live
-   — Claude không có tool truy vấn n8n API trực tiếp trong phiên này (chỉ có Composio GitHub + Supabase MCP),
-   không tự suy ra được ID.
-4. Production Elite Help Bot GPT (trigger cũ, Telegram Trigger1 / Telegram Trigger PROD) vẫn chạy song song,
-   không tắt — chưa động tới, chỉ thêm nhánh mới.
-
-## Quy tắc làm việc để tránh phình context
-- KHÔNG dán lại toàn bộ nội dung file JSON lớn vào chat để sửa 1-2 trường.
-- Cách hiệu quả đã kiểm chứng: dùng Composio remote workbench (run_composio_tool trong
-  COMPOSIO_REMOTE_WORKBENCH) để GET file từ GitHub -> sửa bằng Python trong sandbox ->
-  COMMIT lại, tất cả không đi qua context chính của chat.
-- File > 60KB cần thêm mới (chưa có trên GitHub) thì đóng gói zip, để user tự kéo-thả upload
-  qua GitHub web UI thay vì dán vào chat.
-- Credential Postgres docker: `Postgres account` (id iNVsYeDUnMl6pq4M).
-  Credential Supabase: `Supabase Postgres`.
-
-
-## LẦN SỬA MỚI NHẤT (sau lần cutover thử nghiệm)
-- Lỗi "chat_id is empty" ở node "Bỏ qua (không phải admin)": nguyên nhân là node Postgres
-  "Check admin" phía trước GHI ĐÈ toàn bộ $json bằng kết quả SQL (chỉ còn cột `role`), làm
-  mất chat_id gốc. ĐÃ SỬA: chatId giờ đọc từ `{{ $('GW-01 Envelope').first().json.chat_id }}`
-  thay vì `{{ $json.chat_id }}`. Đã rà toàn bộ workflow, không còn node nào khác mắc lỗi
-  tương tự (mọi node khác đều đi qua Code node trung gian giữ nguyên envelope).
-- Bài học chung: BẤT KỲ lúc nào thêm node Postgres/DB query vào giữa luồng, node theo SAU nó
-  không được đọc thẳng $json cho các field gốc (chat_id, user_id...) — phải tham chiếu ngược
-  về node Envelope hoặc Merge Auth bằng $('TênNode').first().json.field.
-
-
-## Fix bổ sung (đã xong)
-- "Bỏ qua (không phải admin)" từng báo sai admin không phải admin do dữ liệu Postgres
-  (không phải lỗi workflow) — user đã tự sửa trực tiếp trên DB, đã hoạt động đúng.
-
-## ĐỔI ƯU TIÊN (04/09/2026) — ClickUp (Telebot Main) làm trước Help Bot
-Theo yêu cầu: ưu tiên hoàn thiện sub-workflow ClickUp (Telebot Main) trước, Help Bot GPT tạm gác lại
-sau bước 1-2 (đã xong phần code, chỉ còn thiếu workflow ID thật để gắn vào Gateway — xem mục phía trên).
-
-### Telebot Main (ClickUp bot) — tiến độ
-File `Telebot_main.json` PHỨC TẠP HƠN Help Bot: 71 node, đã có sẵn hạ tầng làm dở từ trước:
-- Node `sub workflow` (Execute Workflow Trigger, inputSource=passthrough) — đã có sẵn, không cần thêm.
-- Node `Code` — logic tính route y hệt `Phân tích lệnh` gốc nhưng đọc thẳng `$input` (không phụ thuộc
-  node `Trigger Prod`) — TRƯỚC ĐÓ bị `disabled: true` và output nối vào chỗ trống, không dùng được.
-- Node `zalo code` — thử nghiệm dở cho Zalo, đọc sai shape (`body.message`), chỉ phủ 1/8 nhánh Switch
-  qua node `If` — KHÔNG ĐỤNG TỚI, để nguyên cho việc khác.
-- Node `Phân tích lệnh` gốc: hard-code `$('Trigger Prod').item.json` → KHÔNG dùng được khi gọi qua
-  sub-workflow (Trigger Prod chưa chạy trong execution đó → lỗi "Referenced node is not part of input").
-
-✅ ĐÃ SỬA (commit https://github.com/FachkraftSupply/n8nwf/commit/f1644e822edc5184ac113f3149c9d32678925970):
-1. Thêm node mới "Envelope → Legacy Shape": nhận Message Envelope (spec mục 3 ARCHITECTURE.md), dựng lại
-   `message.{text,chat.id,message_id,from.id,from.username}` hoặc `callback_query.{id,data,message.chat.id,
-   message.message_id}` tùy `kind`, spread nguyên envelope gốc ra root để giữ request_id/platform/auth/
-   bot_key trong `originalData` phục vụ debug.
-2. Bật lại node `Code` (xoá `disabled: true`).
-3. Nối lại: `sub workflow` → `Envelope → Legacy Shape` → `Code` → `Switch` (đúng đích mà `Phân tích lệnh`
-   đang nối tới) — tái sử dụng 100% pipeline `task`/`stat`/`help`/`chitiet`/`taotask_td`/`taotask_tc` phía
-   sau, không viết lại gì. Nhánh `zalo code` giữ nguyên, không đụng.
-
-⚠️ LƯU Ý AN TOÀN khi test: route `taotask_td`/`taotask_tc` gọi thẳng node `cr_task_hs`/`cr_task_dh`
-(n8n-nodes-base.clickUp) — TẠO TASK THẬT trên ClickUp List ID `901805909593` (hoặc list liên quan).
-Khi nghiệm thu qua Gateway, nên test theo thứ tự: `/help` → `/task <id có sẵn>` → `/stat` → `chitiet_<id>`
-TRƯỚC, để `/taotask` cuối cùng và xoá/dọn task test sau khi xong.
-
-### Việc tiếp theo — CẦN TỪ ANH
-1. CẦN workflow ID (hoặc link) thật của "Telebot main" trên n8n live → gắn vào node "→ Sub: Telebot Main"
-   trong Gateway (đang placeholder REPLACE_TELEBOT_MAIN_ID).
-2. CẦN workflow ID thật của "Elite Help Bot GPT" (đang gác lại, xem mục Giai đoạn 2 phía trên) — có thể
-   gửi cùng lúc.
-3. Sau khi có ID: Claude gắn cả 2 vào Gateway, commit, anh import lại Gateway trên n8n live rồi test
-   theo checklist (xem chat) cho từng sub-workflow riêng.
-
-## Việc tiếp theo khi mở chat mới
-1. Test #4, #5, #6, #7 còn lại (xem docs/SETUP_PHASE_0_1.md mục Test nghiệm thu) — nếu chưa làm.
-2. Giai đoạn 2 đang ưu tiên ClickUp (Telebot Main) — xem mục "ĐỔI ƯU TIÊN" phía trên để biết đang chờ gì.
-3. Help Bot GPT: code đã xong bước 1-2, chỉ còn thiếu workflow ID thật (mục Giai đoạn 2 phía trên).
-
-
-## ĐẬP ĐI LÀM LẠI (04/09/2026) — Telebot Main → "Telebot ClickUp Reader"
-Quyết định: KHÔNG dùng `Telebot_main.json` (72 node, chưa từng import lên n8n live) nữa. Dựng file
-hoàn toàn mới, gọn hơn, chỉ tập trung đọc dữ liệu + tìm/tải file OneDrive.
-
-### File mới: `sub_workflows_modernized/Telebot_ClickUp_Reader.json`
-Commit: https://github.com/FachkraftSupply/n8nwf/commit/10ac87bf3f6594760593b9c63048e1920c79010f
-26 node (giảm từ 72). Kiến trúc:
-```
-sub workflow (Execute Workflow Trigger, passthrough)
-  -> Phân tích lệnh (Code, đọc Envelope trực tiếp, tự tính route)
-  -> Switch: help / task / chitiet / view_file / taotask / (fallback: unknown)
-```
-- help: text hướng dẫn mới (bỏ mô tả /taotask cũ, thêm ghi chú "đang xây lại bằng AI")
-- task: y hệt luồng cũ (Prepare Search -> PostgreSQL search tasks -> Code1 scoring -> Beautify full ->
-  Telegram) — ĐÃ SỬA 1 lỗi trong query gốc: ts_rank hard-code chữ 'hnd' thay vì dùng $1, giờ dùng đúng $1.
-  ĐÃ BỎ nhánh Discord/Zalo đi kèm (Gộp dữ liệu, Merge2, Execute Workflow gọi "ZALO BOT DEV", Beautify unfull1).
-- chitiet: task_detail_sql -> extract output -> Beautify_detail (ĐÃ SỬA lỗi cú pháp thừa dấu } ở link
-  OneDrive trong code gốc) -> If1 (có onedrive_link?) -> Telegram thường / telegram inline (nút "Xem file"
-  callback_data=view_file:<taskId>, bỏ nút "Upload File" cũ)
-- view_file (MỚI, callback từ nút "Xem file"): task_detail_sql (dùng chung) -> Encode Share URL (encode
-  OneDrive share link theo chuẩn Microsoft Graph u!<base64url>) -> HTTP Request tới
-  graph.microsoft.com/v1.0/shares/{id}/driveItem?$expand=children -> Beautify File List (dựng nút bấm tải
-  từng file bằng @microsoft.graph.downloadUrl, KHÔNG qua Telegram upload nên không bị giới hạn 50MB) ->
-  Telegram (File List).
-  ⚠️ CHƯA TEST ĐƯỢC field name response Graph API thật (không chạy được n8n live trong phiên này) — cần anh
-  test kỹ, field @microsoft.graph.downloadUrl có thể khác tùy loại tài khoản OneDrive (personal vs
-  SharePoint/business) hoặc cần thêm $select.
-- taotask: placeholder — trả lời "đang xây dựng lại bằng AI, chưa khả dụng", KHÔNG gọi ClickUp — an toàn
-  100%, không tạo task thật.
-
-### ĐÃ BỎ khỏi workflow (không xóa, giữ trong Telebot_main.json cũ làm tham khảo)
-- /taotask thật (cr_task_hs, cr_task_dh, tt_dk, Validate code, toàn bộ chuỗi upload OneDrive)
-- zalo code (thử nghiệm dở, đọc sai shape)
-- Xử lý ảnh (xóa nền/nén trang/chèn logo) — CẦN CHUYỂN SANG "Bot System Main" khi build workflow đó. Logic
-  gốc nằm trong Telebot_main.json (giữ nguyên, KHÔNG XÓA), các node liên quan: Edit Fields1, Check if Photo,
-  check caption, nocaption, Get a file xoa nen, Get a file1 nen trang, Get a file chen logo,
-  HTTP Request xoa nen(1), HTTP Request nen trang, Extract from File, gui file nen trang, Send a document(1),
-  Send a photo message2.
-- MySQL cũ (MySQL2, task_detail_sql bản MySQL — đã có bản Postgres thay thế, node MySQL là thừa)
-
-### Việc tiếp theo — CẦN TỪ ANH
-1. Import Telebot_ClickUp_Reader.json vào n8n (workflow MỚI, chưa từng có trên live, không rủi ro ghi đè).
-2. Test kỹ nhánh view_file trước tiên (rủi ro cao nhất vì chưa test được Graph API response thật).
-3. Lấy Workflow ID, gắn vào Gateway node "→ Sub: Telebot Main".
-4. Khi nào làm "Bot System Main", quay lại lấy cụm node xử lý ảnh trong Telebot_main.json.
-
-
-## SQL SYNC + BACKUP (04/09/2026) — Có data thật để test Telebot ClickUp Reader
-Vấn đề: anh đã deploy xong Telebot_ClickUp_Reader.json nhưng chưa có data trong `clickup.tasks` để test.
-
-### Workflow mới: `SQL_ClickUp_to_Postgres_Sync.json`
-Commit: https://github.com/FachkraftSupply/n8nwf/commit/6ddac314ffc6827de990563ba5cc172633e3e72a
-File schema: `sql/02_clickup_tasks_schema.sql`
-10 node, config-driven (node "⚙️ Config" — điền list ID + tên custom field, KHÔNG cần sửa code khác):
-```
-Manual Trigger / Schedule (15 phút) -> ⚙️ Config
-  -> Ensure Schema (idempotent, CREATE TABLE IF NOT EXISTS clickup.tasks)
-  -> Split Out Lists -> Loop Over Lists -> ClickUp - Get Tasks -> Map Task -> Row -> Upsert Postgres -> (quay lại Loop)
-  -> khi xong: Notify Done (Telegram)
-```
-- Đọc custom field theo TÊN (không phải ID) qua hàm `getCF()` — tránh phải biết ID field, chỉ cần đúng tên
-  hiển thị trong ClickUp.
-- ⚠️ ClickUp MCP trong phiên chat này bị "No approval received" khi Claude thử gọi `clickup_get_custom_fields`
-  để lấy tên field thật — KHÔNG lấy được data live. Tên field trong node Config hiện là PHỎNG ĐOÁN dựa theo
-  tên cột đã dùng trong code Telebot cũ (`Phụ trách`, `DKPV`, `PVTC`, `VFS`, `Plan bay`, `Ngày bay`, `Youtube`,
-  `OneDrive`, `Link khác`, `Color`) — CẦN ANH KIỂM TRA LẠI cho khớp tên thật trong ClickUp trước khi chạy.
-- List ID đã điền sẵ n: List 2025 (`901805909593`), Orders (`901805909357`). Cần điền thêm List 2026 + 3 công
-  ty (ELMC/ELHZ/ELHT) nếu muốn đồng bộ đủ.
-- Node `ClickUp - Get Tasks` dùng native ClickUp node (`resource: task, operation: getAll`) — CHƯA TEST được
-  param chính xác (không chạy được n8n live trong phiên này), có thể cần chỉnh lại qua dropdown sau khi import.
-
-### Backup Postgres hàng ngày → OneDrive — ĐANG CHỜ ANH CHỌN PHƯƠNG ÁN
-Đã đề xuất 2 phương án (xem chat):
-- **A — pg_dump qua SSH**: đầy đủ nhất (phục hồi bằng `pg_restore` 1 lệnh), cần SSH credential trỏ Mac Mini.
-- **B — SQL export thuần n8n**: không cần hạ tầng thêm, export JSON/CSV qua Postgres node + nén zip + upload
-  OneDrive, phục hồi cần insert lại thủ công.
-Khuyến nghị: làm B trước (nhanh, không rủi ro hạ tầng), nâng cấp A sau nếu cần. QUYẾT ĐỊNH (04/09/2026): làm Phương án B, nhưng DỜI sang Phase 3 (sau khi Phase 2c — SQL Sync có data thật — xong trước). Hiện đang ở Phase 2c: import & chạy thử SQL Sync.
-
-### THAY THẾ (04/09/2026) — Tách 2 luồng theo yêu cầu mới, dùng native ClickUp node
-`SQL_ClickUp_to_Postgres_Sync.json` (10 node, 1 luồng poll+full) KHÔNG dùng nữa — thay bằng 2 file mới,
-tách rõ Full Reconcile / Live Update, đúng tinh thần "ưu tiên native ClickUp node" + rate-limit + trích
-link từ comment. Commit: https://github.com/FachkraftSupply/n8nwf/commit/58123403ff985f9ef20f68bef93b4becb741d036
-
-#### `SQL_ClickUp_Full_Reconcile.json` (19 node) — Schedule 5 ngày/lần, 1h sáng + Manual Trigger test
-```
-Schedule/Manual → Config (space_id=9018351620, testMode, fieldNameMap)
-  → Lấy Admin Chat ID (SELECT tu gateway.config, KHÔNG hardcode) → Notify Start
-  → ClickUp: Get all folders (theo Space, tra ve luon lists[] long trong) ┐
-  → ClickUp: Get all lists (folderless, theo Space)                       ┴→ Merge (combine, cho ca 2 nhanh xong)
-  → Gộp danh sách List (khu trung, ap dung testMode/testFolderLimit)
-  → Ensure Schema (idempotent)
-  → Split Out Lists → Loop Over Lists
-      → ClickUp: Get Tasks (native, returnAll tat khi testMode, limit=testTaskLimit)
-      → Limit (test mode) — lop an toan thu 2, khong phu thuoc field "limit" cua ClickUp node dung dung ten
-      → Map Task + Trich Link Comment (Code, runOnceForEachItem):
-          goi truc tiep GET /task/{id}/comment qua this.helpers.httpRequestWithAuthentication('clickUpApi', ...)
-          KHONG can node ClickUp rieng / vong lap long nhau. Trich link tu CA
-          comment[].attributes.link (hyperlink co anchor text khac URL) LAN regex tren comment_text.
-          Co delay 350ms/task khi khong test mode (chong 429, gioi han 100 req/phut).
-      → Upsert Postgres → Ghi thống kê (staticData tich luy) → quay lai Loop
-  → Notify Done: liet ke List + so task/List + tong so task + thoi gian chay
-```
-⚠️ CHƯA TEST được node `ClickUp - Get Folders`/`Get Folderless Lists`/`Get Tasks` (resource/operation/param
-đúng tên) trên n8n live — ClickUp MCP trong phiên chat bị "No approval received" liên tục, không verify được.
-Cần kiểm tra kỹ khi import, có thể phải chỉnh lại qua dropdown.
-
-#### `SQL_ClickUp_Live_Update.json` (23 node) — ClickUp Trigger (webhook, KHÔNG poll)
-```
-ClickUp Trigger (native, scope Space 9018351620, event: Task Updated + Task Comment Posted/Updated)
-  → Lấy Admin Chat ID (song song)
-  → Phân tích Webhook Payload (đọc history_items, xác định field đổi + before/after có sẵn miễn phí)
-  → Là comment event?
-      true → Đọc lại Comment + Trích Link → Update Postgres (UPDATE trực tiếp onedrive/youtube_link,
-             COALESCE giữ giá trị cũ nếu không tìm thấy link mới) → Build Notify (comment) → Telegram
-      false → Split Out Updates → Lọc cột hợp lệ (whitelist 10 cột, chống SQL injection qua tên cột động)
-             → Switch theo tên cột → 1 trong 10 node "Update: <cột>" (UPDATE thẳng, KHÔNG gọi lại
-               ClickUp API — dùng luôn giá trị `after` có sẵn trong webhook, tiết kiệm toàn bộ quota
-               API cho các thay đổi field thường) → Build Notify (field) → Telegram
-```
-Mẫu thông báo (đã rút gọn theo yêu cầu — bỏ "Trước", chỉ giữ giá trị mới + tên task + người thực hiện):
-```
-🔄 Thông báo CẬP NHẬT Task
-🔧 Thay đổi:
-📝 Trường "<field>" được cập nhật bởi <user>
-✅ Giá trị mới: <after>
-📦 Thông tin:
-🆔 ID: <id>  📌 Tên: <name>  🔗 Link: <url>
-🕒 Cập nhật lúc: <timestamp> #task_updated
-```
-⚠️ CHƯA TEST được: (1) node `ClickUp Trigger` tự đăng ký webhook đúng scope Space hay không (cần xác
-nhận sau khi active workflow), (2) map `FIELD_TO_COLUMN` trong "Phân tích Webhook Payload" mới chỉ có
-status/name/content — CẦN BỔ SUNG cho custom field (webhook trả field dạng ID/uuid, cần đọc thêm object
-`custom_field` trong history_item để map đúng, phần này chưa hoàn chỉnh, cần 1 payload thật để tinh chỉnh).
-
-### Backup Postgres hàng ngày → OneDrive
-QUYẾT ĐỊNH: làm Phương án B (SQL export thuần n8n, xem chat), DỜI sang Phase 3 (sau khi 2 luồng SQL Sync
-ở trên chạy ổn định).
-
-### Việc tiếp theo — CẦN TỪ ANH
-1. Import cả 2 workflow mới vào n8n (Full Reconcile + Live Update).
-2. Chạy Full Reconcile bằng Manual Trigger (testMode=true có sẵn) — sửa lỗi node ClickUp nếu n8n báo sai
-   param, kiểm tra `clickup.tasks` có data.
-3. Active Live Update, thử sửa 1 task/comment trên ClickUp, xem thông báo Telegram + Postgres có cập nhật.
-4. Test lại Telebot ClickUp Reader với data thật.
-5. Bổ sung map custom field trong "Phân tích Webhook Payload" khi có payload thật để tham khảo.
-
-
-## PHIÊN BẢN SIMPLIFIED (04-05/09/2026) — Full Reconcile viết lại theo pattern đã chứng minh chạy tốt
-Sau nhiều lần lỗi liên tiếp với node ClickUp native (resource locator `__rl`, "Multiple matches"
-pairedItem...), user cung cấp workflow CŨ đã chạy ổn (`original/Telebot_sql.json`) để tham khảo.
-
-### PHÁT HIỆN GỐC RỄ QUAN TRỌNG
-Node ClickUp trên n8n của user dùng **tham số PHẲNG (plain string)**, KHÔNG PHẢI resource-locator
-(`{__rl:true, value, mode}`) như các node n8n hiện đại khác. Ví dụ đã chạy tốt:
+**Node ClickUp native trên n8n của user dùng THAM SỐ PHẲNG, không phải resource-locator.**
 ```js
-// "lay task" (Get Tasks):
+// ĐÚNG (đã xác nhận chạy ổn, xem original/Telebot_sql.json node "lay task"/"lay comment1"):
 { team: "9018351620", space: "90183192291", folderless: true, list: "={{ $json.id }}" }
-// "lay comment1" (Get Comments):
-{ resource: "comment", operation: "getAll", commentsOn: "task", id: "={{ $json.task.id }}", limit: 50 }
+{ resource: "comment", operation: "getAll", commentsOn: "task", id: "={{ $json.id }}", limit: 50 }
+// SAI (gây lỗi liên tục trước đây):
+{ team: {"__rl": true, "value": "...", "mode": "id"} }  // resource-locator - KHÔNG dùng cho instance này
 ```
-KHÔNG cần `.toNumber()` (đã thử trước đó, SAI hướng - gốc rễ là sai cấu trúc tham số chứ không phải
-kiểu number/string). Áp dụng lại đúng format này cho toàn bộ node ClickUp là hướng đúng.
+- `ClickUp - Get Comments` KHÔNG tự lặp qua nhiều item — bắt buộc bọc trong `SplitInBatches(batchSize=1)`.
+- Link OneDrive/Youtube trong comment ClickUp: đọc CẢ `comment[].bookmark.url` LẪN `comment[].attributes.link`
+  (2 nguồn khác nhau tùy cách dán link) + regex trên `comment_text` làm fallback cuối.
+- ClickUp đã đổi định dạng Task ID (số → chữ+số, vd `z908826jhz`) — luôn để cột `id` trong Postgres là
+  `TEXT` không giới hạn.
+- `gateway.config` là bảng key-value (`key`, `value`), KHÔNG có cột riêng `admin_chat_id` — query đúng:
+  `SELECT value AS admin_chat_id FROM gateway.config WHERE key = 'admin_chat_id'`.
+- Code node mặc định "Run Once for All Items" — nếu code viết theo kiểu xử lý từng item (`$json`,
+  `return {json:{...}}`), PHẢI set `"mode": "runOnceForEachItem"` trong parameters, nếu không chỉ xử
+  lý được 1 item dù đầu vào nhiều hơn.
+- `SplitInBatches` output "done" (index 0) trả về TOÀN BỘ item gốc đã đưa vào loop (không phải 1 tín
+  hiệu đơn) — nếu nối thẳng sang bước gửi Telegram sẽ lặp/dài tin nhắn, cần chèn `Limit(maxItems=1)`
+  trước bước thông báo cuối cùng.
 
-Link trong comment ClickUp có thể nằm ở `comment[].bookmark.url` (không chỉ `attributes.link`) — đã bổ
-sung đọc cả 2 nguồn.
+## Trạng thái hiện tại theo Phase (roadmap đầy đủ ở ARCHITECTURE.md mục 8)
+| Phase | Việc | Trạng thái |
+|---|---|---|
+| 0-1 | Schema DB + Gateway + Error Handler | ✅ Xong (7/7 test) |
+| 2 | Help Bot GPT nhận Envelope | ✅ Code xong, ⏳ chờ Workflow ID thật để gắn Gateway |
+| 2b | Telebot ClickUp Reader (đọc/tìm task + xem file) | ✅ Đã deploy, chờ gắn Workflow ID vào Gateway |
+| 2c | SQL Sync ClickUp ↔ Postgres | ✅ Full Reconcile đã test xong; ⏳ Live Update (webhook) CHƯA test |
+| 3 | Backup Postgres → OneDrive (Phương án B — SQL export thuần n8n) | Chưa bắt đầu |
+| 3 | Chuyển Crawl Bot | Chưa bắt đầu |
+| 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
+| — | Bot System Main (xử lý ảnh, tách từ Telebot_main.json cũ) | Chưa bắt đầu |
+| — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | 🔵 Đang lên kế hoạch, đã chọn hướng A (route qua Gateway trong Telebot_ClickUp_Reader.json) |
 
-### Kiến trúc SIMPLIFIED (theo yêu cầu user: bỏ vòng lặp nhiều List, chỉ 1 List cố định)
-File: `SQL_ClickUp_Full_Reconcile_v2_simplified.json` (13 node, giảm từ 22) — **CHƯA merge vào file
-chính**, đang chờ user test xong xác nhận.
-Commit: https://github.com/FachkraftSupply/n8nwf/commit/02e161ed9091dcef5fd69f028eb0aae48ae860a8
-```
-Manual/Schedule → Config (list_id CỐ ĐỊNH, điền tay — chọn List động qua Telegram bot để SAU)
-  → Ensure Schema
-  → ClickUp - Get Tasks (native, tham số PHẲNG đúng chuẩn)
-      ├─→ Map Row (không comment) → Upsert Postgres (main) ─┐ (nhánh A: mọi field trừ link)
-      └─(sau khi A xong, KHÔNG song song)→ ClickUp - Get Comments (native, tham số PHẲNG)
-             → Trích Link từ Comment → Update Link vào Postgres (nhánh B: chỉ UPDATE 2 cột link)
-  → Notify Done
-```
-- Nhánh B cố tình nối SAU nhánh A (không chạy song song) để tránh race condition: UPDATE link có thể
-  chạy trước khi INSERT chính kịp tạo dòng, khiến WHERE id=... không khớp gì.
-- Đã sửa nhiều lỗi "hiệu ứng dây chuyền" (n8n bỏ qua node có 0 item đầu vào) bằng `alwaysOutputData`
-  + luôn trả về ít nhất 1 dòng "vô hại" (taskId=null) ở các bước có thể ra rỗng.
-
-### LỖI THỰC TẾ ĐÃ GẶP KHI TEST (04-05/09/2026) VÀ CÁCH SỬA
-1. `column "team_id" does not exist` — bảng `clickup.tasks` đã tồn tại từ trước (code Telebot cũ),
-   `CREATE TABLE IF NOT EXISTS` KHÔNG tự thêm cột thiếu vào bảng có sẵn → phải dùng
-   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` cho từng cột (đã sửa trong Ensure Schema).
-2. ClickUp đổi định dạng Task ID (số → chữ+số, vd `z908826jhz`) — cần ép cột `id` (và mọi cột ID khác)
-   về kiểu `TEXT` không giới hạn, tránh lỗi/lạc dữ liệu nếu cột cũ là INTEGER/VARCHAR giới hạn.
-3. **"Map Row (không comment)" chỉ ra 1 item dù Get Tasks ra 5** — nguyên nhân: Code node quên set
-   Mode "Run Once for Each Item" (mặc định là "Run Once for All Items", code viết theo kiểu per-item
-   dùng `$json` sẽ chỉ lấy được item đầu). ĐÃ SỬA (nhắc user đổi Mode trong UI).
-4. **QUÊN node "Notify Start"** khi rút gọn từ 22 xuống 13 node — bài học: khi đơn giản hoá workflow,
-   PHẢI đối chiếu lại checklist tính năng của bản đầy đủ trước đó để không rơi rớt tính năng phụ
-   (không chỉ pipeline chính). Đã bổ sung lại.
-
-### Nâng cấp tìm kiếm — ĐÃ CHỌN Phương án A (pg_trgm)
-So với B (pgvector/semantic, cần API embedding + tốn phí) — A dùng extension có sẵn của Postgres,
-fuzzy/typo-tolerant, miễn phí, làm ngay được. SQL cụ thể: CHƯA ĐƯA (đang chờ 2 lỗi node Map
-Row/Notify Start ở trên được xác nhận xong trước, tránh dồn quá nhiều thay đổi cùng lúc).
-
-### QUY TẮC MỚI (05/09/2026) — user yêu cầu
-- **KHÔNG tự động commit lên GitHub file chính nữa** khi đang debug/thử nghiệm. Chỉ đưa nội dung node
-  cần sửa (JSON đầy đủ nếu node thường, chỉ code nếu Code node) để user tự copy/paste vào n8n test.
-  Chỉ commit lên GitHub SAU KHI user xác nhận chạy ổn — và khi thay đổi lớn, commit thành file
-  `_v2_...`/`_simplified` RIÊNG (không đè file chính) để dễ so sánh/rollback trước khi merge.
-- Khi rút gọn/đơn giản hoá 1 workflow, LUÔN đối chiếu checklist tính năng của bản trước để không quên
-  (vd Notify Start bị bỏ sót lần này).
-
-### Việc tiếp theo — CẦN TỪ ANH
-1. Sửa Mode "Run Once for Each Item" cho node Map Row (không comment).
-2. Thêm lại node Notify Start (JSON đã đưa trong chat).
-3. Test lại toàn bộ, xác nhận Postgres có đủ data + cả 2 thông báo Telegram (start & done) đều tới.
-4. Sau khi ổn: Claude sẽ đưa SQL pg_trgm, rồi mới merge bản simplified đè lên file chính + xoá file
-   `_v2_simplified` cho gọn repo.
+## Việc tiếp theo — CẦN TỪ ANH
+1. Test `/sync` feature khi Claude build xong (xem kế hoạch 6 bước đã thống nhất trong chat).
+2. Cung cấp Workflow ID thật (n8n live) cho Help Bot GPT + Telebot ClickUp Reader để gắn vào Gateway.
+3. Test `SQL_ClickUp_Live_Update.json` — nhiều khả năng cần áp fix tương tự Full Reconcile (tham số
+   phẳng cho ClickUp Trigger, chưa được kiểm chứng).
+4. Khi rảnh: quay lại Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).
