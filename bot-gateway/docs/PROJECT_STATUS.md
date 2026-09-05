@@ -26,7 +26,7 @@ bot-gateway/
     ├── GW_Gateway_Telegram.json       (Gateway, đang chạy trên bot DEV)
     ├── GW_Error_Handler.json
     ├── SQL_ClickUp_Full_Reconcile.json    <- ✅ HOÀN TẤT (21 node, có chống rate-limit)
-    ├── SQL_ClickUp_Live_Update.json       <- ⚠️ CHƯA TEST, khả năng cần fix giống Full Reconcile
+    ├── SQL_ClickUp_Live_Update.json       <- ✅ HOÀN TẤT (9 node, don gian hoa manh, webhook real-time)
     └── sub_workflows_modernized/
         ├── Elite_Help_Bot_GPT.json        (✅ nhận Envelope, chờ Workflow ID để gắn Gateway)
         ├── Telebot_ClickUp_Reader.json    (✅ đã deploy, đọc/tìm task + xem file OneDrive)
@@ -75,7 +75,7 @@ bot-gateway/
 | 0-1 | Schema DB + Gateway + Error Handler | ✅ Xong (7/7 test) |
 | 2 | Help Bot GPT nhận Envelope | ✅ Code xong, ⏳ chờ Workflow ID thật để gắn Gateway |
 | 2b | Telebot ClickUp Reader (đọc/tìm task + xem file) | ✅ Đã deploy, chờ gắn Workflow ID vào Gateway |
-| 2c | SQL Sync ClickUp ↔ Postgres | ✅ Full Reconcile HOÀN TẤT (kèm chống rate-limit); 🔵 Live Update (webhook) ĐANG TEST |
+| 2c | SQL Sync ClickUp ↔ Postgres | ✅ HOÀN TẤT CẢ 2 — Full Reconcile (21 node) + Live Update (9 node, webhook real-time) |
 | 3 | Backup Postgres → OneDrive (Phương án B — SQL export thuần n8n) | Chưa bắt đầu |
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
 | 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
@@ -84,14 +84,11 @@ bot-gateway/
 | — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
 ## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên)
-1. **Đang làm**: test `SQL_ClickUp_Live_Update.json` (đã fix tham số phẳng cho ClickUp Trigger, commit
-   0f78891) — active workflow, thử sửa 1 task/comment trên ClickUp, xem execution + Postgres +
-   Telegram.
-3. Hoàn thiện tính năng `/sync` (đã code xong, CHƯA TEST — file
+1. **Đang làm**: hoàn thiện tính năng `/sync` (đã code xong, CHƯA TEST — file
    `Telebot_ClickUp_Reader_v2_with_sync.json`):
    - Test 3 bước: chọn Folder → chọn List → lưu `clickup.sync_targets`.
    - Thêm Execute Workflow Trigger vào `SQL_ClickUp_Full_Reconcile.json` để nhận `list_id` truyền từ
      nút "Đồng bộ ngay" (hiện `Execute Full Reconcile` đang để `workflowId` placeholder).
    - Sau khi ổn: merge đè lên `Telebot_ClickUp_Reader.json` chính, xoá file `_v2_with_sync`.
-4. Cung cấp Workflow ID thật (n8n live) cho Help Bot GPT + Telebot ClickUp Reader để gắn vào Gateway.
-5. Khi rảnh: Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).
+2. Cung cấp Workflow ID thật (n8n live) cho Help Bot GPT + Telebot ClickUp Reader để gắn vào Gateway.
+3. Khi rảnh: Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).

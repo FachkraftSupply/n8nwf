@@ -68,21 +68,66 @@ Manual/Schedule → Config → Ensure Schema (ALTER COLUMN, tự thêm cột thi
   → (khi Loop xong) → Limit(1) → Lấy Admin Chat ID → Query Thống Kê → Build Notify Done → Notify Done
 ```
 
-## `SQL_ClickUp_Live_Update.json` — Cấu hình
+## `SQL_ClickUp_Live_Update.json` — Cấu hình (✅ HOÀN TẤT, 9 node)
 
-### Cách hoạt động
-- Kích hoạt (Active) workflow — bắt buộc, vì đây là webhook trigger, không dùng "Test workflow" được.
-- `ClickUp Trigger` đăng ký webhook cho toàn bộ Space `90183192291`, lắng nghe 3 sự kiện:
-  `taskUpdated`, `taskCommentPosted`, `taskCommentUpdated`.
-- Field thường đổi (status/name/description) → UPDATE thẳng cột đó, dùng giá trị có sẵn trong webhook
-  (`history_items[].after`) — KHÔNG gọi lại ClickUp API.
-- Custom field / comment đổi → gọi lại Get Comments để trích link mới.
+### Giới thiệu
+Webhook real-time từ ClickUp — mỗi khi 1 task trong Space `90183192291` thay đổi (status, tên, mô tả,
+custom field, thêm phụ trách, hoặc có comment mới), workflow này nhận diện loại thay đổi, **ghi đè trực
+tiếp vào Postgres** (không phải chờ Full Reconcile 5 ngày/lần) và **gửi thông báo Telegram** ngay lập tức.
+Đã đơn giản hoá mạnh: từ bản đầu 36 node (Switch + 24 node Update riêng từng cột) xuống còn **9 node**,
+bằng cách build tên cột UPDATE **động** trong 1 câu query duy nhất (an toàn vì cột luôn lấy từ danh sách
+cố định kiểm soát trong code, không phải input tự do).
 
-### ⚠️ Hạn chế đã biết — cần payload thật để hoàn thiện
-`FIELD_TO_COLUMN` trong node "Phân tích Webhook Payload" hiện chỉ map được `status/name/description`.
-Custom field trong `history_items` trả về dạng ID/uuid — cần 1 payload webhook thật (sửa thử 1 custom
-field trên ClickUp, xem Execution log) để hoàn thiện map này.
+### Sơ đồ
+```
+ClickUp Trigger (Live)
+  → ⚙️ Config (Admin Chat ID)          [Code — dien tay ADMIN_CHAT_ID, KHONG doc Postgres]
+  → Nhận Diện & Format Thay Đổi        [Code — doc $('ClickUp Trigger (Live)').first().json,
+                                         co the ra NHIEU item, 1 item = 1 thay doi]
+  → Có Thay Đổi Cần Theo Dõi?          [If: skip? true → (khong lam gi, co chu dich)
+                                              false → di tiep]
+  → Có Cột Cần Ghi DB?                 [If: column co gia tri?
+        true  → Ghi Đè Postgres        (UPDATE ten cot DONG + RETURNING id,name,url)
+        false → Lấy Thông Tin Task     (SELECT thuong, vd truong hop 'comment' khong co link)]
+  → (2 nhánh hội tụ) Build Thông Báo   [Code — mode "Run Once for Each Item" BAT BUOC]
+  → Notify                             [Telegram]
+```
 
-## Quy tắc chung khi debug 2 workflow này
-- Sửa nhỏ đang test: chỉ dán từng node vào canvas n8n, không import lại cả file.
-- Sau khi user xác nhận chạy ổn: Claude commit lên GitHub, cập nhật CHANGELOG + PROJECT_STATUS.
+### 6 loại thay đổi nhận diện được (dựa theo `history_items[].field` từ webhook thật)
+
+| `field` trong webhook | Cột Postgres ghi đè | Cách hiển thị trong thông báo |
+|---|---|---|
+| `comment` (có link OneDrive/Youtube) | `onedrive_link` / `youtube_link` | Link tìm được (đọc cả `comment[].attributes.link` lẫn `.bookmark.url`, fallback regex `text_content`) |
+| `comment` (không có link) | *(không ghi DB)* | "Có comment mới trên task" |
+| `content` (mô tả) | `description` | Text đã parse từ Quill Delta `{"ops":[...]}`, cắt 200 ký tự |
+| `custom_field` | Tra theo `custom_field.name` qua `CUSTOM_FIELD_TO_COLUMN` | Tên field thật + giá trị mới |
+| `assignee_add` | `phu_trach` | Username người được gán |
+| `name` | `name` | Tên task mới |
+| `status` | `status` | `<trạng thái cũ> ➜ <trạng thái mới>` |
+
+Field khác (`due_date`, `priority`, `assignee_rem`...) không nằm trong danh sách → bỏ qua, không thông báo.
+
+### Cấu hình Admin Chat ID
+Node `⚙️ Config (Admin Chat ID)` — **không còn** query `gateway.config` qua Postgres (đã bỏ theo yêu cầu,
+tránh lỗi kết nối). Sửa thẳng 1 dòng trong code:
+```js
+const ADMIN_CHAT_ID = "975005174"; // doi gia tri nay neu can gui sang chat/group khac
+```
+
+### ⚠️ Các lỗi đã gặp khi build + cách đã sửa (tham khảo nếu tái phát)
+1. **`httpRequestWithAuthentication` không hỗ trợ trong Code node** trên instance này — đã đổi sang đọc
+   trực tiếp `history_items[].comment` (payload webhook ĐÃ có sẵn toàn bộ nội dung comment mới, không
+   cần gọi lại API).
+2. **"No connection back to node"** — do 1 node (Lay Admin Chat ID cũ) nằm ở nhánh song song thay vì nối
+   tuần tự. Bài học: mọi node được tham chiếu qua `$('TenNode')` PHẢI nằm trên đường nối thật tới node
+   gọi nó, không chỉ "chạy cùng execution".
+3. **"Multiple matches" / chỉ xử lý được 1 item dù nhiều item vào`** — do quên set
+   `"mode": "runOnceForEachItem"` cho Code node viết theo kiểu xử lý từng item. Áp dụng cho cả
+   `Nhận Diện & Format Thay Đổi` và `Build Thông Báo`.
+4. **`Split Out Updates` bị dừng không lý do** (bản cũ) — do `field: "custom_field"` không được nhận diện
+   (code cũ chỉ biết `status/name/content`). Đã sửa đọc `history_items[].custom_field.name` (có sẵn
+   trong payload) thay vì cố map theo `field` (luôn là chuỗi cố định `"custom_field"`).
+
+### Cách hoạt động chung (áp dụng mọi lần sửa)
+- Kích hoạt (Active) workflow — bắt buộc, vì đây là webhook trigger, "Test workflow" không hoạt động.
+- Đang sửa nhỏ để test: chỉ dán từng node vào canvas n8n, không import lại cả file.
