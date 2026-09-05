@@ -3,16 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "list": {
-          "__rl": true,
-          "value": "",
-          "mode": "list"
-        },
-        "space": {
-          "__rl": true,
-          "value": 90183192291,
-          "mode": "id"
-        },
+        "space": "90183192291",
         "events": [
           "taskUpdated",
           "taskCommentPosted",
@@ -77,7 +68,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// Doc lai comment cua task, trich onedrive_link/youtube_link giong logic Flow 1\nconst taskId = $json.taskId;\n\nconst URL_RE = /https?:\\/\\/[^\\s)\"'\\]]+/g;\nfunction classifyLink(url) {\n  const u = url.toLowerCase();\n  if (u.includes('onedrive.live.com') || u.includes('1drv.ms') || u.includes('sharepoint.com')) return 'onedrive';\n  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';\n  return null;\n}\n\nlet onedriveLink = null, youtubeLink = null;\nconst resp = await this.helpers.httpRequestWithAuthentication.call(\n  this, 'clickUpApi',\n  { method: 'GET', url: `https://api.clickup.com/api/v2/task/${taskId}/comment`, json: true }\n);\nconst comments = resp.comments || [];\nlet lastAuthor = 'không rõ';\nif (comments.length > 0) lastAuthor = comments[0].user?.username || lastAuthor;\n\nfor (const c of comments) {\n  const segs = Array.isArray(c.comment) ? c.comment : [];\n  for (const seg of segs) {\n    const link = seg.attributes && seg.attributes.link;\n    if (link) {\n      const kind = classifyLink(link);\n      if (kind === 'onedrive' && !onedriveLink) onedriveLink = link;\n      if (kind === 'youtube' && !youtubeLink) youtubeLink = link;\n    }\n  }\n  const plain = c.comment_text || '';\n  const matches = plain.match(URL_RE) || [];\n  for (const url of matches) {\n    const kind = classifyLink(url);\n    if (kind === 'onedrive' && !onedriveLink) onedriveLink = url;\n    if (kind === 'youtube' && !youtubeLink) youtubeLink = url;\n  }\n  if (onedriveLink && youtubeLink) break;\n}\n\nreturn [{\n  json: {\n    taskId,\n    onedriveLink, youtubeLink,\n    changedBy: lastAuthor,\n    // \"gia tri moi\" hien thi trong thong bao: uu tien onedrive, roi youtube\n    newValueDisplay: onedriveLink || youtubeLink || '(không tìm thấy link trong comment)',\n  }\n}];\n"
+        "jsCode": "\n// Doc lai comment cua task, trich onedrive_link/youtube_link giong logic Flow 1\nconst taskId = $json.taskId;\n\nconst URL_RE = /https?:\\/\\/[^\\s)\"'\\]]+/g;\nfunction classifyLink(url) {\n  const u = url.toLowerCase();\n  if (u.includes('onedrive.live.com') || u.includes('1drv.ms') || u.includes('sharepoint.com')) return 'onedrive';\n  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';\n  return null;\n}\n\nlet onedriveLink = null, youtubeLink = null;\nconst resp = await this.helpers.httpRequestWithAuthentication.call(\n  this, 'clickUpApi',\n  { method: 'GET', url: `https://api.clickup.com/api/v2/task/${taskId}/comment`, json: true }\n);\nconst comments = resp.comments || [];\nlet lastAuthor = 'không rõ';\nif (comments.length > 0) lastAuthor = comments[0].user?.username || lastAuthor;\n\nfor (const c of comments) {\n  const segs = Array.isArray(c.comment) ? c.comment : [];\n  for (const seg of segs) {\n    const link = seg.bookmark?.url || (seg.attributes && seg.attributes.link);\n    if (link) {\n      const kind = classifyLink(link);\n      if (kind === 'onedrive' && !onedriveLink) onedriveLink = link;\n      if (kind === 'youtube' && !youtubeLink) youtubeLink = link;\n    }\n  }\n  const plain = c.comment_text || '';\n  const matches = plain.match(URL_RE) || [];\n  for (const url of matches) {\n    const kind = classifyLink(url);\n    if (kind === 'onedrive' && !onedriveLink) onedriveLink = url;\n    if (kind === 'youtube' && !youtubeLink) youtubeLink = url;\n  }\n  if (onedriveLink && youtubeLink) break;\n}\n\nreturn [{\n  json: {\n    taskId,\n    onedriveLink, youtubeLink,\n    changedBy: lastAuthor,\n    // \"gia tri moi\" hien thi trong thong bao: uu tien onedrive, roi youtube\n    newValueDisplay: onedriveLink || youtubeLink || '(không tìm thấy link trong comment)',\n  }\n}];\n"
       },
       "id": "33f57751-1465-4f56-a13b-836b5e3ea13e",
       "name": "Đọc lại Comment + Trích Link",
