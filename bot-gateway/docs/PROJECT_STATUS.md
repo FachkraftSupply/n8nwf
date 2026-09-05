@@ -29,7 +29,8 @@ bot-gateway/
     ├── SQL_ClickUp_Live_Update.json       <- ✅ HOÀN TẤT (9 node, don gian hoa manh, webhook real-time)
     └── sub_workflows_modernized/
         ├── Elite_Help_Bot_GPT.json        (✅ nhận Envelope, chờ Workflow ID để gắn Gateway)
-        ├── Telebot_ClickUp_Reader.json    (✅ đã deploy, đọc/tìm task + xem file OneDrive)
+        ├── Telebot_ClickUp_Reader.json    (⚠️ bản GỐC, đã deploy lần đầu nhưng bị lỗi tìm kiếm - xem bản _v2_with_sync)
+        ├── Telebot_ClickUp_Reader_v2_with_sync.json  (✅ ĐANG DÙNG - đã REVAMP 05/09/2026, 16 node, ưu tiên tìm task, tạm tắt OneDrive/sync)
         └── Telebot_main.json              (⚠️ KHÔNG dùng nữa, giữ tham khảo logic xử lý ảnh)
 ```
 
@@ -74,26 +75,24 @@ bot-gateway/
 |---|---|---|
 | 0-1 | Schema DB + Gateway + Error Handler | ✅ Xong (7/7 test) |
 | 2 | Help Bot GPT nhận Envelope | ✅ Code xong, ⏳ chờ Workflow ID thật để gắn Gateway |
-| 2b | Telebot ClickUp Reader (đọc/tìm task + xem file) | ✅ Đã deploy, chờ gắn Workflow ID vào Gateway |
+| 2b | Telebot ClickUp Reader (đọc/tìm task) | ✅ REVAMP xong (16 node), đã gắn Workflow ID vào Gateway, tìm kiếm task hoạt động đúng; OneDrive + /sync tạm tắt |
 | 2c | SQL Sync ClickUp ↔ Postgres | ✅ HOÀN TẤT CẢ 2 — Full Reconcile (21 node) + Live Update (9 node, webhook real-time) |
 | 3 | Backup Postgres → OneDrive (Phương án B — SQL export thuần n8n) | Chưa bắt đầu |
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
 | 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
 | — | Bot System Main (xử lý ảnh, tách từ Telebot_main.json cũ) | Chưa bắt đầu |
-| — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | 🟡 CODE XONG (`Telebot_ClickUp_Reader_v2_with_sync.json`, 45 node), CHƯA TEST — làm sau |
+| — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | ⏸️ TẠM TẮT khi revamp 05/09/2026 (đã xoá khỏi file đang dùng), sẽ làm lại từ đầu sau khi tìm kiếm ổn định |
 | — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
 ## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên)
-1. **Đang làm**: chạy `Telebot_ClickUp_Reader_v2_with_sync.json` — lấy Workflow ID thật (n8n live), gắn
-   vào node "→ Sub: Telebot Main" trong `GW_Gateway_Telegram.json` — để bắt đầu tìm/đọc task ĐÃ import
-   sẵn trong Postgres (`/task`, `chitiet_<id>`) qua Gateway.
-2. Tiếp tục triển khai/test các tính năng liên quan sync (`/sync`: chọn Folder → chọn List → lưu
-   `clickup.sync_targets`) — file `Telebot_ClickUp_Reader_v2_with_sync.json` (đã code xong 45 node,
-   CHƯA TEST).
-3. Sau khi (2) ổn định:
+1. **XONG** — `Telebot_ClickUp_Reader_v2_with_sync.json` (16 node, revamp 05/09/2026) đã gắn vào Gateway
+   (Workflow ID `9JJRrh36H2rLwtnu`), tìm kiếm task (`/task`, `chitiet_<id>`) hoạt động đúng qua bot DEV.
+2. **Kế tiếp**: xây dựng lại tính năng `/sync` từ đầu (đã tắt/xoá khỏi file khi revamp — không còn code
+   cũ để tái sử dụng, cần thiết kế lại: chọn Folder → chọn List → lưu `clickup.sync_targets`).
+3. Xây dựng lại tính năng xem file OneDrive (`view_file`, Graph API resolve) — cũng đã tắt khi revamp.
+4. Sau khi (2) ổn định:
    a. Thêm Execute Workflow Trigger vào `SQL_ClickUp_Full_Reconcile.json` để nhận `list_id` truyền từ
-      nút "Đồng bộ ngay" (hiện `Execute Full Reconcile` đang để `workflowId` placeholder).
-   b. Merge `Telebot_ClickUp_Reader_v2_with_sync.json` đè lên `Telebot_ClickUp_Reader.json` chính, xoá
-      file `_v2_with_sync`.
-4. Cung cấp Workflow ID thật cho Help Bot GPT để gắn vào Gateway (song song với bước 1).
-5. Khi rảnh: Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).
+      nút "Đồng bộ ngay" (hiện `Execute Full Reconcile` đang để `workflowId` placeholder — LƯU Ý: node
+      này đã bị xoá khỏi bản revamp, cần dựng lại từ đầu cùng lúc với /sync).
+5. Cung cấp Workflow ID thật cho Help Bot GPT để gắn vào Gateway.
+6. Khi rảnh: Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).
