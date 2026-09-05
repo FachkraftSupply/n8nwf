@@ -1,0 +1,388 @@
+{
+  "name": "SQL - ClickUp Full Reconcile (5 ngay)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "29b1720c-0a5a-4c7e-899e-2a0fac30dd3e",
+      "name": "Manual Trigger (Test)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -3200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 5,
+              "triggerAtHour": 1
+            }
+          ]
+        }
+      },
+      "id": "dc7f4921-f47c-4743-86eb-bc8137dc0881",
+      "name": "Schedule (moi 5 ngay, 1h sang)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3200,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// DON GIAN HOA: chi 1 List co dinh, dien tay o day. Sau nay se lam chon List dong qua bot Telegram.\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\",\n  list_id: \"901812218309\",   // List \"2026\" trong folder \"Xu Ly Ho So\" - DOI theo List can dong bo\n\n  notifyChatId: \"\", // de trong = lay tu gateway.config (admin_chat_id)\n\n  testMode: true,\n  testTaskLimit: 5,\n\n  fieldNameMap: {\n    b1_datum:          \"B1 Datum\",\n    dob:               \"DOB\",\n    ma_hd:             \"Mã HĐ\",\n    nghe:              \"Nghề\",\n    sdt:               \"SDT\",\n    email:             \"email\",\n    dia_chi_vn:        \"Địa chỉ VN\",\n    vfs:               \"🌍 VFS\",\n    du_kien_den_duc:   \"📆 Dự kiến thời gian đến Đức\",\n    ngay_xuat_canh:    \"🛫 Ngày xuất cảnh\",\n    dkpv_2026:         \"DKPV 2026\",\n    pvtc_2026:         \"PVTC 2026\",\n    nha_cua_support:   \"Nhà cửa / Support\",\n    phu_trach:         \"Phụ trách\",\n    dkpv:              \"DKPV\",\n    pvtc:              \"PVTC\",\n    vfs_khong_dau:     \"VFS\",\n    planbay:           \"Plan bay\",\n    ngaybay:           \"Ngày bay\",\n    color:             \"Color\",\n    onedrive_cf:       \"OneDrive\",\n    youtube_cf:        \"Youtube\",\n    other_link:        \"Link khác\",\n  }\n};\n\nreturn [{ json: config }];\n"
+      },
+      "id": "f6ed6f73-c790-4216-a846-7d3dc3a9967d",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE SCHEMA IF NOT EXISTS clickup;\nCREATE TABLE IF NOT EXISTS clickup.tasks (\n  id TEXT PRIMARY KEY, name TEXT, name_khong_dau TEXT, url TEXT, description TEXT, status TEXT,\n  team_id TEXT, space_id TEXT, folder_id TEXT, folder_name TEXT, list_id TEXT, list_name TEXT,\n  phu_trach TEXT, b1_datum TEXT, dob TEXT, ma_hd TEXT, nghe TEXT, sdt TEXT, email TEXT,\n  dia_chi_vn TEXT, vfs TEXT, vfs_khong_dau TEXT, du_kien_den_duc TEXT, ngay_xuat_canh TEXT,\n  dkpv_2026 TEXT, pvtc_2026 TEXT, nha_cua_support TEXT, dkpv TEXT, pvtc TEXT, planbay TEXT,\n  ngaybay TEXT, color TEXT, other_link TEXT, youtube_link TEXT, onedrive_link TEXT,\n  date_updated TIMESTAMPTZ, synced_at TIMESTAMPTZ DEFAULT now()\n);\nCREATE INDEX IF NOT EXISTS idx_clickup_tasks_name_khong_dau\n  ON clickup.tasks USING gin (to_tsvector('simple', coalesce(name_khong_dau,'')));",
+        "options": {}
+      },
+      "id": "d2a17c88-969e-43dd-af3b-ea74d29365aa",
+      "name": "Ensure Schema (idempotent)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2704,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "team": "={{ $('⚙️ Config').first().json.team_id }}",
+        "space": "={{ $('⚙️ Config').first().json.space_id }}",
+        "folderless": true,
+        "list": "={{ $('⚙️ Config').first().json.list_id }}",
+        "returnAll": "={{ !$('⚙️ Config').first().json.testMode }}",
+        "limit": "={{ $('⚙️ Config').first().json.testTaskLimit }}",
+        "filters": {}
+      },
+      "id": "96b0e07f-daca-4aef-801b-d4edede763b7",
+      "name": "ClickUp - Get Tasks",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        -2432,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst cfg = $('⚙️ Config').first().json;\nconst t = $json;\nconst fieldNameMap = cfg.fieldNameMap;\n\nconst normalize = (s) => (s || '')\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/\\u0111/g, 'd').replace(/\\u0110/g, 'D').toLowerCase();\n\nfunction getCF(customFields, name) {\n  if (!Array.isArray(customFields) || !name) return null;\n  const f = customFields.find(cf => (cf.name || '').trim().toLowerCase() === name.trim().toLowerCase());\n  if (!f || f.value === undefined || f.value === null) return null;\n  if (f.type === 'list_relationship' && Array.isArray(f.value)) {\n    return f.value.map(v => v.status ? `${v.name} (${v.status})` : v.name).join('; ');\n  }\n  if (f.type === 'date' || /^\\d{10,13}$/.test(String(f.value))) {\n    const d = new Date(Number(f.value));\n    if (!isNaN(d.getTime())) {\n      const dd = String(d.getDate()).padStart(2, '0');\n      const mm = String(d.getMonth() + 1).padStart(2, '0');\n      return `${dd}/${mm}/${d.getFullYear()}`;\n    }\n  }\n  if (typeof f.value === 'object') return JSON.stringify(f.value);\n  return String(f.value);\n}\n\nconst cfs = t.custom_fields || [];\nlet phuTrach = getCF(cfs, fieldNameMap.phu_trach) || '';\nif (!phuTrach && Array.isArray(t.assignees) && t.assignees.length > 0) {\n  phuTrach = t.assignees.map(a => a.username || a.email).filter(Boolean).join(', ');\n}\n\nreturn {\n  json: {\n    id: t.id,\n    name: t.name || '',\n    name_khong_dau: normalize(t.name || ''),\n    url: t.url || '',\n    description: t.text_content || t.description || '',\n    status: t.status?.status || '',\n    team_id: t.team_id || cfg.team_id,\n    space_id: t.space?.id || cfg.space_id,\n    folder_id: t.folder?.id || '',\n    folder_name: t.folder?.name || '',\n    list_id: t.list?.id || cfg.list_id,\n    list_name: t.list?.name || '',\n    phu_trach: phuTrach,\n    b1_datum: getCF(cfs, fieldNameMap.b1_datum) || '',\n    dob: getCF(cfs, fieldNameMap.dob) || '',\n    ma_hd: getCF(cfs, fieldNameMap.ma_hd) || '',\n    nghe: getCF(cfs, fieldNameMap.nghe) || '',\n    sdt: getCF(cfs, fieldNameMap.sdt) || '',\n    email: getCF(cfs, fieldNameMap.email) || '',\n    dia_chi_vn: getCF(cfs, fieldNameMap.dia_chi_vn) || '',\n    vfs: getCF(cfs, fieldNameMap.vfs) || '',\n    du_kien_den_duc: getCF(cfs, fieldNameMap.du_kien_den_duc) || '',\n    ngay_xuat_canh: getCF(cfs, fieldNameMap.ngay_xuat_canh) || '',\n    dkpv_2026: getCF(cfs, fieldNameMap.dkpv_2026) || '',\n    pvtc_2026: getCF(cfs, fieldNameMap.pvtc_2026) || '',\n    nha_cua_support: getCF(cfs, fieldNameMap.nha_cua_support) || '',\n    dkpv: getCF(cfs, fieldNameMap.dkpv) || '',\n    pvtc: getCF(cfs, fieldNameMap.pvtc) || '',\n    vfs_khong_dau: getCF(cfs, fieldNameMap.vfs_khong_dau) || '',\n    planbay: getCF(cfs, fieldNameMap.planbay) || '',\n    ngaybay: getCF(cfs, fieldNameMap.ngaybay) || '',\n    color: getCF(cfs, fieldNameMap.color) || '',\n    other_link: getCF(cfs, fieldNameMap.other_link) || '',\n    onedrive_link: getCF(cfs, fieldNameMap.onedrive_cf) || '',\n    youtube_link: getCF(cfs, fieldNameMap.youtube_cf) || '',\n    date_updated: t.date_updated ? new Date(Number(t.date_updated)).toISOString() : null,\n  }\n};\n"
+      },
+      "id": "76631a32-af23-4119-953d-482e74a00d47",
+      "name": "Map Row (không comment)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": "clickup",
+        "table": {
+          "__rl": true,
+          "value": "tasks",
+          "mode": "list",
+          "cachedResultName": "tasks"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "id"
+          ],
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "913fbc2b-8bc9-424d-8425-2afa86d6617f",
+      "name": "Upsert Postgres (main)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -1920,
+        180
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "comment",
+        "operation": "getAll",
+        "commentsOn": "task",
+        "id": "={{ $json.id }}",
+        "limit": "={{ 50 }}"
+      },
+      "id": "7969f850-0dfa-46c1-abed-4cb8f7454c30",
+      "name": "ClickUp - Get Comments",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        -2176,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Chay tren TUNG comment tra ve. task id lay tu chinh output cua node Get Comments -\n// ClickUp API tra ve comment gan voi 1 task, nhung item nay khong tu mang task_id kem theo,\n// nen phai dua vao $('ClickUp - Get Tasks').itemMatching(idx) NEU co - neu loi (do node native\n// khong set pairedItem chuan khi fan-out 1->N), fallback doc tu $json.task_id neu ClickUp co tra,\n// hoac bo qua (khong update duoc task nao neu khong xac dinh duoc id).\nconst items = $input.all();\n\nconst URL_RE = /https?:\\/\\/[^\\s)\"'\\]]+/g;\nfunction classifyLink(url) {\n  const u = url.toLowerCase();\n  if (u.includes('onedrive.live.com') || u.includes('1drv.ms') || u.includes('sharepoint.com')) return 'onedrive';\n  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';\n  return null;\n}\n\nconst results = [];\nfor (let idx = 0; idx < items.length; idx++) {\n  const c = items[idx].json;\n  let taskId = c.task_id || c.task?.id || null;\n  if (!taskId) {\n    try {\n      taskId = $('ClickUp - Get Tasks').itemMatching(idx).json.id;\n    } catch (e) {\n      continue; // khong xac dinh duoc task nao - bo qua dong nay, khong lam sap workflow\n    }\n  }\n  if (!taskId) continue;\n\n  let link = null, kind = null;\n  const segs = Array.isArray(c.comment) ? c.comment : [];\n  for (const seg of segs) {\n    const bookmarkUrl = seg.bookmark?.url;\n    const attrLink = seg.attributes?.link;\n    const candidate = bookmarkUrl || attrLink;\n    if (candidate) {\n      const k = classifyLink(candidate);\n      if (k) { link = candidate; kind = k; break; }\n    }\n  }\n  if (!link) {\n    const plain = c.comment_text || '';\n    const matches = plain.match(URL_RE) || [];\n    for (const url of matches) {\n      const k = classifyLink(url);\n      if (k) { link = url; kind = k; break; }\n    }\n  }\n  if (link) {\n    results.push({ json: { taskId, link, kind } });\n  }\n}\nreturn results;\n"
+      },
+      "id": "528a3aed-0206-4c92-b400-e5c12ceea0de",
+      "name": "Trích Link từ Comment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1920,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE clickup.tasks SET onedrive_link = CASE WHEN $2 = 'onedrive' THEN $1 ELSE onedrive_link END, youtube_link = CASE WHEN $2 = 'youtube' THEN $1 ELSE youtube_link END, synced_at = now() WHERE id = $3;",
+        "options": {
+          "queryReplacement": "={{ [$json.link, $json.kind, $json.taskId] }}"
+        }
+      },
+      "id": "34fade89-fa4e-46f0-a680-f6c405efc814",
+      "name": "Update Link vào Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -1664,
+        420
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT value AS admin_chat_id FROM gateway.config WHERE key = 'admin_chat_id' LIMIT 1;",
+        "options": {}
+      },
+      "id": "b82b2919-b26f-41f9-9de9-27b18076755d",
+      "name": "Lay Admin Chat ID",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -1408,
+        420
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "iNVsYeDUnMl6pq4M",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst cfg = $('⚙️ Config').first().json;\nconst admin = $json;\nconst chatId = cfg.notifyChatId || admin.admin_chat_id;\nconst count = $input.all().length;\nconst now = new Date();\nconst text = `✅ <b>Đồng bộ ClickUp → Postgres HOÀN TẤT</b>\\n` +\n  `📋 List: ${cfg.list_id}\\n` +\n  `${cfg.testMode ? '⚠️ Đang chạy TEST MODE' : '📦 Full data'}\\n` +\n  `🕒 Kết thúc lúc: ${now.toLocaleString('vi-VN')}\\n#full_reconcile_done`;\nreturn [{ json: { chatId, text } }];\n"
+      },
+      "id": "8aea4092-038a-4ef6-a023-e12efcbe960a",
+      "name": "Build Notify Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0af5db27-d0ca-497d-a2a2-0a5137423b77",
+      "name": "Notify Done",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -896,
+        420
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "stuiyiJvXIuqhNuc",
+          "name": "Telegram Bot (PROD)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger (Test)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule (moi 5 ngay, 1h sang)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Config": {
+      "main": [
+        [
+          {
+            "node": "Ensure Schema (idempotent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Schema (idempotent)": {
+      "main": [
+        [
+          {
+            "node": "ClickUp - Get Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp - Get Tasks": {
+      "main": [
+        [
+          {
+            "node": "Map Row (không comment)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Row (không comment)": {
+      "main": [
+        [
+          {
+            "node": "Upsert Postgres (main)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp - Get Comments": {
+      "main": [
+        [
+          {
+            "node": "Trích Link từ Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trích Link từ Comment": {
+      "main": [
+        [
+          {
+            "node": "Update Link vào Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Postgres (main)": {
+      "main": [
+        [
+          {
+            "node": "ClickUp - Get Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Link vào Postgres": {
+      "main": [
+        [
+          {
+            "node": "Lay Admin Chat ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lay Admin Chat ID": {
+      "main": [
+        [
+          {
+            "node": "Build Notify Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Notify Done": {
+      "main": [
+        [
+          {
+            "node": "Notify Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
