@@ -221,7 +221,10 @@
           "id": "X1u3uxVrYMLf6HZz",
           "name": "ClickUp account"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -353,6 +356,87 @@
           "name": "Telegram System Bot"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, onedrive_link, youtube_link FROM clickup.tasks WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.id] }}"
+        }
+      },
+      "id": "55ebf6d6-cdf4-43e1-83bd-beb7410e2d33",
+      "name": "Kiểm Tra Link Có Sẵn",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        4160,
+        760
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "GwUFREmcXzXXj5mZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f2f9bb31-5a5c-473f-8bd6-73abbcdd62c0",
+              "leftValue": "={{ $json.onedrive_link }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "dcc754d9-c732-4dff-84c4-4a5e89f63dce",
+              "leftValue": "={{ $json.youtube_link }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dde0f900-5d1e-4d93-97ea-e93e038d74b6",
+      "name": "Đã Có Đủ Link?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4288,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 0.7,
+        "unit": "seconds"
+      },
+      "id": "81842ec3-d8c8-4703-8756-75051b6c58f6",
+      "name": "Nghỉ 700ms (chống rate limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4288,
+        900
+      ]
     }
   ],
   "connections": {
@@ -466,7 +550,7 @@
         ],
         [
           {
-            "node": "ClickUp - Get Comments",
+            "node": "Kiểm Tra Link Có Sẵn",
             "type": "main",
             "index": 0
           }
@@ -544,6 +628,46 @@
         [
           {
             "node": "Notify Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kiểm Tra Link Có Sẵn": {
+      "main": [
+        [
+          {
+            "node": "Đã Có Đủ Link?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đã Có Đủ Link?": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nghỉ 700ms (chống rate limit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nghỉ 700ms (chống rate limit)": {
+      "main": [
+        [
+          {
+            "node": "ClickUp - Get Comments",
             "type": "main",
             "index": 0
           }
