@@ -78,11 +78,20 @@ bot-gateway/
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
 | 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
 | — | Bot System Main (xử lý ảnh, tách từ Telebot_main.json cũ) | Chưa bắt đầu |
-| — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | 🔵 Đang lên kế hoạch, đã chọn hướng A (route qua Gateway trong Telebot_ClickUp_Reader.json) |
+| — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | 🟡 CODE XONG (`Telebot_ClickUp_Reader_v2_with_sync.json`, 45 node), CHƯA TEST — làm sau |
+| — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
-## Việc tiếp theo — CẦN TỪ ANH
-1. Test `/sync` feature khi Claude build xong (xem kế hoạch 6 bước đã thống nhất trong chat).
-2. Cung cấp Workflow ID thật (n8n live) cho Help Bot GPT + Telebot ClickUp Reader để gắn vào Gateway.
-3. Test `SQL_ClickUp_Live_Update.json` — nhiều khả năng cần áp fix tương tự Full Reconcile (tham số
-   phẳng cho ClickUp Trigger, chưa được kiểm chứng).
-4. Khi rảnh: quay lại Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).
+## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên)
+1. **Đang làm**: test `SQL_ClickUp_Live_Update.json` sau khi fix tham số phẳng cho ClickUp Trigger
+   (commit 0f78891) — active workflow, thử sửa 1 task/comment trên ClickUp, xem execution + Postgres +
+   Telegram.
+2. **Kế tiếp**: áp dụng giải pháp rate-limit cho Full Reconcile khi lấy comment (xem thiết kế trong
+   CHANGELOG/chat 05/09/2026) trước khi chạy full (testMode=false) trên List lớn.
+3. Hoàn thiện tính năng `/sync` (đã code xong, CHƯA TEST — file
+   `Telebot_ClickUp_Reader_v2_with_sync.json`):
+   - Test 3 bước: chọn Folder → chọn List → lưu `clickup.sync_targets`.
+   - Thêm Execute Workflow Trigger vào `SQL_ClickUp_Full_Reconcile.json` để nhận `list_id` truyền từ
+     nút "Đồng bộ ngay" (hiện `Execute Full Reconcile` đang để `workflowId` placeholder).
+   - Sau khi ổn: merge đè lên `Telebot_ClickUp_Reader.json` chính, xoá file `_v2_with_sync`.
+4. Cung cấp Workflow ID thật (n8n live) cho Help Bot GPT + Telebot ClickUp Reader để gắn vào Gateway.
+5. Khi rảnh: Bot System Main (xử lý ảnh) và Backup Postgres → OneDrive (Phase 3).
