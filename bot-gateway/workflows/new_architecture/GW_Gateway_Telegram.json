@@ -628,7 +628,7 @@
         "source": "database",
         "workflowId": {
           "__rl": true,
-          "value": "REPLACE_TELEBOT_MAIN_ID",
+          "value": "9JJRrh36H2rLwtnu",
           "mode": "id"
         },
         "mode": "each",
@@ -643,7 +643,7 @@
         20
       ],
       "id": "dcd8f3ff-3d11-4745-9f97-f031d197da9f",
-      "name": "→ Sub: Telebot Main",
+      "name": "→ Sub: Telebot ClickUp Reader",
       "onError": "continueRegularOutput"
     },
     {
@@ -1251,7 +1251,7 @@
       "main": [
         [
           {
-            "node": "→ Sub: Telebot Main",
+            "node": "→ Sub: Telebot ClickUp Reader",
             "type": "main",
             "index": 0
           }
