@@ -420,7 +420,7 @@
         "operation": "executeQuery",
         "query": "-- $1 la tu khoa\nSELECT t.*,\n       ts_rank(\n         to_tsvector('simple', COALESCE(t.name_khong_dau, $1 )),\n         websearch_to_tsquery('simple', $1)\n       ) AS relevance\nFROM clickup.tasks t\nWHERE to_tsvector('simple', COALESCE(t.name_khong_dau,'')) @@ websearch_to_tsquery('simple', $1 )\n   OR t.name_khong_dau ILIKE '%' || $1 || '%'\nORDER BY relevance DESC NULLS LAST,\n         date_updated DESC NULLS LAST\nLIMIT 100;",
         "options": {
-          "queryReplacement": "={{ $json.originalText_khong_dau }}"
+          "queryReplacement": "={{ [$json.originalText_khong_dau] }}"
         }
       },
       "id": "6f970505-b0a2-4b9f-b8ff-653aa02ab0d7",
