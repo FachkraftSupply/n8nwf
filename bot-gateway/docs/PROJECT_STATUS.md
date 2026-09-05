@@ -284,3 +284,74 @@ QUYẾT ĐỊNH: làm Phương án B (SQL export thuần n8n, xem chat), DỜI s
 3. Active Live Update, thử sửa 1 task/comment trên ClickUp, xem thông báo Telegram + Postgres có cập nhật.
 4. Test lại Telebot ClickUp Reader với data thật.
 5. Bổ sung map custom field trong "Phân tích Webhook Payload" khi có payload thật để tham khảo.
+
+
+## PHIÊN BẢN SIMPLIFIED (04-05/09/2026) — Full Reconcile viết lại theo pattern đã chứng minh chạy tốt
+Sau nhiều lần lỗi liên tiếp với node ClickUp native (resource locator `__rl`, "Multiple matches"
+pairedItem...), user cung cấp workflow CŨ đã chạy ổn (`original/Telebot_sql.json`) để tham khảo.
+
+### PHÁT HIỆN GỐC RỄ QUAN TRỌNG
+Node ClickUp trên n8n của user dùng **tham số PHẲNG (plain string)**, KHÔNG PHẢI resource-locator
+(`{__rl:true, value, mode}`) như các node n8n hiện đại khác. Ví dụ đã chạy tốt:
+```js
+// "lay task" (Get Tasks):
+{ team: "9018351620", space: "90183192291", folderless: true, list: "={{ $json.id }}" }
+// "lay comment1" (Get Comments):
+{ resource: "comment", operation: "getAll", commentsOn: "task", id: "={{ $json.task.id }}", limit: 50 }
+```
+KHÔNG cần `.toNumber()` (đã thử trước đó, SAI hướng - gốc rễ là sai cấu trúc tham số chứ không phải
+kiểu number/string). Áp dụng lại đúng format này cho toàn bộ node ClickUp là hướng đúng.
+
+Link trong comment ClickUp có thể nằm ở `comment[].bookmark.url` (không chỉ `attributes.link`) — đã bổ
+sung đọc cả 2 nguồn.
+
+### Kiến trúc SIMPLIFIED (theo yêu cầu user: bỏ vòng lặp nhiều List, chỉ 1 List cố định)
+File: `SQL_ClickUp_Full_Reconcile_v2_simplified.json` (13 node, giảm từ 22) — **CHƯA merge vào file
+chính**, đang chờ user test xong xác nhận.
+Commit: https://github.com/FachkraftSupply/n8nwf/commit/02e161ed9091dcef5fd69f028eb0aae48ae860a8
+```
+Manual/Schedule → Config (list_id CỐ ĐỊNH, điền tay — chọn List động qua Telegram bot để SAU)
+  → Ensure Schema
+  → ClickUp - Get Tasks (native, tham số PHẲNG đúng chuẩn)
+      ├─→ Map Row (không comment) → Upsert Postgres (main) ─┐ (nhánh A: mọi field trừ link)
+      └─(sau khi A xong, KHÔNG song song)→ ClickUp - Get Comments (native, tham số PHẲNG)
+             → Trích Link từ Comment → Update Link vào Postgres (nhánh B: chỉ UPDATE 2 cột link)
+  → Notify Done
+```
+- Nhánh B cố tình nối SAU nhánh A (không chạy song song) để tránh race condition: UPDATE link có thể
+  chạy trước khi INSERT chính kịp tạo dòng, khiến WHERE id=... không khớp gì.
+- Đã sửa nhiều lỗi "hiệu ứng dây chuyền" (n8n bỏ qua node có 0 item đầu vào) bằng `alwaysOutputData`
+  + luôn trả về ít nhất 1 dòng "vô hại" (taskId=null) ở các bước có thể ra rỗng.
+
+### LỖI THỰC TẾ ĐÃ GẶP KHI TEST (04-05/09/2026) VÀ CÁCH SỬA
+1. `column "team_id" does not exist` — bảng `clickup.tasks` đã tồn tại từ trước (code Telebot cũ),
+   `CREATE TABLE IF NOT EXISTS` KHÔNG tự thêm cột thiếu vào bảng có sẵn → phải dùng
+   `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` cho từng cột (đã sửa trong Ensure Schema).
+2. ClickUp đổi định dạng Task ID (số → chữ+số, vd `z908826jhz`) — cần ép cột `id` (và mọi cột ID khác)
+   về kiểu `TEXT` không giới hạn, tránh lỗi/lạc dữ liệu nếu cột cũ là INTEGER/VARCHAR giới hạn.
+3. **"Map Row (không comment)" chỉ ra 1 item dù Get Tasks ra 5** — nguyên nhân: Code node quên set
+   Mode "Run Once for Each Item" (mặc định là "Run Once for All Items", code viết theo kiểu per-item
+   dùng `$json` sẽ chỉ lấy được item đầu). ĐÃ SỬA (nhắc user đổi Mode trong UI).
+4. **QUÊN node "Notify Start"** khi rút gọn từ 22 xuống 13 node — bài học: khi đơn giản hoá workflow,
+   PHẢI đối chiếu lại checklist tính năng của bản đầy đủ trước đó để không rơi rớt tính năng phụ
+   (không chỉ pipeline chính). Đã bổ sung lại.
+
+### Nâng cấp tìm kiếm — ĐÃ CHỌN Phương án A (pg_trgm)
+So với B (pgvector/semantic, cần API embedding + tốn phí) — A dùng extension có sẵn của Postgres,
+fuzzy/typo-tolerant, miễn phí, làm ngay được. SQL cụ thể: CHƯA ĐƯA (đang chờ 2 lỗi node Map
+Row/Notify Start ở trên được xác nhận xong trước, tránh dồn quá nhiều thay đổi cùng lúc).
+
+### QUY TẮC MỚI (05/09/2026) — user yêu cầu
+- **KHÔNG tự động commit lên GitHub file chính nữa** khi đang debug/thử nghiệm. Chỉ đưa nội dung node
+  cần sửa (JSON đầy đủ nếu node thường, chỉ code nếu Code node) để user tự copy/paste vào n8n test.
+  Chỉ commit lên GitHub SAU KHI user xác nhận chạy ổn — và khi thay đổi lớn, commit thành file
+  `_v2_...`/`_simplified` RIÊNG (không đè file chính) để dễ so sánh/rollback trước khi merge.
+- Khi rút gọn/đơn giản hoá 1 workflow, LUÔN đối chiếu checklist tính năng của bản trước để không quên
+  (vd Notify Start bị bỏ sót lần này).
+
+### Việc tiếp theo — CẦN TỪ ANH
+1. Sửa Mode "Run Once for Each Item" cho node Map Row (không comment).
+2. Thêm lại node Notify Start (JSON đã đưa trong chat).
+3. Test lại toàn bộ, xác nhận Postgres có đủ data + cả 2 thông báo Telegram (start & done) đều tới.
+4. Sau khi ổn: Claude sẽ đưa SQL pg_trgm, rồi mới merge bản simplified đè lên file chính + xoá file
+   `_v2_simplified` cho gọn repo.
