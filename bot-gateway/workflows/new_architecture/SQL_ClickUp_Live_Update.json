@@ -10,7 +10,7 @@
           "taskCommentUpdated"
         ]
       },
-      "id": "4c3bfe66-3e0e-4d38-934e-f8d49ebbae07",
+      "id": "71b07140-7653-4554-9685-d4c63037df50",
       "name": "ClickUp Trigger (Live)",
       "type": "n8n-nodes-base.clickUpTrigger",
       "typeVersion": 1,
@@ -25,7 +25,7 @@
         "query": "SELECT value AS admin_chat_id FROM gateway.config WHERE key = 'admin_chat_id' LIMIT 1;",
         "options": {}
       },
-      "id": "94233fbf-c0f9-481a-af3d-55cb0549b385",
+      "id": "a98fadb2-5404-4119-b47c-c9a8684c9dcc",
       "name": "Lay Admin Chat ID (F2)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
@@ -42,9 +42,9 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// Nhan dien va format thay doi theo dung 6 truong hop da xac nhan qua payload that (05/09/2026).\n// Node nay tra ve NHIEU item (1 item = 1 thay doi can thong bao) - khong can node Split Out rieng.\nconst body = $json;\nconst historyItems = body.history_items || [];\nconst taskId = body.task_id;\n\nfunction extractPlainTextFromDelta(raw) {\n  try {\n    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\n    if (parsed && Array.isArray(parsed.ops)) {\n      return parsed.ops.map(op => (typeof op.insert === 'string' ? op.insert : '')).join('').trim();\n    }\n  } catch (e) { }\n  return typeof raw === 'string' ? raw : '';\n}\n\nconst results = [];\nfor (const h of historyItems) {\n  const changedBy = h.user?.username || 'không rõ';\n  const dateStr = h.date ? new Date(Number(h.date)).toLocaleString('vi-VN') : '';\n  let label = null, valueText = null;\n\n  if (h.field === 'comment') {\n    label = 'Comment mới';\n    valueText = 'Có comment mới trên task';\n  } else if (h.field === 'content') {\n    label = 'Mô tả';\n    const text = extractPlainTextFromDelta(h.after);\n    valueText = text.length > 200 ? text.slice(0, 200) + '…' : (text || '(trống)');\n  } else if (h.field === 'custom_field' && h.custom_field) {\n    // Doc TEN field truc tiep tu payload - khong can hardcode map, tu dong ho tro moi custom field\n    label = h.custom_field.name;\n    valueText = (h.after && typeof h.after === 'object') ? JSON.stringify(h.after) : String(h.after ?? '(trống)');\n  } else if (h.field === 'assignee_add') {\n    label = 'Phụ trách (thêm)';\n    valueText = h.after?.username || h.after?.email || 'không rõ';\n  } else if (h.field === 'name') {\n    label = 'Tên task';\n    valueText = h.after;\n  } else if (h.field === 'status') {\n    label = 'Trạng thái';\n    const before = (h.before && typeof h.before === 'object') ? h.before.status : h.before;\n    const after = (h.after && typeof h.after === 'object') ? h.after.status : h.after;\n    valueText = `${before || '—'} ➜ ${after || '—'}`;\n  } else {\n    continue; // field khong theo doi (due_date, priority, assignee_rem...) - bo qua\n  }\n\n  results.push({ json: { taskId, label, valueText, changedBy, dateStr } });\n}\n\nif (results.length === 0) {\n  return [{ json: { taskId, skip: true } }];\n}\nreturn results;\n"
+        "jsCode": "\n// Nhan dien 6 truong hop thay doi + xac dinh COT Postgres tuong ung de ghi de (neu co).\n// Tra ve NHIEU item (1 item = 1 thay doi), khong can node Split Out rieng.\nconst body = $json;\nconst historyItems = body.history_items || [];\nconst taskId = body.task_id;\n\n// Dong bo voi fieldNameMap ben SQL_ClickUp_Full_Reconcile.json - CAP NHAT CA 2 CHO neu doi field\nconst CUSTOM_FIELD_TO_COLUMN = {\n  \"B1 Datum\": \"b1_datum\", \"DOB\": \"dob\", \"Mã HĐ\": \"ma_hd\", \"Nghề\": \"nghe\", \"SDT\": \"sdt\",\n  \"email\": \"email\", \"Địa chỉ VN\": \"dia_chi_vn\", \"🌍 VFS\": \"vfs\",\n  \"📆 Dự kiến thời gian đến Đức\": \"du_kien_den_duc\", \"🛫 Ngày xuất cảnh\": \"ngay_xuat_canh\",\n  \"DKPV 2026\": \"dkpv_2026\", \"PVTC 2026\": \"pvtc_2026\", \"Nhà cửa / Support\": \"nha_cua_support\",\n  \"Phụ trách\": \"phu_trach\", \"DKPV\": \"dkpv\", \"PVTC\": \"pvtc\", \"VFS\": \"vfs_khong_dau\",\n  \"Plan bay\": \"planbay\", \"Ngày bay\": \"ngaybay\", \"Color\": \"color\", \"Link khác\": \"other_link\",\n};\n\nfunction extractPlainTextFromDelta(raw) {\n  try {\n    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\n    if (parsed && Array.isArray(parsed.ops)) {\n      return parsed.ops.map(op => (typeof op.insert === 'string' ? op.insert : '')).join('').trim();\n    }\n  } catch (e) { }\n  return typeof raw === 'string' ? raw : '';\n}\n\nconst results = [];\nfor (const h of historyItems) {\n  const changedBy = h.user?.username || 'không rõ';\n  const dateStr = h.date ? new Date(Number(h.date)).toLocaleString('vi-VN') : '';\n  let column = null, label = null, displayValue = null, dbValue = null;\n\n  if (h.field === 'comment') {\n    // Khong co cot Postgres rieng de ghi (link OneDrive/Youtube da xu ly o Full Reconcile) - chi bao\n    label = 'Comment mới'; displayValue = 'Có comment mới trên task';\n  } else if (h.field === 'content') {\n    column = 'description'; label = 'Mô tả';\n    const text = extractPlainTextFromDelta(h.after);\n    dbValue = text; displayValue = text.length > 200 ? text.slice(0, 200) + '…' : (text || '(trống)');\n  } else if (h.field === 'custom_field' && h.custom_field) {\n    const cfName = h.custom_field.name;\n    column = CUSTOM_FIELD_TO_COLUMN[cfName] || null; // chi ghi DB neu field nam trong danh sach da biet\n    label = cfName;\n    dbValue = (h.after && typeof h.after === 'object') ? JSON.stringify(h.after) : (h.after ?? '');\n    displayValue = (dbValue === '' || dbValue === null || dbValue === undefined) ? '(trống)' : dbValue;\n  } else if (h.field === 'assignee_add') {\n    column = 'phu_trach'; label = 'Phụ trách (thêm)';\n    dbValue = h.after?.username || h.after?.email || '';\n    displayValue = dbValue || 'không rõ';\n  } else if (h.field === 'name') {\n    column = 'name'; label = 'Tên task';\n    dbValue = h.after; displayValue = h.after;\n  } else if (h.field === 'status') {\n    column = 'status'; label = 'Trạng thái';\n    const before = (h.before && typeof h.before === 'object') ? h.before.status : h.before;\n    const after = (h.after && typeof h.after === 'object') ? h.after.status : h.after;\n    dbValue = after;\n    displayValue = `${before || '—'} ➜ ${after || '—'}`;\n  } else {\n    continue; // field khong theo doi (due_date, priority, assignee_rem...) - bo qua\n  }\n\n  results.push({ json: { taskId, column, label, displayValue, dbValue, changedBy, dateStr } });\n}\n\nif (results.length === 0) {\n  return [{ json: { taskId, skip: true } }];\n}\nreturn results;\n"
       },
-      "id": "2ec3688d-c494-461d-adac-53110f6198fd",
+      "id": "4603df2a-0a7c-469b-80a5-b9fd0d467c35",
       "name": "Nhận Diện & Format Thay Đổi",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -64,7 +64,7 @@
           },
           "conditions": [
             {
-              "id": "c0237b89-ad46-4812-b01d-42cfe9fed96e",
+              "id": "68de9305-64d3-47ff-8fef-bb096efac9c6",
               "leftValue": "={{ $json.skip }}",
               "rightValue": "",
               "operator": {
@@ -78,7 +78,7 @@
         },
         "options": {}
       },
-      "id": "7bec27ed-67b7-4d49-aa8f-ea1d22ffae34",
+      "id": "97725fdf-0b92-462b-ba7d-1ff5bcc99494",
       "name": "Có Thay Đổi Cần Theo Dõi?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -89,19 +89,53 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT id, name, url FROM clickup.tasks WHERE id = $1;",
-        "options": {
-          "queryReplacement": "={{ [$json.taskId] }}"
-        }
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c7d981b9-fe99-413c-8b22-498fd30e43e8",
+              "leftValue": "={{ $json.column }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
       },
-      "id": "517ba918-5dc2-435d-b1be-9953b95ad6ca",
-      "name": "Lấy Thông Tin Task",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "id": "e5595d29-8b8a-4045-89a9-900248e74074",
+      "name": "Có Cột Cần Ghi DB?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
         -2176,
         380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE clickup.tasks SET {{ $json.column }} = $1, synced_at = now() WHERE id = $2 RETURNING id, name, url;",
+        "options": {
+          "queryReplacement": "={{ [$json.dbValue, $json.taskId] }}"
+        }
+      },
+      "id": "1a27f97d-636b-4641-a06c-32bb12fb51fa",
+      "name": "Ghi Đè Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -1920,
+        280
       ],
       "credentials": {
         "postgres": {
@@ -112,14 +146,37 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst change = $('Nhận Diện & Format Thay Đổi').item.json;\nconst admin = $('Lay Admin Chat ID (F2)').first().json;\nconst task = $json; // { id, name, url } tu Lay Thong Tin Task (co the rong neu task chua sync)\n\nconst text = `🔄 <b>Thông báo CẬP NHẬT Task</b>\\n\\n` +\n  `🔧 Thay đổi:\\n` +\n  `📝 Trường \"${change.label}\" được cập nhật bởi ${change.changedBy}\\n` +\n  `✅ Giá trị mới: ${change.valueText}\\n\\n` +\n  `📦 Thông tin:\\n` +\n  `🆔 ID: ${task.id || change.taskId}\\n` +\n  `📌 Tên: ${task.name || '—'}\\n` +\n  `🔗 Link: ${task.url || '—'}\\n` +\n  (change.dateStr ? `🕒 Cập nhật lúc: ${change.dateStr}\\n` : '') +\n  `#task_updated`;\n\nreturn [{ json: { chatId: admin.admin_chat_id, text } }];\n"
+        "operation": "executeQuery",
+        "query": "SELECT id, name, url FROM clickup.tasks WHERE id = $1;",
+        "options": {
+          "queryReplacement": "={{ [$json.taskId] }}"
+        }
       },
-      "id": "b6aa2810-9ff6-4efd-ae87-cefe84e6fd0a",
+      "id": "ff6342ee-e248-4cc3-b61e-8ba27ff8bb25",
+      "name": "Lấy Thông Tin Task",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -1920,
+        480
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "GwUFREmcXzXXj5mZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst change = $('Nhận Diện & Format Thay Đổi').item.json;\nconst admin = $('Lay Admin Chat ID (F2)').first().json;\nconst task = $json; // { id, name, url } - tu Ghi De Postgres (RETURNING) hoac Lay Thong Tin Task (SELECT)\n\nconst text = `🔄 <b>Thông báo CẬP NHẬT Task</b>\\n\\n` +\n  `🔧 Thay đổi:\\n` +\n  `📝 Trường \"${change.label}\" được cập nhật bởi ${change.changedBy}\\n` +\n  `✅ Giá trị mới: ${change.displayValue}\\n\\n` +\n  `📦 Thông tin:\\n` +\n  `🆔 ID: ${task.id || change.taskId}\\n` +\n  `📌 Tên: ${task.name || '—'}\\n` +\n  `🔗 Link: ${task.url || '—'}\\n` +\n  (change.dateStr ? `🕒 Cập nhật lúc: ${change.dateStr}\\n` : '') +\n  `#task_updated`;\n\nreturn [{ json: { chatId: admin.admin_chat_id, text } }];\n"
+      },
+      "id": "9de924a4-2442-46fe-9ba8-1a1080017acf",
       "name": "Build Thông Báo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1920,
+        -1664,
         380
       ]
     },
@@ -132,12 +189,12 @@
           "parse_mode": "HTML"
         }
       },
-      "id": "75a16e6b-1f5a-47cd-ab1f-779e941699b3",
+      "id": "c1ad8e28-c237-4494-8c02-a8b6232df9e3",
       "name": "Notify",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1664,
+        -1408,
         380
       ],
       "credentials": {
@@ -187,7 +244,36 @@
         [],
         [
           {
+            "node": "Có Cột Cần Ghi DB?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có Cột Cần Ghi DB?": {
+      "main": [
+        [
+          {
+            "node": "Ghi Đè Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Lấy Thông Tin Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ghi Đè Postgres": {
+      "main": [
+        [
+          {
+            "node": "Build Thông Báo",
             "type": "main",
             "index": 0
           }
