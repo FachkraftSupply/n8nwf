@@ -101,20 +101,19 @@ bot-gateway/
 1. **Ý tưởng #3 (đang chờ)** — Liên kết DKPV/PVTC trong chi tiết task: cần bảng `clickup.task_links`
    mới (thay vì mở rộng cột text), xử lý PVTC đổi tên field theo năm bằng regex thay vì hardcode. Xem
    kế hoạch 6 bước đã thống nhất trong chat 06/09/2026. CHƯA BẮT ĐẦU — đang chờ user proceed.
-2. **Menu lệnh dễ dùng (ý tưởng mới 07/09/2026)** — làm cả 2, không loại trừ nhau:
-   a. Đăng ký `setMyCommands` qua Telegram Bot API cho bot DEV (và PROD khi cutover) — Telegram tự hiện
-      menu "/" browse được, không cần nhớ gõ tay.
-   b. Sửa `/help` — lệnh KHÔNG cần tham số (vd `/sync_status`, `/db_status`, `/sync`) làm thành hyperlink
-      bấm được luôn trong tin nhắn help.
-3. ⚠️ Vẫn cần: điền Workflow ID của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
+2. ⚠️ Vẫn cần: điền Workflow ID của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
    `Chạy Sync List Mặc Định` trong `Sync Scheduler`.
-4. Test lại multi-list qua `Sync Scheduler` — chuột phải → Execute Workflow để test không cần chờ 5 ngày.
-5. Xây dựng lại tính năng xem file OneDrive (`view_file`, Graph API resolve liệt kê từng file) — đã tắt
+3. Test lại multi-list qua `Sync Scheduler` — chuột phải → Execute Workflow để test không cần chờ 5 ngày.
+4. Xây dựng lại tính năng xem file OneDrive (`view_file`, Graph API resolve liệt kê từng file) — đã tắt
    khi revamp, hiện chỉ có link OneDrive phẳng trong chi tiết task.
-6. Cung cấp Workflow ID thật cho **Help Bot GPT** để gắn vào Gateway (độc lập, có thể làm song song).
-7. Khi rảnh: **Bot System Main** (xử lý ảnh, tách từ `Telebot_main.json` cũ) và
+5. Cung cấp Workflow ID thật cho **Help Bot GPT** để gắn vào Gateway (độc lập, có thể làm song song).
+6. Khi rảnh: **Bot System Main** (xử lý ảnh, tách từ `Telebot_main.json` cũ) và
    **Backup Postgres → OneDrive** (Phase 3, Phương án B — SQL export thuần n8n).
-8. Khi rảnh: test `taotask` thật (hiện đang là placeholder "chưa khả dụng").
+
+## ĐÃ HOÀN TẤT (07/09/2026)
+- **Menu lệnh dễ dùng**: `/help` giờ có hyperlink bấm được cho lệnh không tham số
+  (`/sync`, `/sync_status`, `/db_status`) + hướng dẫn đăng ký `setMyCommands` qua BotFather (menu "/").
+- **Đã xoá `/taotask`** hoàn toàn khỏi hệ thống (router, Switch, node placeholder) — không cần nữa.
 
 ## GỢI Ý cách bắt đầu phiên làm việc tiếp theo
 Dán link `docs/PROJECT_STATUS.md` này vào đầu chat mới để Claude nắm ngữ cảnh nhanh, rồi nói tiếp:
