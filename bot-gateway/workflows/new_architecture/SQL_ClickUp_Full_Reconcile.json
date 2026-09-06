@@ -61,7 +61,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chatId }}",
+        "chatId": "={{ $('Build Notify Start').first().json.chatId }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,
@@ -294,7 +294,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chatId }}",
+        "chatId": "={{ $('Build Notify Done').first().json.chatId }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,
