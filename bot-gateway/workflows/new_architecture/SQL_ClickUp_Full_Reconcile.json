@@ -452,32 +452,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "DELETE FROM clickup.task_links WHERE student_task_id = $1;",
+        "query": "WITH deleted AS (\n  DELETE FROM clickup.task_links WHERE student_task_id = $1\n)\nINSERT INTO clickup.task_links\n  (student_task_id, order_task_id, order_task_name, order_task_status, link_type, pvtc_year)\nSELECT $1, x.order_task_id, x.order_task_name, x.order_task_status, x.link_type, x.pvtc_year\nFROM jsonb_to_recordset($2::jsonb)\n  AS x(order_task_id text, order_task_name text, order_task_status text, link_type text, pvtc_year int);",
         "options": {
-          "queryReplacement": "={{ [$('Trích Xuất Task Links').first().json.taskId] }}"
-        }
-      },
-      "id": "1f42434a-49a4-4c12-b7e4-d6b0c201d483",
-      "name": "Xoá Task Links Cũ",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
-      "position": [
-        3632,
-        460
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "GwUFREmcXzXXj5mZ",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO clickup.task_links\n  (student_task_id, order_task_id, order_task_name, order_task_status, link_type, pvtc_year)\nSELECT $1, x.order_task_id, x.order_task_name, x.order_task_status, x.link_type, x.pvtc_year\nFROM jsonb_to_recordset($2::jsonb)\n  AS x(order_task_id text, order_task_name text, order_task_status text, link_type text, pvtc_year int)\nON CONFLICT (student_task_id, order_task_id, link_type) DO UPDATE SET\n  order_task_name = EXCLUDED.order_task_name,\n  order_task_status = EXCLUDED.order_task_status,\n  pvtc_year = EXCLUDED.pvtc_year,\n  synced_at = now();",
-        "options": {
-          "queryReplacement": "={{ [$('Trích Xuất Task Links').first().json.taskId, $('Trích Xuất Task Links').first().json.linksJson] }}"
+          "queryReplacement": "={{ [$('Trích Xuất Task Links').item.json.taskId, $('Trích Xuất Task Links').item.json.linksJson] }}"
         }
       },
       "id": "b1474e5b-aae2-4f45-9a5a-7d1e27e70d77",
@@ -732,17 +709,6 @@
       ]
     },
     "Trích Xuất Task Links": {
-      "main": [
-        [
-          {
-            "node": "Xoá Task Links Cũ",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Xoá Task Links Cũ": {
       "main": [
         [
           {
