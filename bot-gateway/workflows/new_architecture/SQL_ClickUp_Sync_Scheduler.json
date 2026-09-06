@@ -103,6 +103,7 @@
           "mappingMode": "defineBelow",
           "value": {
             "list_id": "={{ $json.list_id }}",
+            "list_name": "={{ $json.list_name }}",
             "testMode": false
           },
           "matchingColumns": [],

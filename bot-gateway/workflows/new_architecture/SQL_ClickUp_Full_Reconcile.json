@@ -14,7 +14,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// DON GIAN HOA: chi 1 List co dinh, dien tay o day (dung khi chay qua Manual/Schedule).\n// Neu duoc goi qua Execute Workflow Trigger (vi du tu /sync -> \"Dong bo ngay\"), doc gia tri\n// truyen vao ($json.list_id / $json.testMode) de ghi de gia tri mac dinh ben duoi.\nconst input = $json || {};\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\",\n  list_id: input.list_id || \"901812218309\",   // List \"2026\" trong folder \"Xu Ly Ho So\" (mac dinh)\n\n  notifyChatId: \"\", // de trong = dung ADMIN_CHAT_ID ben duoi\n  ADMIN_CHAT_ID: \"975005174\", // dung chung voi Live Update/Reader - doi neu can\n\n  testMode: input.testMode !== undefined ? input.testMode : true,\n  testTaskLimit: 5,\n\n  fieldNameMap: {\n    b1_datum: \"B1 Datum\", dob: \"DOB\", ma_hd: \"Mã HĐ\", nghe: \"Nghề\", sdt: \"SDT\", email: \"email\",\n    dia_chi_vn: \"Địa chỉ VN\", vfs: \"🌍 VFS\", du_kien_den_duc: \"📆 Dự kiến thời gian đến Đức\",\n    ngay_xuat_canh: \"🛫 Ngày xuất cảnh\", dkpv_2026: \"DKPV 2026\", pvtc_2026: \"PVTC 2026\",\n    nha_cua_support: \"Nhà cửa / Support\", phu_trach: \"Phụ trách\", dkpv: \"DKPV\", pvtc: \"PVTC\",\n    vfs_khong_dau: \"VFS\", planbay: \"Plan bay\", ngaybay: \"Ngày bay\", color: \"Color\",\n    onedrive_cf: \"OneDrive\", youtube_cf: \"Youtube\", other_link: \"Link khác\",\n  }\n};\nreturn [{ json: config }];\n"
+        "jsCode": "\n// DON GIAN HOA: chi 1 List co dinh, dien tay o day (dung khi chay qua Manual/Schedule).\n// Neu duoc goi qua Execute Workflow Trigger (vi du tu /sync -> \"Dong bo ngay\"), doc gia tri\n// truyen vao ($json.list_id / $json.testMode) de ghi de gia tri mac dinh ben duoi.\nconst input = $json || {};\nconst config = {\n  team_id: \"9018351620\",\n  space_id: \"90183192291\",\n  list_id: input.list_id || \"901812218309\",   // List \"2026\" trong folder \"Xu Ly Ho So\" (mac dinh)\n  list_name: input.list_name || \"\",   // truyen tu Scheduler/nut \"Dong bo ngay\" neu co, de trong se tu tra o buoc sau\n\n  notifyChatId: \"\", // de trong = dung ADMIN_CHAT_ID ben duoi\n  ADMIN_CHAT_ID: \"975005174\", // dung chung voi Live Update/Reader - doi neu can\n\n  testMode: input.testMode !== undefined ? input.testMode : true,\n  testTaskLimit: 5,\n\n  fieldNameMap: {\n    b1_datum: \"B1 Datum\", dob: \"DOB\", ma_hd: \"Mã HĐ\", nghe: \"Nghề\", sdt: \"SDT\", email: \"email\",\n    dia_chi_vn: \"Địa chỉ VN\", vfs: \"🌍 VFS\", du_kien_den_duc: \"📆 Dự kiến thời gian đến Đức\",\n    ngay_xuat_canh: \"🛫 Ngày xuất cảnh\", dkpv_2026: \"DKPV 2026\", pvtc_2026: \"PVTC 2026\",\n    nha_cua_support: \"Nhà cửa / Support\", phu_trach: \"Phụ trách\", dkpv: \"DKPV\", pvtc: \"PVTC\",\n    vfs_khong_dau: \"VFS\", planbay: \"Plan bay\", ngaybay: \"Ngày bay\", color: \"Color\",\n    onedrive_cf: \"OneDrive\", youtube_cf: \"Youtube\", other_link: \"Link khác\",\n  }\n};\nreturn [{ json: config }];\n"
       },
       "id": "f3929b7f-1244-40ab-9967-55cf5bdbe1cd",
       "name": "⚙️ Config",
@@ -48,7 +48,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const cfg = $('⚙️ Config').first().json;\nreturn [{ json: { chatId: cfg.notifyChatId || cfg.ADMIN_CHAT_ID, text: `🚀 <b>Bắt đầu đồng bộ ClickUp → Postgres</b>\\n📋 List: ${cfg.list_id}\\n🕒 Bắt đầu lúc: ${new Date().toLocaleString('vi-VN')}\\n${cfg.testMode ? '⚠️ TEST MODE' : '📦 Full data'}` } }];"
+        "jsCode": "const cfg = $('⚙️ Config').first().json;\nconst listName = $('Xác Định Tên List').first().json.resolved_list_name || cfg.list_id;\nreturn [{ json: { chatId: cfg.notifyChatId || cfg.ADMIN_CHAT_ID, text: `🚀 <b>Bắt đầu đồng bộ ClickUp → Postgres</b>\\n📋 List: <b>${listName}</b> (ID: ${cfg.list_id})\\n🕒 Bắt đầu lúc: ${new Date().toLocaleString('vi-VN')}\\n${cfg.testMode ? '⚠️ TEST MODE' : '📦 Full data'}` } }];"
       },
       "id": "ae367cd6-c472-4890-b7ad-ff119ce24d7d",
       "name": "Build Notify Start",
@@ -409,6 +409,30 @@
         2096,
         1000
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COALESCE(\n  NULLIF($2, ''),\n  (SELECT list_name FROM clickup.sync_targets WHERE list_id = $1 LIMIT 1),\n  $1\n) AS resolved_list_name;",
+        "options": {
+          "queryReplacement": "={{ [$('⚙️ Config').first().json.list_id, $('⚙️ Config').first().json.list_name] }}"
+        }
+      },
+      "id": "75c0749f-4a34-4243-bb1e-b6270adf43bf",
+      "name": "Xác Định Tên List",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2704,
+        300
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "GwUFREmcXzXXj5mZ",
+          "name": "Postgres account"
+        }
+      }
     }
   ],
   "connections": {
@@ -427,7 +451,7 @@
       "main": [
         [
           {
-            "node": "Ensure Schema (idempotent)",
+            "node": "Xác Định Tên List",
             "type": "main",
             "index": 0
           }
@@ -629,6 +653,17 @@
         [
           {
             "node": "⚙️ Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Xác Định Tên List": {
+      "main": [
+        [
+          {
+            "node": "Ensure Schema (idempotent)",
             "type": "main",
             "index": 0
           }
