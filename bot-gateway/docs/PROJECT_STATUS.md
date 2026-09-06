@@ -96,21 +96,25 @@ bot-gateway/
 | — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | ⏸️ TẠM TẮT khi revamp 05/09/2026 (đã xoá khỏi file đang dùng), sẽ làm lại từ đầu sau khi tìm kiếm ổn định |
 | — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
-## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên, cập nhật 06/09/2026 khuya)
+## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên, cập nhật 07/09/2026)
 
-1. **XONG** — Đã tách `SQL_ClickUp_Sync_Scheduler.json` (điều phối) riêng khỏi
-   `SQL_ClickUp_Full_Reconcile.json` (engine) để dễ theo dõi Executions, không còn tự gọi chính nó.
-   Đã thêm hiển thị TÊN List (không chỉ ID) trong thông báo Bắt đầu/Hoàn tất.
-   ⚠️ Vẫn cần: điền Workflow ID của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
-   `Chạy Sync List Mặc Định` trong `Sync Scheduler` (khác file rồi nên KHÔNG còn là self-reference nữa).
-2. Test lại multi-list qua `Sync Scheduler` (không phải Full Reconcile nữa) — chuột phải → Execute
-   Workflow trên `Sync Scheduler` để test không cần chờ 5 ngày.
-3. Xây dựng lại tính năng xem file OneDrive (`view_file`, Graph API resolve liệt kê từng file) — đã tắt
+1. **Ý tưởng #3 (đang chờ)** — Liên kết DKPV/PVTC trong chi tiết task: cần bảng `clickup.task_links`
+   mới (thay vì mở rộng cột text), xử lý PVTC đổi tên field theo năm bằng regex thay vì hardcode. Xem
+   kế hoạch 6 bước đã thống nhất trong chat 06/09/2026. CHƯA BẮT ĐẦU — đang chờ user proceed.
+2. **Menu lệnh dễ dùng (ý tưởng mới 07/09/2026)** — làm cả 2, không loại trừ nhau:
+   a. Đăng ký `setMyCommands` qua Telegram Bot API cho bot DEV (và PROD khi cutover) — Telegram tự hiện
+      menu "/" browse được, không cần nhớ gõ tay.
+   b. Sửa `/help` — lệnh KHÔNG cần tham số (vd `/sync_status`, `/db_status`, `/sync`) làm thành hyperlink
+      bấm được luôn trong tin nhắn help.
+3. ⚠️ Vẫn cần: điền Workflow ID của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
+   `Chạy Sync List Mặc Định` trong `Sync Scheduler`.
+4. Test lại multi-list qua `Sync Scheduler` — chuột phải → Execute Workflow để test không cần chờ 5 ngày.
+5. Xây dựng lại tính năng xem file OneDrive (`view_file`, Graph API resolve liệt kê từng file) — đã tắt
    khi revamp, hiện chỉ có link OneDrive phẳng trong chi tiết task.
-4. Cung cấp Workflow ID thật cho **Help Bot GPT** để gắn vào Gateway (độc lập, có thể làm song song).
-5. Khi rảnh: **Bot System Main** (xử lý ảnh, tách từ `Telebot_main.json` cũ) và
+6. Cung cấp Workflow ID thật cho **Help Bot GPT** để gắn vào Gateway (độc lập, có thể làm song song).
+7. Khi rảnh: **Bot System Main** (xử lý ảnh, tách từ `Telebot_main.json` cũ) và
    **Backup Postgres → OneDrive** (Phase 3, Phương án B — SQL export thuần n8n).
-6. Khi rảnh: test `taotask` thật (hiện đang là placeholder "chưa khả dụng").
+8. Khi rảnh: test `taotask` thật (hiện đang là placeholder "chưa khả dụng").
 
 ## GỢI Ý cách bắt đầu phiên làm việc tiếp theo
 Dán link `docs/PROJECT_STATUS.md` này vào đầu chat mới để Claude nắm ngữ cảnh nhanh, rồi nói tiếp:
