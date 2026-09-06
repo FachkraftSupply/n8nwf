@@ -157,7 +157,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chatId }}",
+        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
           "parse_mode": "HTML",
@@ -290,7 +290,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chatId }}",
+        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,

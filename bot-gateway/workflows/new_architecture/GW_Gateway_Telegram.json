@@ -435,11 +435,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
+        "chatId": "={{ $('GW-01 Envelope').first().json.chat_id }}",
         "text": "⏳ Yêu cầu của bạn đang chờ quản trị viên phê duyệt. Vui lòng quay lại sau.",
         "additionalFields": {
           "appendAttribution": false,
-          "reply_to_message_id": "={{ $json.message_id }}"
+          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -459,11 +459,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
+        "chatId": "={{ $('GW-01 Envelope').first().json.chat_id }}",
         "text": "🚫 Rất tiếc, bạn không có quyền truy cập hệ thống này. Liên hệ quản trị viên nếu có nhầm lẫn.",
         "additionalFields": {
           "appendAttribution": false,
-          "reply_to_message_id": "={{ $json.message_id }}"
+          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -697,11 +697,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
+        "chatId": "={{ $('GW-01 Envelope').first().json.chat_id }}",
         "text": "=🔒 Bạn chưa được cấp quyền dùng chức năng {{ $json.bot_key }}. Liên hệ quản trị viên để được cấp thêm.",
         "additionalFields": {
           "appendAttribution": false,
-          "reply_to_message_id": "={{ $json.message_id }}"
+          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -721,11 +721,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
+        "chatId": "={{ $('GW-01 Envelope').first().json.chat_id }}",
         "text": "❓ Lệnh không hợp lệ. Các lệnh khả dụng:\n/task - tra cứu task\n/ask - hỏi trợ lý AI\n/sum - tóm tắt",
         "additionalFields": {
           "appendAttribution": false,
-          "reply_to_message_id": "={{ $json.message_id }}"
+          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
