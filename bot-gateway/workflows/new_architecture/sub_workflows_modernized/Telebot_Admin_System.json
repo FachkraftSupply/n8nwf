@@ -278,7 +278,8 @@
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "❓ Lệnh không hợp lệ. Gõ /help để xem danh sách lệnh.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "f2c91f97-dc26-4f59-8899-51be0d22c5ad",
@@ -314,7 +315,8 @@
         "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "e9cf20b1-7964-4653-8092-9f4f34186bb9",
@@ -371,7 +373,8 @@
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "Vui lòng nhập từ khóa. Ví dụ: /task linh nhi",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "64d01f25-f716-4ad9-9d33-908557abd7d0",
@@ -446,7 +449,8 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "28a426e6-82e8-4f19-a911-29f416107533",
@@ -565,7 +569,8 @@
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "🚫 Bạn không có quyền dùng lệnh này.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "e4b8062d-d149-4746-9be0-c62489774f8c",
@@ -737,7 +742,8 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "46806570-e4b5-46ce-86bd-44af9719ee42",
@@ -796,7 +802,8 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "2eaef0c6-60a0-4bac-b6d8-e436fd5261f7",
@@ -937,7 +944,8 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "f8705b72-feb7-409d-8d81-7b0dea0a43b5",
@@ -960,7 +968,8 @@
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "⚡ Đang đồng bộ... anh sẽ nhận thông báo qua bot hệ thống khi xong.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "78f8fb8b-315c-4228-a052-bd1662ecb87f",
@@ -1015,7 +1024,8 @@
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
         "text": "⏳ Đã lưu, sẽ tự động đồng bộ vào lần chạy định kỳ tiếp theo (mỗi 5 ngày).",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
       "id": "3eae468c-8f93-4286-8584-9f30c02723a2",
