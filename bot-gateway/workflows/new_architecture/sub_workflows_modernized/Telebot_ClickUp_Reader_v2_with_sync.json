@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// Ban REVAMP (05/09/2026): bo han view_file (OneDrive) va /sync - tam thoi tat, se lam sau.\n// Chi con: help / task / chitiet / taotask (placeholder) / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/taotask') return { route: 'taotask', params, taskId: null };\n  if (command === '/sync') return { route: 'sync', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    if (rawText.startsWith('chitiet_')) {\n      route = 'chitiet'; taskId = rawText.replace('chitiet_', '').trim(); params = 'chitiet';\n    } else if (rawText.startsWith('sync_folder:')) {\n      route = 'sync_folder'; params = rawText.replace('sync_folder:', '').trim(); // = folder_id\n    } else if (rawText.startsWith('sync_list:')) {\n      route = 'sync_list'; params = rawText.replace('sync_list:', '').trim(); // = \"list_id:folder_id\"\n    } else if (rawText.startsWith('sync_now:')) {\n      route = 'sync_now'; params = rawText.replace('sync_now:', '').trim(); // = list_id\n    } else if (rawText === 'sync_later') {\n      route = 'sync_later'; params = '';\n    } else {\n      route = 'unknown_command'; params = rawText;\n    }\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
+        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// Ban REVAMP (05/09/2026): bo han view_file (OneDrive) va /sync - tam thoi tat, se lam sau.\n// Chi con: help / task / chitiet / taotask (placeholder) / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  // /sync dung DEEP-LINK dang text (nhu chitiet_), KHONG dung inline keyboard callback - on dinh hon.\n  // Deep-link Telegram chi cho phep [A-Za-z0-9_-], khong dung duoc dau \":\" nen dung \"_\" lam phan cach.\n  if (params.startsWith('sync_folder_')) {\n    return { route: 'sync_folder', params: params.replace('sync_folder_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_list_')) {\n    return { route: 'sync_list', params: params.replace('sync_list_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_now_')) {\n    return { route: 'sync_now', params: params.replace('sync_now_', '').trim(), taskId: null };\n  }\n  if (params === 'sync_later') {\n    return { route: 'sync_later', params: '', taskId: null };\n  }\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/taotask') return { route: 'taotask', params, taskId: null };\n  if (command === '/sync') return { route: 'sync', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    if (rawText.startsWith('chitiet_')) {\n      route = 'chitiet'; taskId = rawText.replace('chitiet_', '').trim(); params = 'chitiet';\n    } else {\n      route = 'unknown_command'; params = rawText;\n    }\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
       },
       "id": "4f405de8-ae07-4928-8d4f-6b583c3f95e5",
       "name": "Phân tích lệnh",
@@ -732,7 +732,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst folders = $input.all().map(i => i.json);\nconst rows = folders.slice(0, 30).map(f => ({\n  row: { buttons: [{ text: f.name, additionalFields: { callback_data: `sync_folder:${f.id}` } }] }\n}));\nconst text = folders.length > 0\n  ? '📁 Chọn Folder muốn đồng bộ:'\n  : '⚠️ Không tìm thấy Folder nào trong Space.';\nreturn [{ json: { chatId: $('Phân tích lệnh').first().json.chatId, text, rows, hasButtons: rows.length > 0 } }];\n"
+        "jsCode": "\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst folders = $input.all().map(i => i.json);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nif (folders.length === 0) {\n  return [{ json: { chatId, text: '⚠️ Không tìm thấy Folder nào trong Space.', parse_mode: 'HTML' } }];\n}\n\nconst lines = ['📁 <b>Chọn Folder muốn đồng bộ:</b>'];\nfolders.forEach((f, i) => {\n  const link = `https://t.me/${botUsername}?start=sync_folder_${f.id}`;\n  lines.push(`${i + 1}. <a href=\"${link}\">${escapeHtml(f.name)}</a>`);\n});\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n"
       },
       "id": "c66fac8d-8018-482b-9d90-7a3083c7957c",
       "name": "Build Nút Folder",
@@ -747,10 +747,9 @@
       "parameters": {
         "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.text }}",
-        "replyMarkup": "={{ $json.hasButtons ? 'inlineKeyboard' : undefined }}",
-        "inlineKeyboard": "={{ $json.hasButtons ? { rows: $json.rows } : {} }}",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "id": "46806570-e4b5-46ce-86bd-44af9719ee42",
@@ -792,7 +791,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst folderId = $('Phân tích lệnh').first().json.params;\nconst lists = $input.all().map(i => i.json);\nconst rows = lists.slice(0, 30).map(l => ({\n  row: { buttons: [{ text: l.name, additionalFields: { callback_data: `sync_list:${l.id}:${folderId}` } }] }\n}));\nconst text = lists.length > 0\n  ? '📋 Chọn List muốn đồng bộ:'\n  : '⚠️ Folder này không có List nào.';\nreturn [{ json: { chatId: $('Phân tích lệnh').first().json.chatId, text, rows, hasButtons: rows.length > 0 } }];\n"
+        "jsCode": "\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst folderId = $('Phân tích lệnh').first().json.params;\nconst lists = $input.all().map(i => i.json);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nif (lists.length === 0) {\n  return [{ json: { chatId, text: '⚠️ Folder này không có List nào.', parse_mode: 'HTML' } }];\n}\n\nconst lines = ['📋 <b>Chọn List muốn đồng bộ:</b>'];\nlists.forEach((l, i) => {\n  const link = `https://t.me/${botUsername}?start=sync_list_${l.id}_${folderId}`;\n  lines.push(`${i + 1}. <a href=\"${link}\">${escapeHtml(l.name)}</a>`);\n});\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n"
       },
       "id": "dcb88532-2430-4666-8978-4e5e1f67678a",
       "name": "Build Nút List",
@@ -807,10 +806,9 @@
       "parameters": {
         "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.text }}",
-        "replyMarkup": "={{ $json.hasButtons ? 'inlineKeyboard' : undefined }}",
-        "inlineKeyboard": "={{ $json.hasButtons ? { rows: $json.rows } : {} }}",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "id": "2eaef0c6-60a0-4bac-b6d8-e436fd5261f7",
@@ -830,7 +828,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst raw = $('Phân tích lệnh').first().json.params;\nconst [listId, folderId] = raw.split(':');\nreturn [{ json: { listId, folderId } }];\n"
+        "jsCode": "\nconst raw = $('Phân tích lệnh').first().json.params;\nconst [listId, folderId] = raw.split('_'); // doi tu ':' sang '_' (deep-link khong cho phep ':')\nreturn [{ json: { listId, folderId } }];\n"
       },
       "id": "c66cfebc-671b-4651-a78c-00484e2fdcff",
       "name": "Tách List ID + Folder ID",
@@ -934,7 +932,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst t = $json;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst text = `✅ Đã lưu List \"<b>${t.list_name}</b>\" vào danh sách tự động đồng bộ (mỗi 5 ngày).\\n\\nĐồng bộ ngay bây giờ luôn không?`;\nconst rows = [{ row: { buttons: [\n  { text: '⚡ Đồng bộ ngay', additionalFields: { callback_data: `sync_now:${t.list_id}` } },\n  { text: '⏳ Chờ lần sau', additionalFields: { callback_data: 'sync_later' } },\n] } }];\nreturn [{ json: { chatId, text, rows } }];\n"
+        "jsCode": "\nconst t = $json;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nconst syncNowLink = `https://t.me/${botUsername}?start=sync_now_${t.list_id}`;\nconst syncLaterLink = `https://t.me/${botUsername}?start=sync_later`;\n\nconst text = `✅ Đã lưu List \"<b>${t.list_name}</b>\" vào danh sách tự động đồng bộ (mỗi 5 ngày).\\n\\n` +\n  `Đồng bộ ngay bây giờ luôn không?\\n` +\n  `👉 <a href=\"${syncNowLink}\">⚡ Đồng bộ ngay</a>\\n` +\n  `👉 <a href=\"${syncLaterLink}\">⏳ Chờ lần sau</a>`;\n\nreturn [{ json: { chatId, text, parse_mode: 'HTML' } }];\n"
       },
       "id": "83277669-0329-4731-a664-2eabe8d3cbbe",
       "name": "Hỏi Đồng Bộ Ngay",
@@ -949,8 +947,6 @@
       "parameters": {
         "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.text }}",
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": "={{ { rows: $json.rows } }}",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "HTML"
