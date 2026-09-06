@@ -24,8 +24,10 @@ testMode: true / false      // true = giới hạn testTaskLimit task để test
                              // false = lấy ĐẦY ĐỦ (returnAll) — dùng khi chạy thật
 testTaskLimit: 5            // chỉ áp dụng khi testMode=true
 
-notifyChatId: ""            // để trống = gửi thông báo tới admin_chat_id (gateway.config)
+notifyChatId: ""            // để trống = gửi thông báo tới ADMIN_CHAT_ID (hardcode ngay dưới,
+                             //   KHÔNG còn query gateway.config nữa)
                              // điền vào = ghi đè, gửi sang group Telegram khác
+ADMIN_CHAT_ID: "975005174"  // dùng chung với Live Update/Reader — đổi nếu cần
 
 fieldNameMap: { ... }       // map tên cột Postgres -> tên custom field THẬT trong ClickUp
                              // (không phải ID field) — sửa nếu List khác có tên field khác
@@ -58,15 +60,30 @@ Node ClickUp trên n8n instance này dùng **tham số phẳng** (`team: "..."`)
 resource-locator (`{__rl:true,...}`). Nếu copy node ClickUp từ chỗ khác/thêm node mới, PHẢI theo
 đúng format này — xem ví dụ thật trong `original/Telebot_sql.json` (node "lay task"/"lay comment1").
 
-### Sơ đồ đầy đủ
+### Sơ đồ đầy đủ (per-List — chạy 1 lần cho 1 List)
 ```
-Manual/Schedule → Config → Ensure Schema (ALTER COLUMN, tự thêm cột thiếu, bật pg_trgm)
+Manual/Execute Workflow Trigger → Config → Ensure Schema (ALTER COLUMN, tự thêm cột thiếu, bật pg_trgm)
   → Notify Start → ClickUp Get Tasks
       → Map Row → Upsert Postgres (main)
       → Loop Over Tasks → Kiểm Tra Link Có Sẵn → Đã Có Đủ Link? → [Wait → Get Comments →
         Trích Link → Update Link] → (quay lại Loop)
-  → (khi Loop xong) → Limit(1) → Lấy Admin Chat ID → Query Thống Kê → Build Notify Done → Notify Done
+  → (khi Loop xong) → Limit(1) → Query Thống Kê → Build Notify Done → Notify Done
 ```
+
+### Sơ đồ Schedule — tự động sync ĐA-LIST (mới, 06/09/2026)
+`Schedule` KHÔNG còn chạy thẳng vào Config như trên — nó chạy qua 1 lớp orchestrate riêng để lặp qua
+TOÀN BỘ List đã được admin chọn qua lệnh `/sync`:
+```
+Schedule (5 ngày) → Query Sync Targets (SELECT * FROM clickup.sync_targets)
+  → Có List Nào Trong Bảng?
+      true  → Loop Over Sync Targets → Chạy Sync Cho List Này
+              (Execute Workflow — TỰ GỌI LẠI CHÍNH WORKFLOW NÀY, chờ xong mới sang List tiếp theo)
+              → quay lại Loop
+      false → Chạy Sync List Mặc Định (fallback về List cố định trong Config, phòng khi
+              chưa ai dùng /sync lần nào)
+```
+**Bắt buộc:** 2 node `Chạy Sync Cho List Này` và `Chạy Sync List Mặc Định` cần điền Workflow ID
+**của chính workflow này** (self-reference) — copy từ URL `.../workflow/<ID>` sau khi lưu trên n8n.
 
 ## `SQL_ClickUp_Live_Update.json` — Cấu hình (✅ HOÀN TẤT, 9 node)
 
