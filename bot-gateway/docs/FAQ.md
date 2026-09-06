@@ -24,6 +24,14 @@ lệnh tại 1 thời điểm:
 | `@elite_n8n_system_bot` (System) | CHỈ gửi thông báo nền 1 chiều (SQL sync) — không có Trigger nhận lệnh | ❌ Không bao giờ |
 **Cách sửa:** Luôn thao tác admin trên `@elite_n8n_test_bot` cho tới khi go-live.
 
+### "Gõ lệnh đúng trên bot DEV, có phản hồi, nhưng phản hồi lại xuất hiện ở bot System"
+**Biến thể khác của lỗi nhầm bot** — lần này KHÔNG phải do Trigger sai, mà do **1 node reply cụ thể**
+(callback/thông báo) trong workflow vẫn còn để credential Telegram của `@elite_n8n_system_bot` thay vì
+bot DEV Gateway đang lắng nghe. Gateway trigger đúng bot, nhưng node TRẢ LỜI lại dùng nhầm credential.
+**Cách sửa:** Không chỉ kiểm tra credential của node Trigger — phải rà **TỪNG node Telegram reply**
+trong toàn bộ luồng (đặc biệt các node mới thêm/copy từ chỗ khác), xác nhận `result.from.username` khi
+test đúng là bot đang mong đợi. Không giả định "sửa Trigger là đủ".
+
 ### "Bấm nút inline keyboard không có phản ứng gì"
 **Nguyên nhân:** Gateway (trước khi fix) route TOÀN BỘ callback (bấm nút) vào luồng duyệt user riêng
 (`ap:`/`dn:`), không có đường chung sang sub-workflow như message thường.
