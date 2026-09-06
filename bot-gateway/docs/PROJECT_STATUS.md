@@ -55,6 +55,14 @@ bot-gateway/
   `{{ $('GW-01 Envelope').first().json.chat_id }}`).** Đã sửa lỗi này ở hơn 10 node trong 3 workflow
   (07/09/2026) vì dùng `$json` trần khiến chatId có thể rỗng tuỳ node liền trước là gì. Áp dụng tương tự
   cho `reply_to_message_id` (để bot trả lời đúng group/topic khi được thêm vào group).
+- **⚠️ KHÔNG dùng inline keyboard (Telegram) làm mặc định — chỉ dùng khi user YÊU CẦU RÕ RÀNG.** Mặc
+  định LUÔN dùng cơ chế deep-link dạng text (`https://t.me/<bot>?start=<param>`, giống `chitiet_<id>`
+  đã chạy ổn định từ đầu dự án). Lý do: đã gặp inline keyboard không hoạt động ổn định NHIỀU LẦN (06/09
+  và lặp lại 07/09/2026) qua nhiều nguyên nhân khác nhau (Gateway route callback sai luồng, n8n không
+  lưu được field `inlineKeyboard` khi `replyMarkup` là expression động...) — dù đã fix từng nguyên nhân,
+  vẫn không tin cậy bằng deep-link. Deep-link đơn giản hơn, không phụ thuộc callback routing, đã proven
+  qua nhiều tháng dùng cho `chitiet_`. Nếu user yêu cầu cụ thể muốn dùng inline keyboard, hỏi rõ lý do
+  và cảnh báo trước về lịch sử không ổn định này.
 - Sửa file JSON lớn: dùng Composio remote workbench (fetch GitHub → sửa Python trong sandbox → commit),
   không dán nguyên workflow vào chat.
 - **Khi đang debug/thử nghiệm 1 thay đổi:** KHÔNG tự động commit vào file chính trên GitHub. Chỉ đưa
