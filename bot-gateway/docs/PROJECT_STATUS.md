@@ -5,6 +5,7 @@
 > Lịch sử thay đổi chi tiết theo ngày: xem `docs/CHANGELOG.md`.
 > Hướng dẫn vận hành chi tiết SQL ClickUp Sync (Full Reconcile + Live Update): xem `docs/GUIDE_SQL_CLICKUP_SYNC.md`.
 > Checklist đổi credential khi go-live (cutover sang bot PROD): xem `docs/GO_LIVE_CHECKLIST.md`.
+> Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 
 ## Repo
 `FachkraftSupply/n8nwf`, folder `bot-gateway/` — kết nối GitHub qua Composio (OAuth, không dùng token).
@@ -19,6 +20,7 @@ bot-gateway/
 │   ├── ARCHITECTURE.md, BOT_INVENTORY.md, GUIDE_DEPLOY_DATABASE.md, SETUP_PHASE_0_1.md
 │   ├── GUIDE_SQL_CLICKUP_SYNC.md    <- huong dan van hanh Full Reconcile + Live Update
 │   ├── GO_LIVE_CHECKLIST.md         <- checklist doi credential khi cutover sang bot PROD
+│   ├── FAQ.md                       <- loi thuong gap + cach da sua, tra cuu nhanh
 ├── sql/
 │   ├── 01_gateway_schema.sql
 │   └── 02_clickup_tasks_schema.sql
