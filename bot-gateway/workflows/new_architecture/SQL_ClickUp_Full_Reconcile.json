@@ -185,7 +185,8 @@
         "operation": "getAll",
         "commentsOn": "task",
         "id": "={{ $json.id }}",
-        "limit": "={{ 50 }}"
+        "limit": "={{ 50 }}",
+        "filters": {}
       },
       "id": "7589b042-ad52-4ed7-b685-7ac55f683954",
       "name": "ClickUp - Get Comments",
