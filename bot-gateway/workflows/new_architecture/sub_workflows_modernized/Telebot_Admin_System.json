@@ -522,7 +522,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// File nay CHI danh cho System Bot (admin control panel), khong dung switch DEV/PROD nua.\nconst config = {\n  botUsername: 'elite_n8n_system_bot',\n  ADMIN_CHAT_ID: '975005174', // dung chung voi Gateway/Live Update - doi neu can\n};\n\nreturn [{ json: { ...$json, ...config } }];\n"
+        "jsCode": "\n// File nay CHI danh cho System Bot (admin control panel), khong dung switch DEV/PROD nua.\nconst config = {\n  botUsername: 'elite_n8n_system_bot',\n  ADMIN_CHAT_ID: '975005174', // dung chung voi Gateway/Live Update - doi neu can\n  TEAM_ID: '9018351620',\n  SPACE_ID: '90183192291',\n};\n\nreturn [{ json: { ...$json, ...config } }];\n"
       },
       "id": "405a438b-337a-4611-8a47-2f34bb009f38",
       "name": "⚙️ Config",
@@ -708,8 +708,9 @@
         "authentication": "oAuth2",
         "resource": "folder",
         "operation": "getAll",
-        "space": "90183192291",
-        "filters": {}
+        "space": "={{ $('⚙️ Config').first().json.SPACE_ID }}",
+        "filters": {},
+        "team": "={{ $('⚙️ Config').first().json.TEAM_ID }}"
       },
       "id": "2654f32a-009f-4a0b-a42f-8dbc60ce75dc",
       "name": "ClickUp - Get Folders (Sync)",
@@ -774,7 +775,9 @@
         "resource": "list",
         "operation": "getAll",
         "folder": "={{ $('Phân tích lệnh').first().json.params }}",
-        "filters": {}
+        "filters": {},
+        "team": "={{ $('⚙️ Config').first().json.TEAM_ID }}",
+        "space": "={{ $('⚙️ Config').first().json.SPACE_ID }}"
       },
       "id": "7940c81d-6093-4540-9683-671946e4a43b",
       "name": "ClickUp - Get Lists (Sync)",
@@ -853,7 +856,9 @@
         "operation": "get",
         "list": "={{ $json.listId }}",
         "filters": {},
-        "folder": "90183835699"
+        "folder": "={{ '90183835699' }}",
+        "team": "={{ $('⚙️ Config').first().json.TEAM_ID }}",
+        "space": "={{ $('⚙️ Config').first().json.SPACE_ID }}"
       },
       "id": "f1457337-e82c-4866-817a-437ae7bf1952",
       "name": "ClickUp - Get List Info",
