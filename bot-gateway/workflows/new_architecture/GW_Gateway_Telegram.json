@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', start:'telebot_main', help:'help_bot',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"
+        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', start:'telebot_main', sync:'telebot_main',\n                 help:'help_bot', ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -480,7 +480,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  GW-03: Lệnh -> bot_key + check quyền     ║\n// ╚══════════════════════════════════════════╝\nconst cfg = $('⚙️ Config').first().json;\nconst env = $input.first().json;\n\nconst bot = env.command ? (cfg.COMMAND_MAP[env.command] || null) : cfg.DEFAULT_BOT;\n\nlet route;\nif (!bot)                                route = 'unknown';\nelse if (!env.auth.bots.includes(bot))   route = 'no_permission';\nelse                                     route = bot;\n\nreturn [{ json: { ...env, bot_key: bot, route } }];"
+        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  GW-03: Lệnh -> bot_key + check quyền     ║\n// ╚══════════════════════════════════════════╝\nconst cfg = $('⚙️ Config').first().json;\nconst env = $input.first().json;\n\n// Callback (bam nut) khong co dang \"/lenh\" nen env.command luon null - nhan dien qua prefix\n// cua callback_data thay vi COMMAND_MAP. Them prefix moi vao day khi sub-workflow can nhan callback.\nfunction resolveBotKeyForCallback(data) {\n  if (!data) return null;\n  if (data.startsWith('chitiet_') || data.startsWith('sync_') || data.startsWith('view_file:')) {\n    return 'telebot_main';\n  }\n  return null;\n}\n\nlet bot;\nif (env.command) {\n  bot = cfg.COMMAND_MAP[env.command] || null;\n} else if (env.kind === 'callback') {\n  bot = resolveBotKeyForCallback(env.callback?.data) || cfg.DEFAULT_BOT;\n} else {\n  bot = cfg.DEFAULT_BOT;\n}\n\nlet route;\nif (!bot)                                route = 'unknown';\nelse if (!env.auth.bots.includes(bot))   route = 'no_permission';\nelse                                     route = bot;\n\nreturn [{ json: { ...env, bot_key: bot, route } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1097,6 +1097,48 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "517e1ee4-710a-4be9-9f1b-48a653bcdac1",
+              "leftValue": "={{ $json.callback.data }}",
+              "rightValue": "ap:",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            },
+            {
+              "id": "d8a82e27-3c04-4557-a3d4-50e221893d2e",
+              "leftValue": "={{ $json.callback.data }}",
+              "rightValue": "dn:",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "332a668d-8187-42d5-9cc1-5611300db544",
+      "name": "Là Callback Duyệt User?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2900,
+        400
+      ]
     }
   ],
   "connections": {
@@ -1154,7 +1196,7 @@
         ],
         [
           {
-            "node": "Check admin",
+            "node": "Là Callback Duyệt User?",
             "type": "main",
             "index": 0
           }
@@ -1381,6 +1423,24 @@
         [
           {
             "node": "Báo user bị từ chối",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Là Callback Duyệt User?": {
+      "main": [
+        [
+          {
+            "node": "Check admin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GW-02 Auth Lookup",
             "type": "main",
             "index": 0
           }
