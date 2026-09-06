@@ -299,7 +299,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst input = $json;\nconst helpText =\n`<b>📘 Danh sách lệnh (Admin)</b>\n\n<b>🔍 Tra cứu</b>\n<code>/task &lt;từ khóa&gt;</code> — Tìm task theo tên\n<code>/task chitiet_&lt;id&gt;</code> — Xem chi tiết 1 task\n\n<b>🔄 Đồng bộ dữ liệu</b>\nBấm nút bên dưới để thao tác, không cần gõ tay:`;\n\nconst rows = [\n  { row: { buttons: [{ text: '🔄 Chọn List để đồng bộ', additionalFields: { callback_data: 'menu_sync' } }] } },\n  { row: { buttons: [{ text: '📋 Xem List đang tự động sync', additionalFields: { callback_data: 'menu_sync_status' } }] } },\n  { row: { buttons: [{ text: '📊 Thống kê dữ liệu hiện có', additionalFields: { callback_data: 'menu_db_status' } }] } },\n];\n\nreturn [{ json: { ...input, text: helpText, rows, parse_mode: \"HTML\" } }];\n"
+        "jsCode": "\nconst input = $json;\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst linkSync = `https://t.me/${botUsername}?start=menu_sync`;\nconst linkSyncStatus = `https://t.me/${botUsername}?start=menu_sync_status`;\nconst linkDbStatus = `https://t.me/${botUsername}?start=menu_db_status`;\n\nconst helpText =\n`<b>📘 Danh sách lệnh (Admin)</b>\n\n<b>🔍 Tra cứu</b>\n<code>/task &lt;từ khóa&gt;</code> — Tìm task theo tên\n<code>/task chitiet_&lt;id&gt;</code> — Xem chi tiết 1 task\n\n<b>🔄 Đồng bộ dữ liệu</b>\n<a href=\"${linkSync}\">🔄 Chọn List để đồng bộ</a>\n<a href=\"${linkSyncStatus}\">📋 Xem List đang tự động sync</a>\n<a href=\"${linkDbStatus}\">📊 Thống kê dữ liệu hiện có</a>`;\n\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
       },
       "id": "1dfa376b-eb8c-4957-a58b-4271dc293133",
       "name": "Nội dung lệnh help",
@@ -316,10 +316,9 @@
         "text": "={{ $json.text }}",
         "additionalFields": {
           "parse_mode": "HTML",
-          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
-        },
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}",
+          "appendAttribution": false
+        }
       },
       "id": "e9cf20b1-7964-4653-8092-9f4f34186bb9",
       "name": "help",
@@ -730,7 +729,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst folders = $input.all().map(i => i.json);\n\nif (folders.length === 0) {\n  return [{ json: { chatId, text: '⚠️ Không tìm thấy Folder nào trong Space.', parse_mode: 'HTML' } }];\n}\n\nconst rows = folders.slice(0, 30).map(f => ({\n  row: { buttons: [{ text: f.name, additionalFields: { callback_data: `sync_folder_${f.id}` } }] }\n}));\nreturn [{ json: { chatId, text: '📁 <b>Chọn Folder muốn đồng bộ:</b>', rows, parse_mode: 'HTML' } }];\n"
+        "jsCode": "\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst folders = $input.all().map(i => i.json);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nif (folders.length === 0) {\n  return [{ json: { chatId, text: '⚠️ Không tìm thấy Folder nào trong Space.', parse_mode: 'HTML' } }];\n}\n\nconst lines = ['📁 <b>Chọn Folder muốn đồng bộ:</b>'];\nfolders.forEach((f, i) => {\n  const link = `https://t.me/${botUsername}?start=sync_folder_${f.id}`;\n  lines.push(`${i + 1}. <a href=\"${link}\">${escapeHtml(f.name)}</a>`);\n});\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n"
       },
       "id": "c66fac8d-8018-482b-9d90-7a3083c7957c",
       "name": "Build Nút Folder",
@@ -750,9 +749,7 @@
           "appendAttribution": false,
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
-        },
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
+        }
       },
       "id": "46806570-e4b5-46ce-86bd-44af9719ee42",
       "name": "Telegram - Danh sách Folder",
@@ -797,7 +794,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst folderId = $('Phân tích lệnh').first().json.params;\nconst lists = $input.all().map(i => i.json);\n\nif (lists.length === 0) {\n  return [{ json: { chatId, text: '⚠️ Folder này không có List nào.', parse_mode: 'HTML' } }];\n}\n\nconst rows = lists.slice(0, 30).map(l => ({\n  row: { buttons: [{ text: l.name, additionalFields: { callback_data: `sync_list_${l.id}_${folderId}` } }] }\n}));\nreturn [{ json: { chatId, text: '📋 <b>Chọn List muốn đồng bộ:</b>', rows, parse_mode: 'HTML' } }];\n"
+        "jsCode": "\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst folderId = $('Phân tích lệnh').first().json.params;\nconst lists = $input.all().map(i => i.json);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nif (lists.length === 0) {\n  return [{ json: { chatId, text: '⚠️ Folder này không có List nào.', parse_mode: 'HTML' } }];\n}\n\nconst lines = ['📋 <b>Chọn List muốn đồng bộ:</b>'];\nlists.forEach((l, i) => {\n  const link = `https://t.me/${botUsername}?start=sync_list_${l.id}_${folderId}`;\n  lines.push(`${i + 1}. <a href=\"${link}\">${escapeHtml(l.name)}</a>`);\n});\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n"
       },
       "id": "dcb88532-2430-4666-8978-4e5e1f67678a",
       "name": "Build Nút List",
@@ -817,9 +814,7 @@
           "appendAttribution": false,
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
-        },
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
+        }
       },
       "id": "2eaef0c6-60a0-4bac-b6d8-e436fd5261f7",
       "name": "Telegram - Danh sách List",
@@ -946,7 +941,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst t = $json;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst text = `✅ Đã lưu List \"<b>${t.list_name}</b>\" vào danh sách tự động đồng bộ (mỗi 5 ngày).\\n\\nĐồng bộ ngay bây giờ luôn không?`;\nconst rows = [{ row: { buttons: [\n  { text: '⚡ Đồng bộ ngay', additionalFields: { callback_data: `sync_now_${t.list_id}` } },\n  { text: '⏳ Chờ lần sau', additionalFields: { callback_data: 'sync_later' } },\n] } }];\nreturn [{ json: { chatId, text, rows, parse_mode: 'HTML' } }];\n"
+        "jsCode": "\nconst t = $json;\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nconst syncNowLink = `https://t.me/${botUsername}?start=sync_now_${t.list_id}`;\nconst syncLaterLink = `https://t.me/${botUsername}?start=sync_later`;\n\nconst text = `✅ Đã lưu List \"<b>${t.list_name}</b>\" vào danh sách tự động đồng bộ (mỗi 5 ngày).\\n\\n` +\n  `Đồng bộ ngay bây giờ luôn không?\\n` +\n  `👉 <a href=\"${syncNowLink}\">⚡ Đồng bộ ngay</a>\\n` +\n  `👉 <a href=\"${syncLaterLink}\">⏳ Chờ lần sau</a>`;\n\nreturn [{ json: { chatId, text, parse_mode: 'HTML' } }];\n"
       },
       "id": "83277669-0329-4731-a664-2eabe8d3cbbe",
       "name": "Hỏi Đồng Bộ Ngay",
@@ -965,9 +960,7 @@
           "appendAttribution": false,
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
-        },
-        "replyMarkup": "inlineKeyboard",
-        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
+        }
       },
       "id": "f8705b72-feb7-409d-8d81-7b0dea0a43b5",
       "name": "Telegram - Hỏi Đồng Bộ",
