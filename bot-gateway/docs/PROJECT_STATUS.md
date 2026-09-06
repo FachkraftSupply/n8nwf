@@ -39,6 +39,12 @@ bot-gateway/
 ```
 
 ## QUY TẮC LÀM VIỆC (áp dụng cho mọi phiên chat)
+- **⚠️ MỖI KHI thêm/sửa 1 lệnh (command) mới trong bất kỳ sub-workflow nào (Telebot ClickUp Reader,
+  Help Bot GPT, Crawl Bot...): BẮT BUỘC kiểm tra và cập nhật `COMMAND_MAP` trong node `⚙️ Config` của
+  `GW_Gateway_Telegram.json`, route lệnh đó tới đúng `bot_key`.** Đã quên việc này 2 lần liên tiếp
+  (`/sync` và sau đó `/sync_status`+`/db_status`) gây lỗi "route: unknown" — Gateway không hề tự động
+  nhận diện lệnh mới của sub-workflow, phải khai báo tay từng lệnh. Coi đây là bước CUỐI CÙNG bắt buộc
+  của mọi tính năng thêm lệnh mới, trước khi báo "xong" với user.
 - Sửa file JSON lớn: dùng Composio remote workbench (fetch GitHub → sửa Python trong sandbox → commit),
   không dán nguyên workflow vào chat.
 - **Khi đang debug/thử nghiệm 1 thay đổi:** KHÔNG tự động commit vào file chính trên GitHub. Chỉ đưa
