@@ -119,26 +119,67 @@ bot-gateway/
   (không dùng inline keyboard — xem RULES.md #3).
 - Đã tạo `docs/RULES.md` gộp toàn bộ quy tắc — đọc file đó trước khi sửa workflow bất kỳ.
 
-## ⚠️ VIỆC ƯU TIÊN SỐ 1 CHO NGÀY MAI — CHƯA TEST LẠI, PHẢI LÀM TRƯỚC TIÊN
+## ⚠️ VIỆC ƯU TIÊN SỐ 1 CHO NGÀY MAI — 3 phát hiện MỚI (07/09/2026 tối, phiên sau) — CHƯA SỬA GÌ
 
-**Bối cảnh:** Chạy Full Reconcile thật (testMode off, 612 task) → phát hiện lỗi nghiêm trọng: node
-`Xoá Task Links Cũ` nhận input 612 nhưng chỉ output 1 → 611 task bị rơi khỏi vòng lặp xử lý
-`task_links`/comment. Nguyên nhân: tham chiếu `queryReplacement` qua 2 bước (`.first()`/`.item` giữa
-2 node) không đáng tin cậy khi xử lý hàng loạt (612 item), dù đã test ổn với vài task lúc testMode bật.
+### Phát hiện 1 — SAI hiểu về quy luật đặt tên field DKPV/PVTC (QUAN TRỌNG NHẤT)
+User đã tự kiểm tra JSON thật và xác nhận: **CẢ DKPV và PVTC đều đổi tên theo năm mỗi năm** — không
+phải chỉ PVTC đổi còn DKPV cố định như mình từng giả định sai. Field thật sự có dạng `DKPV 2026`,
+`DKPV 2027`... và `PVTC 2026`, `PVTC 2027`... — CẢ HAI ĐỀU CẦN REGEX theo năm, không được hardcode
+"dkpv" cố định như code hiện tại.
 
-**Đã sửa (commit `57a9764`):** gộp DELETE + INSERT thành **1 câu query duy nhất** (CTE
-`WITH deleted AS (DELETE...) INSERT...`) trong node `Ghi Task Links Mới`, tham chiếu THẲNG từ
-`Trích Xuất Task Links` chỉ 1 bước (an toàn tuyệt đối, không còn nguy cơ pairedItem bị mất). Đã xoá hẳn
-node `Xoá Task Links Cũ` riêng — Full Reconcile còn 23 node.
+**Cần sửa (chưa làm):** node `Trích Xuất Task Links` trong `SQL_ClickUp_Full_Reconcile.json` — đổi
+đoạn nhận diện DKPV từ so khớp CHÍNH XÁC `'dkpv'` sang REGEX giống PVTC: `/^DKPV\s+(\d{4})$/i`, lưu
+thêm cột `dkpv_year` tương tự `pvtc_year` (có thể cần `ALTER TABLE clickup.task_links ADD COLUMN
+dkpv_year INT` trong Ensure Schema).
 
-**⚠️ CHƯA ĐƯỢC TEST LẠI VỚI DATASET THẬT (612 task) — đây là việc đầu tiên phải làm ngày mai:**
-1. Import lại `SQL_ClickUp_Full_Reconcile.json` (bản mới nhất, commit `57a9764`).
-2. Chạy lại Full Reconcile (Manual Trigger, testMode vẫn đang off từ hôm qua).
-3. Theo dõi node `Ghi Task Links Mới` — input/output phải KHỚP NHAU (vd input 612 → output 612), không
-   còn bị rơi giữa chừng.
-4. Xác nhận workflow chạy hết toàn bộ, không dừng giữa chừng ở `Kiểm Tra Link Có Sẵn` hay bất kỳ đâu.
-5. Sau khi chạy xong: kiểm tra `SELECT count(*) FROM clickup.task_links;` trong pgAdmin — số dòng phải
-   hợp lý (không phải chỉ có dữ liệu của 1 task).
+**Ví dụ JSON thật user gửi** (custom_field type list_relationship), lưu lại tham khảo:
+```json
+{
+  "field_inverted_name": "DKPV 2026",
+  "subcategory_inverted_name": "Đơn Hàng",
+  "subcategory_id": "901805909357",
+  "value": [
+    { "id": "86ex3um7r", "name": "Bad Reichenhall | MKG...", "status": "đi xin visa",
+      "team_id": "9018351620", "url": "https://app.clickup.com/t/86ex3um7r" }
+  ]
+}
+```
+(Cấu trúc `value[]` giống hệt PVTC — mỗi phần tử có `id`, `name`, `status` — code hiện tại đọc đúng
+cấu trúc này, chỉ sai ở phần NHẬN DIỆN TÊN FIELD.)
+
+### Phát hiện 2 — Lỗi 612→1 output VẪN XẢY RA ở lần chạy không filter (trước khi fix mới nhất được áp dụng?)
+User báo: chạy Full Reconcile không filter theo status → vẫn bị dừng ở đúng vị trí cũ (`Kiểm Tra Link
+Có Sẵn`), input/output 612→1 y hệt lần trước. **Cần làm rõ ngày mai:** đây là do đang chạy BẢN CŨ
+(trước commit `57a9764` gộp DELETE+INSERT), hay fix đó VẪN CHƯA đủ? Cần xác nhận đã import đúng bản
+mới nhất trước khi kết luận.
+
+### Phát hiện 3 — Lỗi MỚI khi lọc theo status: duplicate key trong `Ghi Task Links Mới`
+Khi chạy CÓ filter theo status (tiến xa hơn lần trước), gặp lỗi:
+```
+duplicate key value violates unique constraint "task_links_pkey"
+Key (student_task_id, order_task_id, link_type)=(86ey2brv5, 86et18bg0, pvtc) already exists.
+```
+**Nguyên nhân khả dĩ (liên quan trực tiếp Phát hiện 1):** vì 1 task học sinh có thể có NHIỀU field
+PVTC theo năm khác nhau (`PVTC 2025`, `PVTC 2026`...) cùng trỏ tới CÙNG 1 đơn hàng — khi gộp thành
+mảng `linksJson` để INSERT, 2 dòng có key trùng nhau `(student_task_id, order_task_id, 'pvtc')` vì
+PRIMARY KEY hiện tại KHÔNG có `pvtc_year` — 1 câu INSERT không thể tự ghi đè lên chính nó trong CÙNG
+batch (khác với `ON CONFLICT` giữa các lần chạy khác nhau).
+
+**User tự đề xuất:** "có thể ở đây chúng ta phải dùng upsert?" — ĐÚNG HƯỚNG nhưng chưa đủ, vì
+`ON CONFLICT DO UPDATE` cũng lỗi "cannot affect row a second time" nếu 2 dòng trong CÙNG 1 câu INSERT
+đụng cùng key. **Hướng sửa cần bàn kỹ ngày mai** (chưa quyết định, cần thảo luận với user trước khi
+làm), 2 lựa chọn khả dĩ:
+- (A) Thêm `dkpv_year`/`pvtc_year` vào PRIMARY KEY (`student_task_id, order_task_id, link_type,
+  COALESCE(pvtc_year,0), COALESCE(dkpv_year,0)`) — giữ lại lịch sử nhiều năm nếu 1 đơn hàng thật sự
+  liên quan tới nhiều năm khác nhau.
+- (B) Dedupe trong `linksJson` TRƯỚC khi insert (Code node lọc theo `order_task_id + link_type`, chỉ
+  giữ dòng của NĂM MỚI NHẤT) — coi field năm cũ là dữ liệu lịch sử không cần lưu, chỉ quan tâm năm
+  hiện tại.
+**Cần hỏi rõ user ngày mai: đơn hàng bị trùng giữa 2 năm PVTC có phải là dữ liệu thật hợp lệ (học sinh
+apply lại năm sau cùng 1 đơn hàng), hay là lỗi/rác cần loại bỏ?** — quyết định này ảnh hưởng chọn (A)
+hay (B).
+
+## VẤN ĐỀ CŨ (ưu tiên thấp hơn 3 phát hiện trên) — chưa test lại
 
 ## CHECKLIST — Việc tiếp theo (cập nhật 07/09/2026 cuối phiên)
 
