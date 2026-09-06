@@ -29,8 +29,7 @@ bot-gateway/
     ├── SQL_ClickUp_Live_Update.json       <- ✅ HOÀN TẤT (9 node, don gian hoa manh, webhook real-time)
     └── sub_workflows_modernized/
         ├── Elite_Help_Bot_GPT.json        (✅ nhận Envelope, chờ Workflow ID để gắn Gateway)
-        ├── Telebot_ClickUp_Reader.json    (⚠️ bản GỐC, đã deploy lần đầu nhưng bị lỗi tìm kiếm - xem bản _v2_with_sync)
-        ├── Telebot_ClickUp_Reader_v2_with_sync.json  (✅ ĐANG DÙNG - đã REVAMP 05/09/2026, 16 node, ưu tiên tìm task, tạm tắt OneDrive/sync)
+        ├── Telebot_ClickUp_Reader.json    (✅ ĐANG DÙNG - merge day du: tim task + /sync (35 node), OneDrive view_file van tam tat)
         └── Telebot_main.json              (⚠️ KHÔNG dùng nữa, giữ tham khảo logic xử lý ảnh)
 ```
 
@@ -75,7 +74,7 @@ bot-gateway/
 |---|---|---|
 | 0-1 | Schema DB + Gateway + Error Handler | ✅ Xong (7/7 test) |
 | 2 | Help Bot GPT nhận Envelope | ✅ Code xong, ⏳ chờ Workflow ID thật để gắn Gateway |
-| 2b | Telebot ClickUp Reader (đọc/tìm task) | ✅ HOÀN TẤT + XÁC NHẬN HOẠT ĐỘNG ĐÚNG qua Gateway (tìm kiếm, chi tiết task, đếm tổng kết quả chính xác); OneDrive + /sync tạm tắt |
+| 2b | Telebot ClickUp Reader (đọc/tìm task + /sync) | ✅ HOÀN TẤT CẢ 2 — tìm kiếm/chi tiết task VÀ /sync (chọn Folder/List, lưu clickup.sync_targets, kích hoạt Full Reconcile) đều đã xác nhận hoạt động qua Gateway; chỉ còn OneDrive view_file tạm tắt |
 | 2c | SQL Sync ClickUp ↔ Postgres | ✅ HOÀN TẤT CẢ 2 — Full Reconcile (21 node) + Live Update (9 node, webhook real-time) |
 | 3 | Backup Postgres → OneDrive (Phương án B — SQL export thuần n8n) | Chưa bắt đầu |
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
@@ -84,20 +83,14 @@ bot-gateway/
 | — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | ⏸️ TẠM TẮT khi revamp 05/09/2026 (đã xoá khỏi file đang dùng), sẽ làm lại từ đầu sau khi tìm kiếm ổn định |
 | — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
-## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên, cập nhật 06/09/2026)
+## CHECKLIST — Việc tiếp theo (theo thứ tự ưu tiên, cập nhật 06/09/2026 tối)
 
-1. **Xây dựng lại tính năng `/sync`** (chọn Folder → chọn List → lưu `clickup.sync_targets` →
-   tự động sync định kỳ) — đã tắt/xoá khi revamp, cần thiết kế lại từ đầu. Gợi ý giữ nguyên hướng cũ đã
-   thống nhất: route qua Gateway, admin-only, dùng native ClickUp node lấy Folder/List (nhớ format tham
-   số PHẲNG, xem GUIDE_SQL_CLICKUP_SYNC.md).
-2. **Thêm Execute Workflow Trigger vào `SQL_ClickUp_Full_Reconcile.json`** để nhận `list_id` truyền từ
-   nút "Đồng bộ ngay" trong /sync — làm cùng lúc với bước 1 vì 2 việc liên quan chặt.
-3. **Xây dựng lại tính năng xem file OneDrive** (`view_file`, Graph API resolve liệt kê từng file) —
+1. **Xây dựng lại tính năng xem file OneDrive** (`view_file`, Graph API resolve liệt kê từng file) —
    đã tắt khi revamp, hiện chỉ có link OneDrive phẳng trong chi tiết task.
-4. Cung cấp Workflow ID thật cho **Help Bot GPT** để gắn vào Gateway (độc lập, có thể làm song song).
-5. Khi rảnh: **Bot System Main** (xử lý ảnh, tách từ `Telebot_main.json` cũ) và
+2. Cung cấp Workflow ID thật cho **Help Bot GPT** để gắn vào Gateway (độc lập, có thể làm song song).
+3. Khi rảnh: **Bot System Main** (xử lý ảnh, tách từ `Telebot_main.json` cũ) và
    **Backup Postgres → OneDrive** (Phase 3, Phương án B — SQL export thuần n8n).
-6. Khi rảnh: test `taotask` thật (hiện đang là placeholder "chưa khả dụng").
+4. Khi rảnh: test `taotask` thật (hiện đang là placeholder "chưa khả dụng").
 
 ## GỢI Ý cách bắt đầu phiên làm việc tiếp theo
 Dán link `docs/PROJECT_STATUS.md` này vào đầu chat mới để Claude nắm ngữ cảnh nhanh, rồi nói tiếp:
