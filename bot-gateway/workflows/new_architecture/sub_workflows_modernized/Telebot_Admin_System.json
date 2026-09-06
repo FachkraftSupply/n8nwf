@@ -318,8 +318,8 @@
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         },
-        "replyMarkup": "={{ $json.rows ? 'inlineKeyboard' : undefined }}",
-        "inlineKeyboard": "={{ $json.rows ? { rows: $json.rows } : {} }}"
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
       },
       "id": "e9cf20b1-7964-4653-8092-9f4f34186bb9",
       "name": "help",
@@ -708,7 +708,8 @@
         "authentication": "oAuth2",
         "resource": "folder",
         "operation": "getAll",
-        "space": "90183192291"
+        "space": "90183192291",
+        "filters": {}
       },
       "id": "2654f32a-009f-4a0b-a42f-8dbc60ce75dc",
       "name": "ClickUp - Get Folders (Sync)",
@@ -723,7 +724,8 @@
           "id": "X1u3uxVrYMLf6HZz",
           "name": "ClickUp account"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -736,7 +738,8 @@
       "position": [
         -1344,
         850
-      ]
+      ],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -747,8 +750,8 @@
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         },
-        "replyMarkup": "={{ $json.rows ? 'inlineKeyboard' : undefined }}",
-        "inlineKeyboard": "={{ $json.rows ? { rows: $json.rows } : {} }}"
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
       },
       "id": "46806570-e4b5-46ce-86bd-44af9719ee42",
       "name": "Telegram - Danh sách Folder",
@@ -770,7 +773,8 @@
         "authentication": "oAuth2",
         "resource": "list",
         "operation": "getAll",
-        "folder": "={{ $('Phân tích lệnh').first().json.params }}"
+        "folder": "={{ $('Phân tích lệnh').first().json.params }}",
+        "filters": {}
       },
       "id": "7940c81d-6093-4540-9683-671946e4a43b",
       "name": "ClickUp - Get Lists (Sync)",
@@ -785,7 +789,8 @@
           "id": "X1u3uxVrYMLf6HZz",
           "name": "ClickUp account"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -798,7 +803,8 @@
       "position": [
         -1344,
         1000
-      ]
+      ],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -809,8 +815,8 @@
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         },
-        "replyMarkup": "={{ $json.rows ? 'inlineKeyboard' : undefined }}",
-        "inlineKeyboard": "={{ $json.rows ? { rows: $json.rows } : {} }}"
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
       },
       "id": "2eaef0c6-60a0-4bac-b6d8-e436fd5261f7",
       "name": "Telegram - Danh sách List",
@@ -845,7 +851,9 @@
         "authentication": "oAuth2",
         "resource": "list",
         "operation": "get",
-        "list": "={{ $json.listId }}"
+        "list": "={{ $json.listId }}",
+        "filters": {},
+        "folder": "90183835699"
       },
       "id": "f1457337-e82c-4866-817a-437ae7bf1952",
       "name": "ClickUp - Get List Info",
@@ -953,8 +961,8 @@
           "parse_mode": "HTML",
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         },
-        "replyMarkup": "={{ $json.rows ? 'inlineKeyboard' : undefined }}",
-        "inlineKeyboard": "={{ $json.rows ? { rows: $json.rows } : {} }}"
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": "={{ { rows: $json.rows || [] } }}"
       },
       "id": "f8705b72-feb7-409d-8d81-7b0dea0a43b5",
       "name": "Telegram - Hỏi Đồng Bộ",
