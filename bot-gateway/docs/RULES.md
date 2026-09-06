@@ -70,3 +70,15 @@ Không dùng `$('TenNode').item` nếu chuỗi xử lý phía trước có node 
 
 Mỗi khi thêm node Telegram reply mới: xác nhận đúng credential ứng với bot dự định — không suy luận,
 kiểm tra `result.from.username` khi test thực tế.
+
+
+## 10. ⚠️ Test với vài item KHÔNG đảm bảo đúng khi xử lý HÀNG LOẠT (batch)
+Tham chiếu `$('TenNode').first()` hoặc `.item` giữa các node CÁCH NHAU 2 BƯỚC trở lên (đặc biệt khi có
+Postgres DELETE/UPDATE không RETURNING ở giữa) có thể chạy "đúng" khi test với vài item, nhưng SAI hoàn
+toàn khi xử lý hàng loạt (vd 612 task) — `.first()` luôn lấy item ĐẦU TIÊN bất kể đang xử lý item nào;
+`.item` có thể mất pairedItem qua nhiều bước, gây "Multiple matching items" hoặc âm thầm cắt còn 1 item.
+**Cách sửa triệt để:** GỘP các bước Postgres liên quan (DELETE+INSERT, UPDATE+SELECT...) thành **1 câu
+query duy nhất** (dùng CTE: `WITH x AS (DELETE...) INSERT...`) để chỉ cần tham chiếu THẲNG từ node
+TRỰC TIẾP đứng trước (1 bước, luôn an toàn) — không tham chiếu chéo qua 2+ bước.
+**Luôn test với DATASET THẬT (đủ lớn) trước khi coi 1 luồng Postgres nhiều bước là ổn định** — test
+với 5 item không đủ để phát hiện lỗi loại này.

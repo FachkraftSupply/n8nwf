@@ -117,17 +117,38 @@ bot-gateway/
 - `Telebot_Admin_System.json` (System Bot, không qua Gateway): `/task`, `/sync` (chọn Folder→List→
   Đồng bộ ngay), `/help`, `/sync_status`, `/db_status`, `chitiet_<id>` — TẤT CẢ đã test OK qua deep-link
   (không dùng inline keyboard — xem RULES.md #3).
-- `SQL_ClickUp_Full_Reconcile.json`: testMode đã tắt, đã backfill xong `clickup.task_links` (DKPV/PVTC).
 - Đã tạo `docs/RULES.md` gộp toàn bộ quy tắc — đọc file đó trước khi sửa workflow bất kỳ.
+
+## ⚠️ VIỆC ƯU TIÊN SỐ 1 CHO NGÀY MAI — CHƯA TEST LẠI, PHẢI LÀM TRƯỚC TIÊN
+
+**Bối cảnh:** Chạy Full Reconcile thật (testMode off, 612 task) → phát hiện lỗi nghiêm trọng: node
+`Xoá Task Links Cũ` nhận input 612 nhưng chỉ output 1 → 611 task bị rơi khỏi vòng lặp xử lý
+`task_links`/comment. Nguyên nhân: tham chiếu `queryReplacement` qua 2 bước (`.first()`/`.item` giữa
+2 node) không đáng tin cậy khi xử lý hàng loạt (612 item), dù đã test ổn với vài task lúc testMode bật.
+
+**Đã sửa (commit `57a9764`):** gộp DELETE + INSERT thành **1 câu query duy nhất** (CTE
+`WITH deleted AS (DELETE...) INSERT...`) trong node `Ghi Task Links Mới`, tham chiếu THẲNG từ
+`Trích Xuất Task Links` chỉ 1 bước (an toàn tuyệt đối, không còn nguy cơ pairedItem bị mất). Đã xoá hẳn
+node `Xoá Task Links Cũ` riêng — Full Reconcile còn 23 node.
+
+**⚠️ CHƯA ĐƯỢC TEST LẠI VỚI DATASET THẬT (612 task) — đây là việc đầu tiên phải làm ngày mai:**
+1. Import lại `SQL_ClickUp_Full_Reconcile.json` (bản mới nhất, commit `57a9764`).
+2. Chạy lại Full Reconcile (Manual Trigger, testMode vẫn đang off từ hôm qua).
+3. Theo dõi node `Ghi Task Links Mới` — input/output phải KHỚP NHAU (vd input 612 → output 612), không
+   còn bị rơi giữa chừng.
+4. Xác nhận workflow chạy hết toàn bộ, không dừng giữa chừng ở `Kiểm Tra Link Có Sẵn` hay bất kỳ đâu.
+5. Sau khi chạy xong: kiểm tra `SELECT count(*) FROM clickup.task_links;` trong pgAdmin — số dòng phải
+   hợp lý (không phải chỉ có dữ liệu của 1 task).
 
 ## CHECKLIST — Việc tiếp theo (cập nhật 07/09/2026 cuối phiên)
 
-1. Điền Workflow ID thật của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
+1. **(Xem mục trên)** Test lại Full Reconcile với fix mới nhất — 612 task.
+2. Điền Workflow ID thật của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
    `Chạy Sync List Mặc Định` trong `SQL_ClickUp_Sync_Scheduler.json` — CHƯA làm.
-2. Test multi-list qua `Sync Scheduler` (chuột phải → Execute Workflow).
-3. Test đưa bot vào group Telegram (kiểm tra `reply_to_message_id` giữ đúng group/topic) — CHƯA test.
-4. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng.
-5. Workflow ID cho Help Bot GPT → gắn Gateway.
-6. Khi rảnh: Bot System Main (xử lý ảnh) + Backup Postgres → OneDrive (Phase 3).
+3. Test multi-list qua `Sync Scheduler` (chuột phải → Execute Workflow).
+4. Test đưa bot vào group Telegram (kiểm tra `reply_to_message_id` giữ đúng group/topic) — CHƯA test.
+5. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng.
+6. Workflow ID cho Help Bot GPT → gắn Gateway.
+7. Khi rảnh: Bot System Main (xử lý ảnh) + Backup Postgres → OneDrive (Phase 3).
 
 
