@@ -46,7 +46,15 @@ bot-gateway/
   `GW_Gateway_Telegram.json`, route lệnh đó tới đúng `bot_key`.** Đã quên việc này 2 lần liên tiếp
   (`/sync` và sau đó `/sync_status`+`/db_status`) gây lỗi "route: unknown" — Gateway không hề tự động
   nhận diện lệnh mới của sub-workflow, phải khai báo tay từng lệnh. Coi đây là bước CUỐI CÙNG bắt buộc
-  của mọi tính năng thêm lệnh mới, trước khi báo "xong" với user.
+  của mọi tính năng thêm lệnh mới, trước khi báo "xong" với user. LƯU Ý: từ khi có `Telebot_Admin_System.json`
+  (Trigger riêng, không qua Gateway), quy tắc này CHỈ áp dụng cho sub-workflow nào thực sự gọi qua Gateway
+  — kiểm tra trước xem sub-workflow đó có Trigger riêng hay không.
+- **⚠️ MỖI KHI thêm/sửa 1 node Telegram gửi tin nhắn (bất kỳ workflow nào): BẮT BUỘC kiểm tra `chatId`
+  được truyền đúng và TƯỜNG MINH từ Trigger xuống — không dùng `{{ $json.chatId }}`/`{{ $json.chat_id }}`
+  trần, luôn tham chiếu qua tên node cụ thể (`{{ $('Phân tích lệnh').first().json.chatId }}` hoặc
+  `{{ $('GW-01 Envelope').first().json.chat_id }}`).** Đã sửa lỗi này ở hơn 10 node trong 3 workflow
+  (07/09/2026) vì dùng `$json` trần khiến chatId có thể rỗng tuỳ node liền trước là gì. Áp dụng tương tự
+  cho `reply_to_message_id` (để bot trả lời đúng group/topic khi được thêm vào group).
 - Sửa file JSON lớn: dùng Composio remote workbench (fetch GitHub → sửa Python trong sandbox → commit),
   không dán nguyên workflow vào chat.
 - **Khi đang debug/thử nghiệm 1 thay đổi:** KHÔNG tự động commit vào file chính trên GitHub. Chỉ đưa

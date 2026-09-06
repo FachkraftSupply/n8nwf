@@ -133,3 +133,21 @@ trên trong chuỗi xử lý. Đây là lỗi dễ mắc phải nhất khi copy 
 tham chiếu tường minh qua tên node đã xác nhận có field đó: `{{ $('GW-01 Envelope').first().json.chat_id }}`
 hoặc `{{ $('Phân tích lệnh').first().json.chatId }}`. Quy tắc này ĐÃ có trong dự án (memory: "Postgres
 nodes overwrite $json...") nhưng cần áp dụng CHUNG cho MỌI loại node, không riêng Postgres.
+
+
+### "Publish workflow bị chặn, hoặc node ClickUp báo 'Error fetching options'"
+**Nguyên nhân THẬT (đã xác nhận, không còn là giả thuyết):** node ClickUp `getAll` (Get Folders, Get
+Lists...) THIẾU field `"filters": {}` trong parameters — dù để rỗng, field này vẫn cần XUẤT HIỆN để n8n
+coi node hợp lệ. Format tham số phẳng (`team`, `space` dạng chuỗi số) vẫn ĐÚNG như trước giờ — không
+phải lỗi resource-locator như từng nghi ngờ.
+**Cách sửa:** thêm `"filters": {}` vào parameters của MỌI node ClickUp dùng operation `getAll` (Get
+Folders, Get Lists, Get Tasks, Get Comments...).
+
+### "Inline keyboard không hiện, dù code đã set đúng `rows`"
+**Nguyên nhân:** `replyMarkup` đặt bằng EXPRESSION ĐỘNG (`={{ $json.rows ? 'inlineKeyboard' : undefined }}`)
+khiến n8n KHÔNG lưu được field `inlineKeyboard` đi kèm — n8n chỉ hiện/lưu các field phụ thuộc
+(`inlineKeyboard`, `replyKeyboardOptions`...) dựa trên GIÁ TRỊ CỐ ĐỊNH của `replyMarkup`, không tính
+được khi giá trị đó là expression.
+**Cách sửa:** luôn đặt `replyMarkup` là giá trị CỐ ĐỊNH `"inlineKeyboard"` (không phải expression), rồi
+dùng expression CHO NỘI DUNG bên trong `inlineKeyboard` (`={{ { rows: $json.rows || [] } }}`) — không
+đặt expression ở chính field chọn loại `replyMarkup`.
