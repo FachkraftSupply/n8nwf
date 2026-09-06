@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', start:'telebot_main', sync:'telebot_main',\n                 sync_status:'telebot_main', db_status:'telebot_main', help:'telebot_main',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"
+        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', start:'telebot_main', help:'telebot_main',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  // Luu y: /sync, /sync_status, /db_status KHONG con o day nua - da chuyen sang\n  // Telebot_Admin_System.json (Trigger rieng tren @elite_n8n_system_bot, khong qua Gateway)\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
