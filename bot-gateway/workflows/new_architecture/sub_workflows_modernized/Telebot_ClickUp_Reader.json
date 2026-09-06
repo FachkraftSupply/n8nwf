@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// Ban REVAMP (05/09/2026): bo han view_file (OneDrive) va /sync - tam thoi tat, se lam sau.\n// Chi con: help / task / chitiet / taotask (placeholder) / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  // /sync dung DEEP-LINK dang text (nhu chitiet_), KHONG dung inline keyboard callback - on dinh hon.\n  // Deep-link Telegram chi cho phep [A-Za-z0-9_-], khong dung duoc dau \":\" nen dung \"_\" lam phan cach.\n  if (params.startsWith('sync_folder_')) {\n    return { route: 'sync_folder', params: params.replace('sync_folder_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_list_')) {\n    return { route: 'sync_list', params: params.replace('sync_list_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_now_')) {\n    return { route: 'sync_now', params: params.replace('sync_now_', '').trim(), taskId: null };\n  }\n  if (params === 'sync_later') {\n    return { route: 'sync_later', params: '', taskId: null };\n  }\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/taotask') return { route: 'taotask', params, taskId: null };\n  if (command === '/sync') return { route: 'sync', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    if (rawText.startsWith('chitiet_')) {\n      route = 'chitiet'; taskId = rawText.replace('chitiet_', '').trim(); params = 'chitiet';\n    } else {\n      route = 'unknown_command'; params = rawText;\n    }\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
+        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// Ban REVAMP (05/09/2026): bo han view_file (OneDrive) va /sync - tam thoi tat, se lam sau.\n// Chi con: help / task / chitiet / taotask (placeholder) / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  // /sync dung DEEP-LINK dang text (nhu chitiet_), KHONG dung inline keyboard callback - on dinh hon.\n  // Deep-link Telegram chi cho phep [A-Za-z0-9_-], khong dung duoc dau \":\" nen dung \"_\" lam phan cach.\n  if (params.startsWith('sync_folder_')) {\n    return { route: 'sync_folder', params: params.replace('sync_folder_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_list_')) {\n    return { route: 'sync_list', params: params.replace('sync_list_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_now_')) {\n    return { route: 'sync_now', params: params.replace('sync_now_', '').trim(), taskId: null };\n  }\n  if (params === 'sync_later') {\n    return { route: 'sync_later', params: '', taskId: null };\n  }\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/taotask') return { route: 'taotask', params, taskId: null };\n  if (command === '/sync') return { route: 'sync', params, taskId: null };\n  if (command === '/sync_status') return { route: 'sync_status', params, taskId: null };\n  if (command === '/db_status') return { route: 'db_status', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    if (rawText.startsWith('chitiet_')) {\n      route = 'chitiet'; taskId = rawText.replace('chitiet_', '').trim(); params = 'chitiet';\n    } else {\n      route = 'unknown_command'; params = rawText;\n    }\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
       },
       "id": "4f405de8-ae07-4928-8d4f-6b583c3f95e5",
       "name": "Phân tích lệnh",
@@ -246,6 +246,54 @@
               },
               "renameOutput": true,
               "outputKey": "sync_later"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1b69feec-3d4f-4548-b486-2bfd70e73075",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "sync_status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sync_status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d61de75b-593b-4a4e-94bb-8c49d90f1539",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "db_status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "db_status"
             }
           ]
         },
@@ -287,7 +335,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst input = $json;\nconst helpText = `<b>\\U0001F4D8 Danh sach lenh Telegram</b>\\n\\n` +\n  `\\U0001F449 <code>/task &lt;tu khoa&gt;</code> - Tim task\\n` +\n  `\\U0001F449 <code>/task chitiet_&lt;id&gt;</code> - Chi tiet task\\n\\n` +\n  `\\U0001F6A7 <code>/taotask</code> - Dang xay dung lai (AI), chua kha dung.\\n\\n` +\n  `\\U0001F4CC <i>Vi du:</i>\\n<code>/task linh nhi</code>`;\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
+        "jsCode": "\nconst input = $json;\nconst helpText = `<b>\\U0001F4D8 Danh sach lenh Telegram</b>\\n\\n` +\n  `\\U0001F449 <code>/task &lt;tu khoa&gt;</code> - Tim task\\n` +\n  `\\U0001F449 <code>/task chitiet_&lt;id&gt;</code> - Chi tiet task\\n\\n` +\n  `\\U0001F6A7 <code>/taotask</code> - Dang xay dung lai (AI), chua kha dung.\\n\\n` +\n  `\\U0001F4CB <code>/sync_status</code> - Xem cac List se duoc tu dong dong bo\\n` +\n  `\\U0001F4CA <code>/db_status</code> - Thong ke du lieu hien co trong he thong\\n\\n` +\n  `\\U0001F4CC <i>Vi du:</i>\\n<code>/task linh nhi</code>`;\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
       },
       "id": "1dfa376b-eb8c-4957-a58b-4271dc293133",
       "name": "Nội dung lệnh help",
@@ -1044,6 +1092,78 @@
           "name": "Telegram Bot (PROD)"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT list_id, list_name, folder_name, added_by, added_at FROM clickup.sync_targets ORDER BY added_at;",
+        "options": {}
+      },
+      "id": "d7a3d600-c613-43cc-818e-1cc7fa68febf",
+      "name": "Query Sync Targets (Status)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2384,
+        1600
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "GwUFREmcXzXXj5mZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst rows = $input.all().map(i => i.json).filter(r => r && r.list_id);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nif (rows.length === 0) {\n  return [{ json: { chatId,\n    text: '📋 <b>Chưa có List nào được đăng ký để tự động đồng bộ.</b>\\nLần Schedule tiếp theo sẽ dùng List mặc định trong Config.\\n\\n💡 Dùng lệnh /sync để chọn List cần đồng bộ.',\n    parse_mode: 'HTML' } }];\n}\n\nconst lines = [`📋 <b>Danh sách List sẽ được tự động đồng bộ (mỗi 5 ngày):</b>\\n`];\nrows.forEach((r, i) => {\n  const addedDate = r.added_at ? new Date(r.added_at).toLocaleString('vi-VN') : 'không rõ';\n  lines.push(`${i + 1}. <b>${escapeHtml(r.list_name)}</b> ${r.folder_name ? `(${escapeHtml(r.folder_name)})` : ''}\\n   ID: ${r.list_id} | Thêm bởi: ${escapeHtml(r.added_by)} lúc ${addedDate}`);\n});\n\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n",
+        "alwaysOutputData": true
+      },
+      "id": "a8c44de6-6987-4e9a-969d-5736dd6400df",
+      "name": "Build Sync Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT list_name, status, count(*)::int AS cnt\nFROM clickup.tasks\nGROUP BY list_name, status\nORDER BY list_name, cnt DESC;",
+        "options": {}
+      },
+      "id": "bdfcb954-f812-441f-9071-707091f8c0cd",
+      "name": "Query DB Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2384,
+        1750
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "GwUFREmcXzXXj5mZ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst rows = $input.all().map(i => i.json).filter(r => r && r.list_name);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nif (rows.length === 0) {\n  return [{ json: { chatId, text: '📊 Postgres hiện chưa có dữ liệu task nào.', parse_mode: 'HTML' } }];\n}\n\nconst statusEmoji = (status) => {\n  const s = (status || '').toLowerCase();\n  if (s.includes('xử lý') || s.includes('xu ly')) return '⚙️';\n  if (s.includes('ready') || s.includes('sẵn sàng')) return '✅';\n  if (s.includes('lỗi') || s.includes('loi')) return '❌';\n  if (s.includes('chờ') || s.includes('cho')) return '⏳';\n  return '🔹';\n};\n\nconst byList = {};\nfor (const r of rows) {\n  if (!byList[r.list_name]) byList[r.list_name] = [];\n  byList[r.list_name].push(r);\n}\n\nconst lines = ['📊 <b>Thống kê dữ liệu hiện có trong Postgres:</b>\\n'];\nlet grandTotal = 0;\nfor (const [listName, statuses] of Object.entries(byList)) {\n  const listTotal = statuses.reduce((sum, r) => sum + r.cnt, 0);\n  grandTotal += listTotal;\n  lines.push(`📋 <b>${escapeHtml(listName)}</b>: ${listTotal} task`);\n  statuses.forEach(r => { lines.push(`   ${statusEmoji(r.status)} ${escapeHtml(r.status) || 'Không rõ'}: ${r.cnt}`); });\n  lines.push('');\n}\nlines.push(`━━━━━━━━━━\\n<b>Tổng cộng: ${grandTotal} task</b>`);\n\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n",
+        "alwaysOutputData": true
+      },
+      "id": "ce6ceeb5-caeb-4967-b65a-e23c87a5debe",
+      "name": "Build DB Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        1750
+      ]
     }
   ],
   "connections": {
@@ -1130,6 +1250,20 @@
         [
           {
             "node": "Reply Chờ Lần Sau",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query Sync Targets (Status)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query DB Status",
             "type": "main",
             "index": 0
           }
@@ -1403,6 +1537,50 @@
         [
           {
             "node": "Execute Full Reconcile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Sync Targets (Status)": {
+      "main": [
+        [
+          {
+            "node": "Build Sync Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Sync Status": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query DB Status": {
+      "main": [
+        [
+          {
+            "node": "Build DB Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build DB Status": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
             "type": "main",
             "index": 0
           }
