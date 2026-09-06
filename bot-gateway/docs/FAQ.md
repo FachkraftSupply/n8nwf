@@ -123,3 +123,13 @@ KHÔNG PHẢI kiểu resource-locator hiện đại (`{__rl:true, value, mode}`)
 - `gateway.config` là bảng key-value (`key`, `value`) — không có cột riêng cho từng key.
 - ClickUp Task ID hiện là dạng chữ+số (vd `z908826jhz`) — luôn để cột `id` trong Postgres kiểu `TEXT`.
 - Deep-link Telegram (`?start=...`) CHỈ cho phép ký tự `[A-Za-z0-9_-]`, không được dùng dấu `:`.
+
+
+### "chatId/message_id ra rỗng dù đã truyền từ Trigger xuống" (dùng `$json` trần)
+**Nguyên nhân:** `$json` trong 1 node LUÔN chỉ lấy từ output của node NỐI TRỰC TIẾP ngay trước nó —
+không đảm bảo field cần thiết (vd `chat_id`) có mặt, kể cả khi field đó "chắc chắn" có ở đâu đó phía
+trên trong chuỗi xử lý. Đây là lỗi dễ mắc phải nhất khi copy node hoặc thêm field mới vào giữa chuỗi.
+**Cách sửa:** KHÔNG BAO GIỜ dùng `{{ $json.x }}` cho dữ liệu quan trọng (chatId, message_id...) — luôn
+tham chiếu tường minh qua tên node đã xác nhận có field đó: `{{ $('GW-01 Envelope').first().json.chat_id }}`
+hoặc `{{ $('Phân tích lệnh').first().json.chatId }}`. Quy tắc này ĐÃ có trong dự án (memory: "Postgres
+nodes overwrite $json...") nhưng cần áp dụng CHUNG cho MỌI loại node, không riêng Postgres.
