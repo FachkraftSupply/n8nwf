@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  GW-01: Chuẩn hóa update -> Envelope       ║\n// ║  request_id = correlation ID để debug      ║\n// ╚══════════════════════════════════════════╝\nconst upd = $('Telegram Trigger Gateway').first().json;\nconst reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nlet kind, m = null, user, chat, text = '', callback = null;\n\nif (upd.callback_query) {\n  kind = 'callback';\n  const cq = upd.callback_query;\n  user = cq.from;\n  chat = cq.message.chat;\n  callback = { id: cq.id, data: cq.data || '', message_id: cq.message.message_id };\n  text = cq.data || '';\n} else {\n  m = upd.message || upd.edited_message;\n  if (!m) return [];              // update lạ -> bỏ qua\n  kind = 'message';\n  user = m.from;\n  chat = m.chat;\n  text = m.text || m.caption || '';\n}\n\nconst command = (text.match(/^\\/(\\w+)/) || [])[1] || null;\n\nreturn [{ json: {\n  request_id: reqId,\n  platform: 'telegram',\n  kind,                                   // message | callback\n  user_id: String(user.id),\n  username: user.username || '',\n  display_name: [user.first_name, user.last_name].filter(Boolean).join(' '),\n  chat_id: String(chat.id),\n  text,\n  command,\n  callback,\n  has_media: !!(m && (m.photo || m.document || m.video)),\n  ts: new Date().toISOString(),\n  raw: upd\n}}];"
+        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  GW-01: Chuẩn hóa update -> Envelope       ║\n// ║  request_id = correlation ID để debug      ║\n// ╚══════════════════════════════════════════╝\nconst upd = $('Telegram Trigger Gateway').first().json;\nconst reqId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n\nlet kind, m = null, user, chat, text = '', callback = null;\n\nif (upd.callback_query) {\n  kind = 'callback';\n  const cq = upd.callback_query;\n  user = cq.from;\n  chat = cq.message.chat;\n  callback = { id: cq.id, data: cq.data || '', message_id: cq.message.message_id };\n  text = cq.data || '';\n} else {\n  m = upd.message || upd.edited_message;\n  if (!m) return [];              // update lạ -> bỏ qua\n  kind = 'message';\n  user = m.from;\n  chat = m.chat;\n  text = m.text || m.caption || '';\n}\n\nconst command = (text.match(/^\\/(\\w+)/) || [])[1] || null;\n\nreturn [{ json: {\n  request_id: reqId,\n  platform: 'telegram',\n  kind,                                   // message | callback\n  user_id: String(user.id),\n  username: user.username || '',\n  display_name: [user.first_name, user.last_name].filter(Boolean).join(' '),\n  chat_id: String(chat.id),\n  message_id: m ? m.message_id : (callback ? callback.message_id : null), // de reply dung group/topic\n  text,\n  command,\n  callback,\n  has_media: !!(m && (m.photo || m.document || m.video)),\n  ts: new Date().toISOString(),\n  raw: upd\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -337,7 +337,8 @@
         "chatId": "={{ $('GW-02b Merge Auth').item.json.chat_id }}",
         "text": "🔐 Xin chào! Bạn chưa có quyền sử dụng hệ thống.\nYêu cầu của bạn đã được gửi tới quản trị viên, vui lòng chờ phê duyệt.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('GW-02b Merge Auth').item.json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -437,7 +438,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "⏳ Yêu cầu của bạn đang chờ quản trị viên phê duyệt. Vui lòng quay lại sau.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -460,7 +462,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "🚫 Rất tiếc, bạn không có quyền truy cập hệ thống này. Liên hệ quản trị viên nếu có nhầm lẫn.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -697,7 +700,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "=🔒 Bạn chưa được cấp quyền dùng chức năng {{ $json.bot_key }}. Liên hệ quản trị viên để được cấp thêm.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -720,7 +724,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "❓ Lệnh không hợp lệ. Các lệnh khả dụng:\n/task - tra cứu task\n/ask - hỏi trợ lý AI\n/sum - tóm tắt",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -921,7 +926,8 @@
         "chatId": "={{ $('Parse callback').item.json.chat_id }}",
         "text": "=✅ Đã cấp quyền [{{ $('Parse callback').item.json.target_bot }}] cho user {{ $('Parse callback').item.json.target_uid }}",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Parse callback').item.json.callback.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -992,7 +998,8 @@
         "chatId": "={{ $('GW-01 Envelope').first().json.chat_id }}",
         "text": "⚠️ Bạn không có quyền thực hiện thao tác này.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
