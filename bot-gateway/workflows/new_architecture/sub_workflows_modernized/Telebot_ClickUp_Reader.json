@@ -515,7 +515,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst all = $input.all().map(i => i.json).filter(t => t && t.id);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cleanLink = (l) => (l || '').replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim();\n\nif (all.length === 0) {\n  return [{ json: { chatId, text: '❌ Không tìm thấy task này.', parse_mode: 'HTML' } }];\n}\nconst task = all[0];\nconst lines = [];\nlines.push(`<b>${escapeHtml(task.name)}</b>`);\nlines.push(`├ Mô tả: ${escapeHtml(task.description?.trim()) || 'Không rõ'}`);\nlines.push(`├ Trạng thái: ${escapeHtml(task.status) || 'Không rõ'}`);\nlines.push(`├ List: ${task.list_name ? escapeHtml(task.list_name) : 'Không rõ'}`);\nif (task.phu_trach) lines.push(`├ Phụ trách: ${escapeHtml(task.phu_trach)}`);\nif (task.onedrive_link) {\n  // Chi hien link phang - tinh nang \"Xem file\" (Graph API, liet ke tung file) TAM TAT theo yeu cau,\n  // se lam lai o phien ban sau.\n  lines.push(`├ 📁 <a href=\"${cleanLink(task.onedrive_link)}\">Xem OneDrive</a>`);\n}\nlines.push(`└ 🔗 <a href=\"${cleanLink(task.url)}\">Xem trong ClickUp</a>`);\n\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n",
+        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst taskRows = $('task_detail_sql').all().map(i => i.json).filter(t => t && t.id);\nconst linkRows = $input.all().map(i => i.json).filter(r => r && r.order_task_id);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cleanLink = (l) => (l || '').replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim();\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nif (taskRows.length === 0) {\n  return [{ json: { chatId, text: '❌ Không tìm thấy task này.', parse_mode: 'HTML' } }];\n}\nconst task = taskRows[0];\nconst lines = [];\nlines.push(`<b>${escapeHtml(task.name)}</b>`);\nlines.push(`├ Mô tả: ${escapeHtml(task.description?.trim()) || 'Không rõ'}`);\nlines.push(`├ Trạng thái: ${escapeHtml(task.status) || 'Không rõ'}`);\nlines.push(`├ List: ${task.list_name ? escapeHtml(task.list_name) : 'Không rõ'}`);\nif (task.phu_trach) lines.push(`├ Phụ trách: ${escapeHtml(task.phu_trach)}`);\nif (task.onedrive_link) {\n  // Chi hien link phang - tinh nang \"Xem file\" (Graph API, liet ke tung file) TAM TAT theo yeu cau,\n  // se lam lai o phien ban sau.\n  lines.push(`├ 📁 <a href=\"${cleanLink(task.onedrive_link)}\">Xem OneDrive</a>`);\n}\n\n// Y tuong #3: thong ke + link toi cac task Don Hang lien quan qua DKPV/PVTC\nconst dkpvLinks = linkRows.filter(r => r.link_type === 'dkpv');\nconst pvtcByYear = {};\nlinkRows.filter(r => r.link_type === 'pvtc').forEach(r => {\n  const y = r.pvtc_year || 'khac';\n  if (!pvtcByYear[y]) pvtcByYear[y] = [];\n  pvtcByYear[y].push(r);\n});\n\nif (dkpvLinks.length > 0) {\n  lines.push(`├ 📝 Đăng ký phỏng vấn (DKPV): <b>${dkpvLinks.length}</b> đơn hàng`);\n  dkpvLinks.forEach(r => {\n    const link = `https://t.me/${botUsername}?start=chitiet_${r.order_task_id}`;\n    lines.push(`│   • <a href=\"${link}\">${escapeHtml(r.order_task_name)}</a> (${escapeHtml(r.order_task_status) || 'không rõ'})`);\n  });\n}\nfor (const [year, rows] of Object.entries(pvtcByYear)) {\n  lines.push(`├ ✅ Được nhận (PVTC ${year}): <b>${rows.length}</b> đơn hàng`);\n  rows.forEach(r => {\n    const link = `https://t.me/${botUsername}?start=chitiet_${r.order_task_id}`;\n    lines.push(`│   • <a href=\"${link}\">${escapeHtml(r.order_task_name)}</a> (${escapeHtml(r.order_task_status) || 'không rõ'})`);\n  });\n}\n\nlines.push(`└ 🔗 <a href=\"${cleanLink(task.url)}\">Xem trong ClickUp</a>`);\n\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n",
         "alwaysOutputData": true
       },
       "id": "f57ccada-426d-4962-b468-e401e8da725d",
@@ -1117,6 +1117,30 @@
         -2112,
         1750
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT order_task_id, order_task_name, order_task_status, link_type, pvtc_year\nFROM clickup.task_links\nWHERE student_task_id = $1\nORDER BY link_type, pvtc_year NULLS FIRST;",
+        "options": {
+          "queryReplacement": "={{ [$('Phân tích lệnh').first().json.taskId] }}"
+        }
+      },
+      "id": "02a4d190-2f2a-4d91-859b-08ee072a016d",
+      "name": "Lấy Task Links",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -2248,
+        600
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "GwUFREmcXzXXj5mZ",
+          "name": "Postgres account"
+        }
+      }
     }
   ],
   "connections": {
@@ -1289,7 +1313,7 @@
       "main": [
         [
           {
-            "node": "Beautify chi tiết",
+            "node": "Lấy Task Links",
             "type": "main",
             "index": 0
           }
@@ -1527,6 +1551,17 @@
         [
           {
             "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy Task Links": {
+      "main": [
+        [
+          {
+            "node": "Beautify chi tiết",
             "type": "main",
             "index": 0
           }
