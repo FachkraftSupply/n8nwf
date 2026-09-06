@@ -70,20 +70,27 @@ Manual/Execute Workflow Trigger → Config → Ensure Schema (ALTER COLUMN, tự
   → (khi Loop xong) → Limit(1) → Query Thống Kê → Build Notify Done → Notify Done
 ```
 
-### Sơ đồ Schedule — tự động sync ĐA-LIST (mới, 06/09/2026)
-`Schedule` KHÔNG còn chạy thẳng vào Config như trên — nó chạy qua 1 lớp orchestrate riêng để lặp qua
-TOÀN BỘ List đã được admin chọn qua lệnh `/sync`:
+## `SQL_ClickUp_Sync_Scheduler.json` — điều phối đa-List (✅ MỚI, 6 node, tách riêng 06/09/2026)
+
+Trước đây từng thử để `Full Reconcile` tự gọi lại chính nó (self-reference) khi Schedule chạy đa-List —
+gây lẫn lộn trong danh sách Executions (không phân biệt được lần "điều phối" và lần "sync 1 List"). Đã
+tách hẳn ra workflow riêng cho rõ ràng:
+
 ```
 Schedule (5 ngày) → Query Sync Targets (SELECT * FROM clickup.sync_targets)
   → Có List Nào Trong Bảng?
       true  → Loop Over Sync Targets → Chạy Sync Cho List Này
-              (Execute Workflow — TỰ GỌI LẠI CHÍNH WORKFLOW NÀY, chờ xong mới sang List tiếp theo)
+              (Execute Workflow — gọi SANG SQL_ClickUp_Full_Reconcile.json, kèm list_id + list_name,
+              chờ xong mới sang List tiếp theo, tránh chồng chéo rate-limit ClickUp)
               → quay lại Loop
-      false → Chạy Sync List Mặc Định (fallback về List cố định trong Config, phòng khi
-              chưa ai dùng /sync lần nào)
+      false → Chạy Sync List Mặc Định (gọi Full Reconcile không kèm list_id, để Config tự dùng
+              List mặc định — fallback phòng khi chưa ai dùng /sync lần nào)
 ```
-**Bắt buộc:** 2 node `Chạy Sync Cho List Này` và `Chạy Sync List Mặc Định` cần điền Workflow ID
-**của chính workflow này** (self-reference) — copy từ URL `.../workflow/<ID>` sau khi lưu trên n8n.
+**Bắt buộc:** cả 2 node `Chạy Sync Cho List Này` và `Chạy Sync List Mặc Định` cần điền Workflow ID
+**của `SQL_ClickUp_Full_Reconcile.json`** (workflow khác, không phải chính Scheduler) — copy từ URL
+`.../workflow/<ID>` sau khi lưu Full Reconcile trên n8n.
+
+**Muốn test không cần chờ 5 ngày:** chuột phải vào node `Schedule` trong Scheduler → Execute Node.
 
 ## `SQL_ClickUp_Live_Update.json` — Cấu hình (✅ HOÀN TẤT, 9 node)
 
