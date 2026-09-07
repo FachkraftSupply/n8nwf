@@ -8,6 +8,61 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
+## 🌙 PHIÊN HÔM NAY (Giai đoạn A — Admin backup tools) — cập nhật cuối ngày
+
+**Đã hoàn tất trong phiên này:**
+- Tạo `SQL_Backup_System.json` (workflow riêng, Manual + Schedule Chủ nhật 2h sáng + Execute Workflow
+  Trigger, nhận `backupType`: 'n8n'|'db'|'both').
+- `/backup_n8n` + `/backup_db` trong `Telebot_Admin_System.json` gọi sang workflow này (gọn, tách khỏi
+  logic backup trực tiếp).
+- Đổi từ Google Drive sang **Microsoft OneDrive** theo yêu cầu — đã sửa nhiều lỗi cấu hình thực tế:
+  Azure App Registration (lỗi `unauthorized_client` — do Supported Account Types sai, đã hướng dẫn sửa),
+  field `Parent ID` là ô TEXT THƯỜNG (không phải resource-locator, đã sửa từ object → string),
+  `binaryDataUpload` sai tên tham số → đổi đúng `binaryData` + `binaryPropertyName`.
+- Đang hướng dẫn user lấy Folder ID thật qua node OneDrive (Resource: Folder → Operation: Search).
+
+**⚠️ PHÁT HIỆN QUAN TRỌNG — Execute Command bị chặn trên n8n instance này:**
+Lỗi `Unrecognized node type: n8n-nodes-base.executeCommand` khi chạy `/backup_db` — node này bị
+disable qua biến môi trường trong docker-compose (n8n dùng **Docker Hardened Image**, Alpine 3.24,
+không có `apk`, chạy user thường "node" không phải root).
+- **Đã fix tạm thời (đang dùng)**: bỏ hẳn `pg_dump`, backup Postgres qua 3 node Postgres SELECT
+  (`clickup.tasks`, `clickup.task_links`, `clickup.sync_targets`) → gộp JSON → upload OneDrive.
+  Hoạt động, nhưng KHÔNG PHẢI bản sao SQL đầy đủ (thiếu schema/index/gateway tables).
+
+**User đã nhờ Claude Code (có quyền SSH) khảo sát VPS — kết quả:**
+- Container n8n: Docker Hardened Image, không cài được `pg_dump` trực tiếp (không có apk), build custom
+  image là cách DUY NHẤT để pg_dump nằm TRONG container n8n — **user từ chối build custom image**.
+- Container Postgres (`postgres:16-alpine`) **đã có sẵn** `pg_dump`/`psql`.
+- 3 phương án thay thế (không build image) — đã phân tích ưu/nhược:
+  - **A**: mount `docker.sock` vào n8n container, Execute Command chạy `docker exec <container_postgres>
+    pg_dump ...` — rủi ro bảo mật CAO (tương đương quyền root trên host nếu bị khai thác).
+  - **B**: cron trên HOST (không qua n8n) chạy pg_dump, n8n chỉ đọc file qua mount read-only — an toàn
+    hơn A, nhưng mất khả năng bấm Manual Trigger backup theo yêu cầu (cần thêm webhook riêng để kích
+    hoạt cron ngoài lịch).
+  - **C (khuyến nghị)**: dùng node **SSH có sẵn trong n8n** (KHÔNG bị chặn như Execute Command) để SSH
+    vào chính VPS, chạy `docker exec n8n_stack-postgres-1 pg_dump -U n8n -d n8n -n clickup -n gateway
+    > backup_file.sql` từ đó — né được cả rủi ro docker.sock lẫn việc build image.
+
+## ⚠️ VIỆC ƯU TIÊN CHO NGÀY MAI — triển khai node SSH cho pg_dump thật
+
+1. Xác nhận đã tạo được credential SSH trong n8n (host VPS thật, dùng SSH key RIÊNG — không dùng chung
+   key với Claude Code) — hỏi user xem đã tạo chưa trước khi sửa workflow.
+2. Sửa `SQL_Backup_System.json`: thêm lại node kiểu **SSH** (không phải Execute Command) trong nhánh
+   backup DB, câu lệnh:
+   ```
+   docker exec n8n_stack-postgres-1 pg_dump -U n8n -d n8n -n clickup -n gateway > /path/backup_$(date +%F_%H%M).sql
+   ```
+   (⚠️ Xác nhận lại đúng tên container Postgres + tên database/user thật với user trước khi hardcode —
+   Claude Code dùng `n8n_stack-postgres-1`/`-U n8n -d n8n`, có thể khác với thông tin cũ trong memory
+   dự án `-U postgres`, CẦN HỎI LẠI USER XÁC NHẬN, KHÔNG ĐOÁN.)
+3. Xử lý output của SSH node — cần đọc lại nội dung file `.sql` từ VPS (SSH node có hỗ trợ download file
+   không, hay cần thêm bước riêng?) — tra cứu kỹ trước khi build, tránh đoán mù (đã có tiền lệ lỗi vì
+   đoán sai tham số node).
+4. Test lại `/backup_db` — xác nhận ra đúng file `.sql` đầy đủ (không chỉ 3 bảng JSON như bản tạm hiện
+   tại).
+5. Sau khi pg_dump qua SSH hoạt động ổn định, cân nhắc: giữ luôn bản backup JSON (3 bảng qua Postgres
+   node) làm phương án dự phòng song song, hay bỏ hẳn — hỏi ý kiến user.
+
 ## Repo
 `FachkraftSupply/n8nwf`, folder `bot-gateway/` — kết nối GitHub qua Composio (OAuth, không dùng token).
 
