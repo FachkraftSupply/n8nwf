@@ -135,13 +135,10 @@
       "parameters": {
         "resource": "file",
         "operation": "upload",
-        "parentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
+        "parentId": "",
         "fileName": "={{ `n8n_backup_${new Date().toISOString().slice(0,10)}.json` }}",
-        "binaryDataUpload": true
+        "binaryData": true,
+        "binaryPropertyName": "data"
       },
       "id": "087600b1-8459-49a4-9a76-b52bff0d525f",
       "name": "Upload Backup N8N (OneDrive)",
@@ -248,13 +245,10 @@
       "parameters": {
         "resource": "file",
         "operation": "upload",
-        "parentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
+        "parentId": "",
         "fileName": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.sql` }}",
-        "binaryDataUpload": true
+        "binaryData": true,
+        "binaryPropertyName": "data"
       },
       "id": "a684291e-9195-4c1f-98f1-f7f3b2d23c2f",
       "name": "Upload Backup DB (OneDrive)",
