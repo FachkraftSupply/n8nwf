@@ -1287,13 +1287,13 @@
     {
       "parameters": {
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
-        "text": "🔄 Đang backup toàn bộ workflow n8n, chờ chút...",
+        "text": "🔄 Đang backup toàn bộ workflow n8n, sẽ báo khi xong...",
         "additionalFields": {
           "appendAttribution": false,
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
-      "id": "9b822817-2c1c-4c72-a50a-48acaf2af4bf",
+      "id": "fd504df9-3005-4860-b646-fdbf880ecff0",
       "name": "Reply Đang Backup N8N",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -1310,13 +1310,30 @@
     },
     {
       "parameters": {
-        "filters": {},
-        "requestOptions": {}
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_BACKUP_SYSTEM_WORKFLOW_ID",
+          "mode": "list"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "backupType": "n8n",
+            "notifyChatId": "={{ $('Phân tích lệnh').first().json.chatId }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
       },
-      "id": "bb764a88-eab2-4d93-a720-7005bbed857d",
-      "name": "n8n - Lấy Toàn Bộ Workflow",
-      "type": "n8n-nodes-base.n8n",
-      "typeVersion": 1,
+      "id": "ca90e751-273b-4150-9ec8-240adcde755a",
+      "name": "Execute Backup N8N",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         1984,
         2400
@@ -1324,75 +1341,14 @@
     },
     {
       "parameters": {
-        "operation": "toJson",
-        "options": {}
-      },
-      "id": "359592df-145c-4d65-9491-b4e6972189eb",
-      "name": "Convert Workflow To File",
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        2240,
-        2400
-      ]
-    },
-    {
-      "parameters": {
-        "name": "={{ `n8n_backup_${new Date().toISOString().slice(0,10)}.json` }}",
-        "driveId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "root"
-        },
-        "options": {}
-      },
-      "id": "7824587f-2cba-4b66-a15a-0d97da54621f",
-      "name": "Upload Backup N8N (Drive)",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        2496,
-        2400
-      ]
-    },
-    {
-      "parameters": {
         "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
-        "text": "={{ '✅ Đã backup xong toàn bộ workflow n8n lên Google Drive.\\n🔗 ' + $json.webViewLink }}",
-        "additionalFields": {
-          "appendAttribution": false
-        }
-      },
-      "id": "8dd94689-4ec9-4a31-a116-2de4971f559b",
-      "name": "Reply Backup N8N Xong",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        2752,
-        2400
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "zSZ6vVapow5LNpFT",
-          "name": "Telegram System Bot"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
-        "text": "🔄 Đang backup Postgres, chờ chút...",
+        "text": "🔄 Đang backup Postgres, sẽ báo khi xong...",
         "additionalFields": {
           "appendAttribution": false,
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
-      "id": "1812d6f2-1f45-4117-8faf-46c9176dd245",
+      "id": "632702f1-41e0-4b2e-acba-127d879b0950",
       "name": "Reply Đang Backup DB",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -1409,77 +1365,34 @@
     },
     {
       "parameters": {
-        "command": "=PGPASSWORD='DIEN_MAT_KHAU_QUA_PGPASS_KHONG_GHI_O_DAY' pg_dump -h n8n_stack-postgres-1 -p 5432 -U postgres -d n8n -n clickup -n gateway -f /tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql"
+        "workflowId": {
+          "__rl": true,
+          "value": "REPLACE_BACKUP_SYSTEM_WORKFLOW_ID",
+          "mode": "list"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "backupType": "db",
+            "notifyChatId": "={{ $('Phân tích lệnh').first().json.chatId }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
       },
-      "id": "a6f66f1d-3979-4f29-a423-f550c2b653d9",
-      "name": "Execute pg_dump",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "id": "958ce2cd-40ad-4f5b-9ba9-9fabf3b1bb04",
+      "name": "Execute Backup DB",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
       "position": [
         1984,
         2560
       ]
-    },
-    {
-      "parameters": {
-        "fileSelector": "=/tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql",
-        "options": {}
-      },
-      "id": "249931eb-990c-49aa-95c0-26d3180d2f7c",
-      "name": "Đọc File Backup SQL",
-      "type": "n8n-nodes-base.readWriteFile",
-      "typeVersion": 1,
-      "position": [
-        2240,
-        2560
-      ]
-    },
-    {
-      "parameters": {
-        "name": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.sql` }}",
-        "driveId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "root"
-        },
-        "options": {}
-      },
-      "id": "876d1bdd-46bd-4b55-b6bd-cf25d3ec39bf",
-      "name": "Upload Backup DB (Drive)",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        2496,
-        2560
-      ]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
-        "text": "={{ '✅ Đã backup xong Postgres lên Google Drive.\\n🔗 ' + $json.webViewLink }}",
-        "additionalFields": {
-          "appendAttribution": false
-        }
-      },
-      "id": "01eb9671-90d9-4451-aa0d-3e786c2529a5",
-      "name": "Reply Backup DB Xong",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        2752,
-        2560
-      ],
-      "credentials": {
-        "telegramApi": {
-          "id": "zSZ6vVapow5LNpFT",
-          "name": "Telegram System Bot"
-        }
-      }
     }
   ],
   "connections": {
@@ -1950,40 +1863,7 @@
       "main": [
         [
           {
-            "node": "n8n - Lấy Toàn Bộ Workflow",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "n8n - Lấy Toàn Bộ Workflow": {
-      "main": [
-        [
-          {
-            "node": "Convert Workflow To File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Convert Workflow To File": {
-      "main": [
-        [
-          {
-            "node": "Upload Backup N8N (Drive)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Upload Backup N8N (Drive)": {
-      "main": [
-        [
-          {
-            "node": "Reply Backup N8N Xong",
+            "node": "Execute Backup N8N",
             "type": "main",
             "index": 0
           }
@@ -1994,40 +1874,7 @@
       "main": [
         [
           {
-            "node": "Execute pg_dump",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Execute pg_dump": {
-      "main": [
-        [
-          {
-            "node": "Đọc File Backup SQL",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Đọc File Backup SQL": {
-      "main": [
-        [
-          {
-            "node": "Upload Backup DB (Drive)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Upload Backup DB (Drive)": {
-      "main": [
-        [
-          {
-            "node": "Reply Backup DB Xong",
+            "node": "Execute Backup DB",
             "type": "main",
             "index": 0
           }
