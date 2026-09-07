@@ -133,23 +133,20 @@
     },
     {
       "parameters": {
-        "name": "={{ `n8n_backup_${new Date().toISOString().slice(0,10)}.json` }}",
-        "driveId": {
+        "resource": "file",
+        "operation": "upload",
+        "parentId": {
           "__rl": true,
-          "mode": "list",
-          "value": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "mode": "list",
+          "mode": "id",
           "value": "root"
         },
-        "options": {}
+        "fileName": "={{ `n8n_backup_${new Date().toISOString().slice(0,10)}.json` }}",
+        "binaryDataUpload": true
       },
       "id": "087600b1-8459-49a4-9a76-b52bff0d525f",
-      "name": "Upload Backup N8N (Drive)",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
+      "name": "Upload Backup N8N (OneDrive)",
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
       "position": [
         -1280,
         320
@@ -249,23 +246,20 @@
     },
     {
       "parameters": {
-        "name": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.sql` }}",
-        "driveId": {
+        "resource": "file",
+        "operation": "upload",
+        "parentId": {
           "__rl": true,
-          "mode": "list",
-          "value": "My Drive"
-        },
-        "folderId": {
-          "__rl": true,
-          "mode": "list",
+          "mode": "id",
           "value": "root"
         },
-        "options": {}
+        "fileName": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.sql` }}",
+        "binaryDataUpload": true
       },
       "id": "a684291e-9195-4c1f-98f1-f7f3b2d23c2f",
-      "name": "Upload Backup DB (Drive)",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
+      "name": "Upload Backup DB (OneDrive)",
+      "type": "n8n-nodes-base.microsoftOneDrive",
+      "typeVersion": 1,
       "position": [
         -1280,
         720
@@ -371,14 +365,14 @@
       "main": [
         [
           {
-            "node": "Upload Backup N8N (Drive)",
+            "node": "Upload Backup N8N (OneDrive)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload Backup N8N (Drive)": {
+    "Upload Backup N8N (OneDrive)": {
       "main": [
         [
           {
@@ -415,14 +409,14 @@
       "main": [
         [
           {
-            "node": "Upload Backup DB (Drive)",
+            "node": "Upload Backup DB (OneDrive)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload Backup DB (Drive)": {
+    "Upload Backup DB (OneDrive)": {
       "main": [
         [
           {
