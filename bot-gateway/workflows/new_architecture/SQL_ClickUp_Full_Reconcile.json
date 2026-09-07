@@ -452,7 +452,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH deleted AS (\n  DELETE FROM clickup.task_links WHERE student_task_id = $1\n)\nINSERT INTO clickup.task_links\n  (student_task_id, order_task_id, order_task_name, order_task_status, link_type, year)\nSELECT $1, x.order_task_id, x.order_task_name, x.order_task_status, x.link_type, x.year\nFROM jsonb_to_recordset($2::jsonb)\n  AS x(order_task_id text, order_task_name text, order_task_status text, link_type text, year int);",
+        "query": "INSERT INTO clickup.task_links\n  (student_task_id, order_task_id, order_task_name, order_task_status, link_type, year)\nSELECT $1, x.order_task_id, x.order_task_name, x.order_task_status, x.link_type, x.year\nFROM jsonb_to_recordset($2::jsonb)\n  AS x(order_task_id text, order_task_name text, order_task_status text, link_type text, year int)\nON CONFLICT (student_task_id, order_task_id, link_type, year) DO UPDATE SET\n  order_task_name = EXCLUDED.order_task_name,\n  order_task_status = EXCLUDED.order_task_status,\n  synced_at = now();",
         "options": {
           "queryReplacement": "={{ [$('Trích Xuất Task Links').item.json.taskId, $('Trích Xuất Task Links').item.json.linksJson] }}"
         }
