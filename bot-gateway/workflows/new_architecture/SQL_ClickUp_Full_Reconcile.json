@@ -322,7 +322,7 @@
         "operation": "executeQuery",
         "query": "SELECT id, onedrive_link, youtube_link FROM clickup.tasks WHERE id = $1;",
         "options": {
-          "queryReplacement": "={{ [$json.id] }}"
+          "queryReplacement": "={{ [$('Map Row (không comment)').item.json.id] }}"
         }
       },
       "id": "55ebf6d6-cdf4-43e1-83bd-beb7410e2d33",
