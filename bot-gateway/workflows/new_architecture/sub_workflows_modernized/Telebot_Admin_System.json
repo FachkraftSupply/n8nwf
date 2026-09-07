@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// Ban REVAMP (05/09/2026): bo han view_file (OneDrive) va /sync - tam thoi tat, se lam sau.\n// Chi con: help / task / chitiet / taotask (placeholder) / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  // /sync dung DEEP-LINK dang text (nhu chitiet_), KHONG dung inline keyboard callback - on dinh hon.\n  // Deep-link Telegram chi cho phep [A-Za-z0-9_-], khong dung duoc dau \":\" nen dung \"_\" lam phan cach.\n  if (params.startsWith('sync_folder_')) {\n    return { route: 'sync_folder', params: params.replace('sync_folder_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_list_')) {\n    return { route: 'sync_list', params: params.replace('sync_list_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_now_')) {\n    return { route: 'sync_now', params: params.replace('sync_now_', '').trim(), taskId: null };\n  }\n  if (params === 'sync_later') {\n    return { route: 'sync_later', params: '', taskId: null };\n  }\n  // Deep-link cho /help hyperlink (lenh khong can tham so, bam thang khong can go tay)\n  if (params === 'menu_sync') return { route: 'sync', params: '', taskId: null };\n  if (params === 'menu_sync_status') return { route: 'sync_status', params: '', taskId: null };\n  if (params === 'menu_db_status') return { route: 'db_status', params: '', taskId: null };\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/sync') return { route: 'sync', params, taskId: null };\n  if (command === '/sync_status') return { route: 'sync_status', params, taskId: null };\n  if (command === '/db_status') return { route: 'db_status', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    // Tai dung CHUNG logic nhan dien voi deep-link (computeRoute) - callback_data va params\n    // deep-link dung chung 1 tap prefix (sync_folder_, sync_list_, menu_sync...).\n    const r = computeRoute('', rawText);\n    route = r.route; params = r.params; taskId = r.taskId;\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
+        "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// Ban REVAMP (05/09/2026): bo han view_file (OneDrive) va /sync - tam thoi tat, se lam sau.\n// Chi con: help / task / chitiet / taotask (placeholder) / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  // /sync dung DEEP-LINK dang text (nhu chitiet_), KHONG dung inline keyboard callback - on dinh hon.\n  // Deep-link Telegram chi cho phep [A-Za-z0-9_-], khong dung duoc dau \":\" nen dung \"_\" lam phan cach.\n  if (params.startsWith('sync_folder_')) {\n    return { route: 'sync_folder', params: params.replace('sync_folder_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_list_')) {\n    return { route: 'sync_list', params: params.replace('sync_list_', '').trim(), taskId: null };\n  }\n  if (params.startsWith('sync_now_')) {\n    return { route: 'sync_now', params: params.replace('sync_now_', '').trim(), taskId: null };\n  }\n  if (params === 'sync_later') {\n    return { route: 'sync_later', params: '', taskId: null };\n  }\n  // Deep-link cho /help hyperlink (lenh khong can tham so, bam thang khong can go tay)\n  if (params === 'menu_sync') return { route: 'sync', params: '', taskId: null };\n  if (params === 'menu_sync_status') return { route: 'sync_status', params: '', taskId: null };\n  if (params === 'menu_db_status') return { route: 'db_status', params: '', taskId: null };\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (command === '/sync') return { route: 'sync', params, taskId: null };\n  if (command === '/sync_status') return { route: 'sync_status', params, taskId: null };\n  if (command === '/db_status') return { route: 'db_status', params, taskId: null };\n  if (command === '/backup_n8n') return { route: 'backup_n8n', params, taskId: null };\n  if (command === '/backup_db') return { route: 'backup_db', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    // Tai dung CHUNG logic nhan dien voi deep-link (computeRoute) - callback_data va params\n    // deep-link dung chung 1 tap prefix (sync_folder_, sync_list_, menu_sync...).\n    const r = computeRoute('', rawText);\n    route = r.route; params = r.params; taskId = r.taskId;\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
       },
       "id": "4f405de8-ae07-4928-8d4f-6b583c3f95e5",
       "name": "Phân tích lệnh",
@@ -257,6 +257,54 @@
               },
               "renameOutput": true,
               "outputKey": "db_status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fb2487c4-f0a1-4e0a-bf2e-5e4436b07c84",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "backup_n8n",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "backup_n8n"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "978968ab-7207-426f-954b-9160d1346404",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "backup_db",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "backup_db"
             }
           ]
         },
@@ -299,7 +347,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst input = $json;\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst linkSync = `https://t.me/${botUsername}?start=menu_sync`;\nconst linkSyncStatus = `https://t.me/${botUsername}?start=menu_sync_status`;\nconst linkDbStatus = `https://t.me/${botUsername}?start=menu_db_status`;\n\nconst helpText =\n`<b>📘 Danh sách lệnh (Admin)</b>\n\n<b>🔍 Tra cứu</b>\n<code>/task &lt;từ khóa&gt;</code> — Tìm task theo tên\n<code>/task chitiet_&lt;id&gt;</code> — Xem chi tiết 1 task\n\n<b>🔄 Đồng bộ dữ liệu</b>\n<a href=\"${linkSync}\">🔄 Chọn List để đồng bộ</a>\n<a href=\"${linkSyncStatus}\">📋 Xem List đang tự động sync</a>\n<a href=\"${linkDbStatus}\">📊 Thống kê dữ liệu hiện có</a>`;\n\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
+        "jsCode": "\nconst input = $json;\nconst botUsername = $('⚙️ Config').first().json.botUsername;\nconst linkSync = `https://t.me/${botUsername}?start=menu_sync`;\nconst linkSyncStatus = `https://t.me/${botUsername}?start=menu_sync_status`;\nconst linkDbStatus = `https://t.me/${botUsername}?start=menu_db_status`;\n\nconst helpText =\n`<b>📘 Danh sách lệnh (Admin)</b>\n\n<b>🔍 Tra cứu</b>\n<code>/task &lt;từ khóa&gt;</code> — Tìm task theo tên\n<code>/task chitiet_&lt;id&gt;</code> — Xem chi tiết 1 task\n\n<b>🔄 Đồng bộ dữ liệu</b>\n<a href=\"${linkSync}\">🔄 Chọn List để đồng bộ</a>\n<a href=\"${linkSyncStatus}\">📋 Xem List đang tự động sync</a>\n<a href=\"${linkDbStatus}\">📊 Thống kê dữ liệu hiện có</a>\n\n<b>💾 Sao lưu hệ thống</b>\n<code>/backup_n8n</code> — Backup toàn bộ workflow n8n lên Google Drive\n<code>/backup_db</code> — Backup Postgres lên Google Drive`;\n\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
       },
       "id": "1dfa376b-eb8c-4957-a58b-4271dc293133",
       "name": "Nội dung lệnh help",
@@ -688,6 +736,54 @@
               },
               "renameOutput": true,
               "outputKey": "sync_now"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a7a1122c-f96a-42fa-a666-680cd42d0923",
+                    "leftValue": "={{ $('Phân tích lệnh').first().json.route }}",
+                    "rightValue": "backup_n8n",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "backup_n8n"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c630e06b-5683-469e-bfa6-a0f6939cecad",
+                    "leftValue": "={{ $('Phân tích lệnh').first().json.route }}",
+                    "rightValue": "backup_db",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "backup_db"
             }
           ]
         },
@@ -1187,6 +1283,203 @@
         -3200,
         400
       ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
+        "text": "🔄 Đang backup toàn bộ workflow n8n, chờ chút...",
+        "additionalFields": {
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
+        }
+      },
+      "id": "9b822817-2c1c-4c72-a50a-48acaf2af4bf",
+      "name": "Reply Đang Backup N8N",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        2400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "zSZ6vVapow5LNpFT",
+          "name": "Telegram System Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "filters": {},
+        "requestOptions": {}
+      },
+      "id": "bb764a88-eab2-4d93-a720-7005bbed857d",
+      "name": "n8n - Lấy Toàn Bộ Workflow",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "id": "359592df-145c-4d65-9491-b4e6972189eb",
+      "name": "Convert Workflow To File",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ `n8n_backup_${new Date().toISOString().slice(0,10)}.json` }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root"
+        },
+        "options": {}
+      },
+      "id": "7824587f-2cba-4b66-a15a-0d97da54621f",
+      "name": "Upload Backup N8N (Drive)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2496,
+        2400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
+        "text": "={{ '✅ Đã backup xong toàn bộ workflow n8n lên Google Drive.\\n🔗 ' + $json.webViewLink }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8dd94689-4ec9-4a31-a116-2de4971f559b",
+      "name": "Reply Backup N8N Xong",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2752,
+        2400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "zSZ6vVapow5LNpFT",
+          "name": "Telegram System Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
+        "text": "🔄 Đang backup Postgres, chờ chút...",
+        "additionalFields": {
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
+        }
+      },
+      "id": "1812d6f2-1f45-4117-8faf-46c9176dd245",
+      "name": "Reply Đang Backup DB",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        2560
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "zSZ6vVapow5LNpFT",
+          "name": "Telegram System Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=PGPASSWORD='DIEN_MAT_KHAU_QUA_PGPASS_KHONG_GHI_O_DAY' pg_dump -h n8n_stack-postgres-1 -p 5432 -U postgres -d n8n -n clickup -n gateway -f /tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql"
+      },
+      "id": "a6f66f1d-3979-4f29-a423-f550c2b653d9",
+      "name": "Execute pg_dump",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql",
+        "options": {}
+      },
+      "id": "249931eb-990c-49aa-95c0-26d3180d2f7c",
+      "name": "Đọc File Backup SQL",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.sql` }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root"
+        },
+        "options": {}
+      },
+      "id": "876d1bdd-46bd-4b55-b6bd-cf25d3ec39bf",
+      "name": "Upload Backup DB (Drive)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2496,
+        2560
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Phân tích lệnh').first().json.chatId }}",
+        "text": "={{ '✅ Đã backup xong Postgres lên Google Drive.\\n🔗 ' + $json.webViewLink }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "01eb9671-90d9-4451-aa0d-3e786c2529a5",
+      "name": "Reply Backup DB Xong",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2752,
+        2560
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "zSZ6vVapow5LNpFT",
+          "name": "Telegram System Bot"
+        }
+      }
     }
   ],
   "connections": {
@@ -1269,6 +1562,20 @@
         [
           {
             "node": "Query DB Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Admin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Admin",
             "type": "main",
             "index": 0
           }
@@ -1421,6 +1728,20 @@
         [
           {
             "node": "Reply Đang Đồng Bộ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Đang Backup N8N",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Đang Backup DB",
             "type": "main",
             "index": 0
           }
@@ -1619,6 +1940,94 @@
         [
           {
             "node": "Phân tích lệnh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Đang Backup N8N": {
+      "main": [
+        [
+          {
+            "node": "n8n - Lấy Toàn Bộ Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n - Lấy Toàn Bộ Workflow": {
+      "main": [
+        [
+          {
+            "node": "Convert Workflow To File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Workflow To File": {
+      "main": [
+        [
+          {
+            "node": "Upload Backup N8N (Drive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Backup N8N (Drive)": {
+      "main": [
+        [
+          {
+            "node": "Reply Backup N8N Xong",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Đang Backup DB": {
+      "main": [
+        [
+          {
+            "node": "Execute pg_dump",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute pg_dump": {
+      "main": [
+        [
+          {
+            "node": "Đọc File Backup SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đọc File Backup SQL": {
+      "main": [
+        [
+          {
+            "node": "Upload Backup DB (Drive)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Backup DB (Drive)": {
+      "main": [
+        [
+          {
+            "node": "Reply Backup DB Xong",
             "type": "main",
             "index": 0
           }
