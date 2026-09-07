@@ -82,3 +82,20 @@ query duy nhất** (dùng CTE: `WITH x AS (DELETE...) INSERT...`) để chỉ c�
 TRỰC TIẾP đứng trước (1 bước, luôn an toàn) — không tham chiếu chéo qua 2+ bước.
 **Luôn test với DATASET THẬT (đủ lớn) trước khi coi 1 luồng Postgres nhiều bước là ổn định** — test
 với 5 item không đủ để phát hiện lỗi loại này.
+
+
+## 11. ⚠️ Cách ĐÚNG để dữ liệu "sống sót" qua chuỗi nhiều node Postgres — "đi nhờ" thay vì "tham chiếu ngược"
+Khi 1 chuỗi có NHIỀU node Postgres liên tiếp (mỗi node đều xoá `$json`), đừng cố tham chiếu ngược
+(`.item`/`.first()`) — dù chỉ 1-2 bước cũng có thể lỗi nếu ở giữa có Postgres không giữ pairedItem.
+**Cách đúng: cho field cần dùng "đi nhờ" qua TỪNG bước bằng `$json` trực tiếp (node ngay trước, luôn
+an toàn), không nhảy cóc qua nhiều node.**
+- Ở Code node (mode `runOnceForEachItem`): thêm field cần giữ vào chính `return {json:{...}}` của nó,
+  đọc từ `$json` (input của chính nó) — KHÔNG đọc từ node xa hơn.
+- Ở Postgres node (executeQuery) cần GHI dữ liệu nhưng vẫn phải giữ field khác đi tiếp: bọc INSERT/
+  UPDATE trong CTE, rồi `SELECT` ra các giá trị pass-through ở cuối:
+  ```sql
+  WITH ins AS ( INSERT INTO ... SELECT ... )
+  SELECT $1::text AS id, $3::text AS truong_can_giu;
+  ```
+  Cách này đảm bảo LUÔN ra đúng 1 dòng output (bất kể câu INSERT bên trong ghi bao nhiêu dòng), mang
+  theo đúng field cần thiết — không cần tham chiếu ngược ở bất kỳ node nào phía sau.
