@@ -239,23 +239,23 @@ hay (B).
 5. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng, user xác nhận
    CHƯA CẦN làm ngay, giữ nguyên hiện trạng.
 
-### ✅ Đã xong + TEST THẬT OK (08/09/2026, cuối phiên) — Bot Xử Lý Ảnh (/xoanen + /tomtat)
+### ✅ Đã xong + TEST THẬT OK — Bot Xử Lý Ảnh (/xoanen + /tomtat) — 08/09/2026, hết phiên
 - **`/xoanen` xác nhận chạy được với ảnh Telegram thật** — remove.bg xóa nền, gửi lại document
   `.png` giữ transparency.
-- **`/tomtat` xác nhận chạy được** — OCR song song 2 nguồn (OCR.space + Mistral Cloud
-  `mistral-ocr-latest`, KHÔNG dùng OpenRouter cho vision nữa) → AI tổng hợp (`Mistral (qua
-  OpenRouter)` node — hiện đang set model `google/gemini-3.5-flash-lite`, tên node giữ nguyên
-  "Mistral (qua OpenRouter)" nhưng model thật là Gemini, cân nhắc đổi tên node cho khỏi nhầm) ra
-  tiếng Việt, emoji, Markdown Telegram, link dạng bấm-mở + copy-plaintext.
-- **Vision (Mistral Cloud) prompt đã đơn giản hoá về OCR THUẦN** (không mô tả bối cảnh) theo yêu
-  cầu user — vừa đúng nhu cầu vừa nhanh hơn. ⚠️ User báo Mistral Cloud vẫn khá chậm — nếu cần tối ưu
-  thêm tốc độ, cân nhắc bỏ hẳn 1 trong 2 nguồn OCR (chỉ OCR.space hoặc chỉ Mistral) thay vì chạy
-  song song, hỏi ý kiến user trước khi đổi.
-- Toàn bộ 3 credential cần thiết đã tạo xong và xác nhận đúng: `REMOVE.BG` (X-Api-Key),
-  `Spaceocr`/OCR.space (đã sửa template đúng header `apikey`, ban đầu bị nhầm copy header của
-  remove.bg), `Mistral Cloud account`.
-- Chi tiết đầy đủ chuỗi debug (6+ lỗi khác nhau đã gặp và sửa): xem CHANGELOG mục 08/09/2026 (2
-  entry cuối cùng trong ngày).
+- **`/tomtat` build xong, cả 2 nguồn OCR đã xác nhận key/credential đúng** (OCR.space + Mistral) —
+  vừa đổi kiến trúc Vision sang node OCR gốc `n8n-nodes-base.mistralAi` (extractText) thay vì
+  LangChain Chat Model, theo đúng yêu cầu user (chỉ cần OCR thuần, tận dụng free plan OCR của
+  Mistral). ⚠️ **CẦN 1 LẦN TEST CUỐI** sau khi đổi — field text đọc từ `pages[0].markdown` (tra từ
+  tài liệu Mistral OCR chính thức, CHƯA tự chạy thử được qua MCP vì loại trigger không hỗ trợ gọi
+  trực tiếp) — gửi `/tomtat` kèm ảnh 1 lần nữa để xác nhận, xem execution log nếu lỗi.
+- AI tổng hợp cuối dùng node `Mistral (qua OpenRouter)` — ⚠️ tên node gây nhầm lẫn: model THẬT
+  đang set là `google/gemini-3.5-flash-lite` (Gemini, không phải Mistral) — nên đổi tên node cho
+  khớp thực tế lần sau sửa.
+- Toàn bộ credential cần thiết đã tạo và xác nhận đúng: `REMOVE.BG` (X-Api-Key), `Spaceocr`/
+  OCR.space (header `apikey`, ban đầu bị nhầm copy header remove.bg — đã sửa), `Mistral Cloud
+  account` (dùng credential type `mistralCloudApi`, KHÔNG còn dùng OpenRouter cho phần OCR/Vision).
+- Chi tiết đầy đủ toàn bộ chuỗi debug (8+ lỗi khác nhau đã gặp và sửa, có thể tham khảo lại nếu gặp
+  lỗi tương tự): xem CHANGELOG mục 08/09/2026 (3 entry cuối cùng trong ngày).
 
 ### ⚪ Còn treo, chưa ưu tiên
 6. Workflow ID cho Help Bot GPT → gắn Gateway.
