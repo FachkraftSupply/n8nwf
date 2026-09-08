@@ -8,6 +8,37 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
+## 🔴 XÁC NHẬN: Upload OneDrive VẪN CHƯA hoạt động (sau khi đã vá lỗi alwaysOutputData)
+
+User đã test lại sau khi vá sự cố P0 (mục ngay bên dưới) — nút "📤 Upload OneDrive" **vẫn không có
+phản hồi**. Vậy sự cố alwaysOutputData KHÔNG PHẢI nguyên nhân duy nhất (hoặc không phải nguyên nhân
+đúng) khiến nút này không chạy — **cần điều tra tiếp vào phiên sau, CHƯA rõ nguyên nhân thật**.
+
+**Việc cần làm ĐẦU TIÊN phiên sau để debug:**
+1. Kiểm tra execution mới nhất của `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`) VÀ `GW Gateway`
+   (`xmEKeIUnzxm2F7dF`) ngay sau thời điểm user bấm nút — xem callback `od_start_<id>` có tới được
+   Gateway không, có được route đúng `bot_key: telebot_main` không, sub-workflow ClickUp Reader có
+   được gọi không, và nếu có thì dừng ở node nào.
+2. **Nghi phạm số 1 (đã ghi từ phiên trước)**: nút bấm được hiển thị hay KHÔNG hiển thị luôn trên
+   tin nhắn chi tiết task? Nếu nút thậm chí không hiện ra → lỗi nằm ở `Beautify chi tiết`/node
+   `Telegram` (shared send) — cụ thể là cách set `inlineKeyboard`/`replyMarkup` bằng BIỂU THỨC
+   (`={{ $json.telegramInlineKeyboard }}`) thay vì OBJECT TĨNH như MỌI nơi khác trong cả codebase
+   đang làm (vd `Báo admin duyệt user`, `Send Detail Panel` đều set `inlineKeyboard` là object cố
+   định, KHÔNG phải expression). Đây là lần ĐẦU TIÊN toàn bộ codebase thử cách set động này — rất
+   có thể n8n KHÔNG evaluate expression cho field `inlineKeyboard` giống các field text thường (khác
+   với giả định ban đầu). Nếu đúng vậy, cách sửa: tách 2 node Telegram riêng (1 cho có nút, 1 cho
+   không có nút) thay vì 1 node dùng chung với keyboard động — giống pattern `IF` rẽ nhánh trước khi
+   gửi, tránh hẳn việc set `inlineKeyboard` bằng expression.
+3. Nếu nút CÓ hiện nhưng bấm không phản hồi → tra tiếp theo thứ tự: `GW-03 Router` có nhận diện
+   đúng prefix `od_` không (đã thêm ở phiên trước, cần xác nhận lại) → `Phân tích lệnh` (ClickUp
+   Reader) có parse đúng route `od_start` không → `Switch` (ClickUp Reader, đã thêm 5 output mới)
+   nối đúng chưa (RÀ LẠI Y HỆT KIỂU LỖI ĐÃ GẶP 3 LẦN TRƯỚC — connections dồn hết vào 1 output).
+
+📄 **Tài liệu mới**: đã tạo `docs/FEATURE_CATALOG.md` — bảng đầy đủ tính năng theo từng bot (User
+Gateway, Telebot ClickUp Reader, Bot Xử Lý Ảnh, Telebot Admin System, workflow nền, bot chưa hoàn
+thiện), kèm mô tả cách hoạt động, workflow liên quan, ngày cập nhật. Dùng file này thay vì hỏi lại
+"tính năng X nằm ở đâu" mỗi phiên.
+
 ## 🚨 PHIÊN MỚI NHẤT 3 (08/09/2026 tối, sau phiên 2) — Sự cố P0 tự gây ra + user panel mới
 
 **⚠️ SỰ CỐ NGHIÊM TRỌNG (đã sửa xong, nhưng cần biết để tránh lặp lại):**
