@@ -8,6 +8,59 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
+## 🚨 PHIÊN MỚI NHẤT 3 (08/09/2026 tối, sau phiên 2) — Sự cố P0 tự gây ra + user panel mới
+
+**⚠️ SỰ CỐ NGHIÊM TRỌNG (đã sửa xong, nhưng cần biết để tránh lặp lại):**
+Khi build tính năng Upload OneDrive (phiên trước), 2 node Postgres mới thêm vào Gateway
+(`Ensure Pending Uploads Table`, `GW-04 Check Pending Upload`) được set `alwaysOutputData:true` +
+`onError:"continueRegularOutput"` **NGAY TRONG THAM SỐ `addNode`** — nhưng thao tác `addNode` của
+n8n MCP **KHÔNG hỗ trợ 2 field này** (chỉ nhận id/name/type/typeVersion/position/disabled/notes/
+credentials/parameters), nên chúng bị ÂM THẦM BỎ QUA. Hậu quả: `GW-04 Check Pending Upload` (SELECT
+tìm pending upload theo chat_id) trả về 0 dòng cho MỌI user KHÔNG có upload đang chờ (tức là hầu như
+100% lượt chat bình thường) → 0 item output → TOÀN BỘ chuỗi phía sau (kể cả `GW-03 Router`) không hề
+chạy → **MỌI lệnh của MỌI user active (kể cả /task, /help) đều không có phản hồi** trong khoảng thời
+gian workflow này active (từ lúc publish tính năng OneDrive tới lúc phát hiện & sửa, cùng trong phiên
+08/09/2026). Đã xác nhận qua execution thật của user `thanhhado` gõ `/task quynh` — dừng đúng tại
+`GW-04 Check Pending Upload`, không có `GW-04b Merge Pending` hay `GW-03 Router` nào chạy.
+
+**Đã sửa**: dùng `setNodeSettings` (field này CÓ hỗ trợ alwaysOutputData/onError) áp lại cho cả 2 node
+trên trong Gateway, và cho `OD Task Lookup`/`Resolve OneDrive Folder`/`Upload To OneDrive` trong
+`Telebot ClickUp Reader` (cũng bị lỗi y hệt vì cùng thêm qua `addNode`). Đã publish cả 2 workflow.
+
+**⚠️ GHI NHỚ KỸ THUẬT MỚI (bổ sung mục "GHI NHỚ KỸ THUẬT" bên dưới):** khi dùng n8n MCP `update_workflow`
+để **thêm node mới** (`addNode`) mà node đó cần `alwaysOutputData` hoặc `onError`/`retryOnFail` khác
+mặc định — **KHÔNG đặt trong object `node` của `addNode`** (sẽ bị bỏ qua không báo lỗi, không cảnh
+báo gì). Phải thêm node trước bằng `addNode` (chỉ với id/name/type/typeVersion/position/parameters/
+credentials), rồi gọi **`setNodeSettings`** RIÊNG một operation khác ngay sau đó để set các field này.
+Đây là lỗi ÂM THẦM NGUY HIỂM NHẤT gặp phải tới giờ vì nó không hiện cảnh báo validate nào và có thể
+làm sập toàn bộ luồng chính (không chỉ tính năng mới) nếu node mới nằm trên đường đi chung của mọi
+request — như trường hợp này. Từ nay: BẤT KỲ node Postgres/HTTP nào mới thêm vào 1 luồng dùng chung
+(không phải nhánh riêng của 1 lệnh cụ thể) — nếu cần alwaysOutputData/onError, LUÔN xác minh lại bằng
+cách đọc lại `get_workflow_details` sau khi thêm, không tin tưởng nguyên văn operation đã gửi.
+
+**Tính năng mới ĐÃ BUILD xong (CHƯA TEST THẬT) — Panel user nâng cao trong `/user_list`:**
+`Telebot Admin System` (`eWtu7Qs85Hes0HuP`), panel chi tiết user (`Send Detail Panel`) giờ có 6 nút:
+➕ Thêm quyền, ➖ Xóa quyền (đã có từ trước) + 3 nút MỚI:
+- **⚡ Cấp tất cả quyền** (`gall:<uid>`) — grant thẳng cả 4 bot (`telebot_main`, `help_bot`,
+  `crawl_bot`, `image_bot`) 1 lần, dual-write Postgres+Supabase, không cần xác nhận (hành động cộng
+  thêm, có thể thu hồi lại sau nên không rủi ro).
+- **⛔ Block user** (`bl:<uid>`) — set `status='blocked'` dual-write, không cần xác nhận. LƯU Ý: chưa
+  cần sửa Gateway vì `GW-02b Merge Auth` đã coi MỌI status khác active/pending là "denied" (tự động
+  chặn luôn, không cần thêm nhánh riêng cho 'blocked').
+- **🗑️ Xóa hoàn toàn** (`dl:<uid>`) — hành động KHÔNG THỂ HOÀN TÁC nên có bước xác nhận riêng: bấm
+  vào hiện panel "⚠️ Xác nhận XÓA VĨNH VIỄN..." với 2 nút "✅ Xác nhận xóa" (`dlc:<uid>`, thực thi
+  DELETE khỏi `gateway.bot_users` + `gateway.bot_permissions` ở CẢ Postgres Docker và Supabase) và
+  "❌ Hủy" (`um:<uid>`, quay lại panel chi tiết — tái dùng route có sẵn).
+- Node mới: `Grant All DB Docker/Supabase`, `Block User DB Docker/Supabase`, `Delete Confirm Panel`,
+  `Send Delete Confirm`, `Delete User DB Docker/Supabase`, `Reply Deleted`. Router: thêm 4 prefix mới
+  vào `Admin Extras Router` (`gall:`, `bl:`, `dl:`, `dlc:`) + 4 output mới vào `Switch (Admin Extras)`
+  (giờ 13 output: index 9=grant_all, 10=block_user, 11=delete_prompt, 12=delete_confirm).
+- ⚠️ CHƯA TEST — cần user thử đủ cả 3 nút trên 1 user thật (khuyến nghị test trên user KHÔNG quan
+  trọng trước, đặc biệt nút Xóa hoàn toàn vì không thể hoàn tác).
+
+**Còn nợ từ yêu cầu trước (chưa làm trong phiên này):** UX tự xóa tin nhắn cũ trước khi gửi tin mới
+cho các lệnh admin — vẫn đang ở dạng ghi chú kế hoạch bên dưới, chưa code.
+
 ## 🔜 VIỆC TIẾP THEO — bắt đầu ngay khi mở phiên mới (đọc mục này ĐẦU TIÊN)
 
 **User yêu cầu cuối phiên 08/09/2026, CHƯA BẮT ĐẦU LÀM (chỉ mới ghi nhận yêu cầu):**
