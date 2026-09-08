@@ -43,25 +43,15 @@ không có `apk`, chạy user thường "node" không phải root).
     vào chính VPS, chạy `docker exec n8n_stack-postgres-1 pg_dump -U n8n -d n8n -n clickup -n gateway
     > backup_file.sql` từ đó — né được cả rủi ro docker.sock lẫn việc build image.
 
-## ⚠️ VIỆC ƯU TIÊN CHO NGÀY MAI — triển khai node SSH cho pg_dump thật
-
-1. Xác nhận đã tạo được credential SSH trong n8n (host VPS thật, dùng SSH key RIÊNG — không dùng chung
-   key với Claude Code) — hỏi user xem đã tạo chưa trước khi sửa workflow.
-2. Sửa `SQL_Backup_System.json`: thêm lại node kiểu **SSH** (không phải Execute Command) trong nhánh
-   backup DB, câu lệnh:
-   ```
-   docker exec n8n_stack-postgres-1 pg_dump -U n8n -d n8n -n clickup -n gateway > /path/backup_$(date +%F_%H%M).sql
-   ```
-   (⚠️ Xác nhận lại đúng tên container Postgres + tên database/user thật với user trước khi hardcode —
-   Claude Code dùng `n8n_stack-postgres-1`/`-U n8n -d n8n`, có thể khác với thông tin cũ trong memory
-   dự án `-U postgres`, CẦN HỎI LẠI USER XÁC NHẬN, KHÔNG ĐOÁN.)
-3. Xử lý output của SSH node — cần đọc lại nội dung file `.sql` từ VPS (SSH node có hỗ trợ download file
-   không, hay cần thêm bước riêng?) — tra cứu kỹ trước khi build, tránh đoán mù (đã có tiền lệ lỗi vì
-   đoán sai tham số node).
-4. Test lại `/backup_db` — xác nhận ra đúng file `.sql` đầy đủ (không chỉ 3 bảng JSON như bản tạm hiện
-   tại).
-5. Sau khi pg_dump qua SSH hoạt động ổn định, cân nhắc: giữ luôn bản backup JSON (3 bảng qua Postgres
-   node) làm phương án dự phòng song song, hay bỏ hẳn — hỏi ý kiến user.
+## ✅ HOÀN TẤT (08/09/2026) — Backup Postgres qua SSH thật (Phase 3 DB backup)
+- `SQL_Backup_System.json` nhánh DB đã đổi sang pg_dump SQL thật qua 4 node SSH (không còn bản
+  JSON 3 bảng tạm). Đã test executeWorkflow qua MCP nhiều lần, `status: success`, file `.sql` lên
+  đúng OneDrive, Telegram báo đúng link. Chi tiết đầy đủ + 3 lỗi đã gặp/đã sửa: xem CHANGELOG.md
+  mục 2026-09-08.
+- Credential Postgres thật đã xác nhận: `-U n8n -d n8n`, schema `clickup` + `gateway`.
+- Câu hỏi còn treo (chưa quyết định): có giữ song song bản backup JSON 3 bảng cũ làm dự phòng
+  không, hay bỏ hẳn như hiện tại (đã bỏ trong lần sửa này)? Hỏi lại user nếu cần.
+- Việc còn lại của Phase 3: **Chuyển Crawl Bot** (chưa bắt đầu).
 
 ## Repo
 `FachkraftSupply/n8nwf`, folder `bot-gateway/` — kết nối GitHub qua Composio (OAuth, không dùng token).
@@ -161,7 +151,7 @@ bot-gateway/
 | 2 | Help Bot GPT nhận Envelope | ✅ Code xong, ⏳ chờ Workflow ID thật để gắn Gateway |
 | 2b | Telebot ClickUp Reader (đọc/tìm task + /sync) | ✅ HOÀN TẤT CẢ 2 — tìm kiếm/chi tiết task VÀ /sync (chọn Folder/List, lưu clickup.sync_targets, kích hoạt Full Reconcile) đều đã xác nhận hoạt động qua Gateway; chỉ còn OneDrive view_file tạm tắt |
 | 2c | SQL Sync ClickUp ↔ Postgres | ✅ HOÀN TẤT — Full Reconcile (21 node, engine sync 1 List + tự tra tên List) + Sync Scheduler (6 node, điều phối đa-List từ `clickup.sync_targets`, tách riêng để dễ theo dõi Executions) + Live Update (9 node, webhook real-time). ⚠️ Cần điền Workflow ID của Full Reconcile vào Scheduler (xem checklist) |
-| 3 | Backup Postgres → OneDrive (Phương án B — SQL export thuần n8n) | Chưa bắt đầu |
+| 3 | Backup Postgres → OneDrive (Phương án C — pg_dump SQL thật qua SSH) | ✅ Xong (08/09/2026) |
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
 | 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
 | — | Bot System Main (xử lý ảnh, tách từ Telebot_main.json cũ) | Chưa bắt đầu |
