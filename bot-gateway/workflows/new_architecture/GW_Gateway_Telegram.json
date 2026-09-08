@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', start:'telebot_main', help:'telebot_main',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot' },\n  // Luu y: /sync, /sync_status, /db_status KHONG con o day nua - da chuyen sang\n  // Telebot_Admin_System.json (Trigger rieng tren @elite_n8n_system_bot, khong qua Gateway)\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"
+        "jsCode": "// ╔═════════════════════════════════════════╗\n// ║  CONFIG - sửa 1 chỗ, dùng toàn workflow    ║\n// ╚══════════════════════════════════════════╝\nreturn [{ json: {\n  ADMIN_CHAT_ID: '975005174',\n  AVAILABLE_BOTS: ['telebot_main', 'help_bot', 'crawl_bot', 'image_bot'],\n  // map lệnh -> bot_key\n  COMMAND_MAP: { task:'telebot_main', t:'telebot_main', start:'telebot_main', help:'telebot_main',\n                 ask:'help_bot', sum:'crawl_bot', crawl:'crawl_bot',\n                 xoanen:'image_bot', tomtat:'image_bot' },\n  // Luu y: /sync, /sync_status, /db_status KHONG con o day nua - da chuyen sang\n  // Telebot_Admin_System.json (Trigger rieng tren @elite_n8n_system_bot, khong qua Gateway)\n  DEFAULT_BOT: 'help_bot'   // tin nhắn tự do (không lệnh) route về đâu\n}}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -612,6 +612,30 @@
               },
               "renameOutput": true,
               "outputKey": "unknown"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6bfe1f95-8ab2-4938-8134-c7e64151e8a1",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "image_bot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image_bot"
             }
           ]
         },
@@ -1146,6 +1170,28 @@
         -2900,
         400
       ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "6I4MnJiJCiv2JOIr",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -9136,
+        2680
+      ],
+      "id": "b3f5a1a2-6c1b-4a3e-9c4e-6e6a4a1f9a01",
+      "name": "→ Sub: Image Bot",
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -1329,6 +1375,13 @@
         [
           {
             "node": "Hướng dẫn lệnh",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "→ Sub: Image Bot",
             "type": "main",
             "index": 0
           }
