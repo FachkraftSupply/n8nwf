@@ -48,6 +48,29 @@ nếu cần.
   (bấm mở link) + dòng dưới bọc `<code>` (chạm copy nguyên văn URL), đồng bộ cho cả
   `Telebot_ClickUp_Reader.json` và `Telebot_Admin_System.json`.
 
+## 2026-09-08 (tiếp, hết phiên) — /tomtat hoàn tất, đổi sang Mistral OCR native
+- **OCR.space đã hoạt động** — lỗi `Missing apikey` trước đó do Auth Template của credential
+  `Spaceocr` dùng nhầm header `X-Api-Key` (của remove.bg) thay vì đúng header `apikey` của
+  OCR.space. Đã sửa, xác nhận qua `curl` độc lập trước khi kết luận.
+- **Đổi kiến trúc nhánh Vision theo yêu cầu user** (chỉ cần OCR thuần bằng Mistral, không cần mô
+  tả bối cảnh, và dùng đúng node/API dành cho OCR để tận dụng gói free của Mistral thay vì gọi qua
+  Chat Completion):
+  - Thay thế `Mô Tả Ảnh Bằng AI (Vision)` (`chainLlm` + subnode `Mistral Cloud Chat Model` qua
+    LangChain) bằng node gốc **`n8n-nodes-base.mistralAi`** (resource `document`, operation
+    `extractText`) — gọi thẳng OCR endpoint của Mistral (`mistral-ocr-latest`), không qua lớp
+    Chat Completion/LangChain — đơn giản hơn, đúng mục đích, tận dụng pricing/free-tier riêng của
+    OCR endpoint.
+  - Đã tra cứu **response schema thật** từ tài liệu Mistral OCR chính thức trước khi build:
+    `{ pages: [{ markdown: "...", ... }], model, usage_info }` — field text nằm ở
+    `pages[0].markdown`, KHÔNG phải `text` như chainLlm cũ. Sửa lại prompt tổng hợp cuối cho khớp.
+  - Dọn 1 node `Extract text` (cùng loại, do user tự thêm thử nghiệm) bị orphan chưa nối dây.
+- **Kết quả**: cả `/xoanen` và `/tomtat` đã xác nhận chạy được với ảnh Telegram thật, đã publish.
+  Còn cần 1 lần test cuối để xác nhận field `pages[0].markdown` đúng như tài liệu (build dựa trên
+  tài liệu chính thức, CHƯA tự chạy thử được vì trigger không hỗ trợ gọi trực tiếp qua MCP).
+- User ghi nhận Mistral Cloud (Vision) chạy khá chậm — nếu cần tối ưu tốc độ thêm, cân nhắc bỏ bớt
+  1 trong 2 nguồn OCR song song (OCR.space hoặc Mistral) thay vì chạy cả 2 — cần hỏi ý kiến user
+  trước khi đổi, không tự quyết.
+
 ## 2026-09-08 (tiếp) — CUTOVER sang bot PROD (Giai đoạn 4) + fix format /task
 - **Cutover chính thức theo `GO_LIVE_CHECKLIST.md`**: đổi bot DEV (`@elite_n8n_test_bot`) sang PROD
   (`@Elite_clickup_bot`) cho `GW_Gateway_Telegram.json` (11 node: Trigger + 10 reply/notify),
