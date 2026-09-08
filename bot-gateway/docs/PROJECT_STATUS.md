@@ -154,7 +154,7 @@ bot-gateway/
 | 3 | Backup Postgres → OneDrive (Phương án C — pg_dump SQL thật qua SSH) | ✅ Xong (08/09/2026) |
 | 3 | Chuyển Crawl Bot | Chưa bắt đầu |
 | 4 | Cutover Gateway sang bot PROD | Chưa bắt đầu |
-| — | Bot System Main (xử lý ảnh, tách từ Telebot_main.json cũ) | Chưa bắt đầu |
+| — | Bot System Main (xử lý ảnh, tách từ Telebot_main.json cũ) | 🔵 Đã có `/xoanen` + `/tomtat` (08/09/2026), còn thiếu các lệnh khác (nền trắng, chèn logo...) |
 | — | Tính năng mới: `/sync` admin-only chọn Folder/List qua Telegram, tự lưu để auto-sync | ⏸️ TẠM TẮT khi revamp 05/09/2026 (đã xoá khỏi file đang dùng), sẽ làm lại từ đầu sau khi tìm kiếm ổn định |
 | — | Rate-limit khi Full Reconcile lấy comment (nhiều task) | 🔵 Đang thiết kế (xem chat 05/09/2026) |
 
@@ -239,13 +239,18 @@ hay (B).
 5. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng, user xác nhận
    CHƯA CẦN làm ngay, giữ nguyên hiện trạng.
 
-### 🔵 Đang làm (08/09/2026)
-- **Sub-workflow xử lý ảnh mới** — nhận ảnh gửi qua Telegram, đọc lệnh trong caption:
-  - `/xoanen` — xóa nền ảnh
-  - `/tomtat` — tóm tắt nội dung ảnh (mô tả/OCR + tóm tắt)
-  - Đây chính là hạng mục "Bot System Main (xử lý ảnh)" trong roadmap — bắt đầu triển khai.
-  - Tham khảo logic xử lý ảnh cũ: `workflows/new_architecture/sub_workflows_modernized/Telebot_main.json`
-    (giữ lại chỉ để tham khảo, KHÔNG dùng trực tiếp — xem ghi chú trong cấu trúc repo ở trên).
+### ✅ Đã xong (08/09/2026) — Bot Xử Lý Ảnh (/xoanen + /tomtat), gắn Gateway
+- `Bot_Image_Processing.json` (19 node) — hạng mục "Bot System Main (xử lý ảnh)" trong roadmap coi
+  như đã bắt đầu và có tính năng đầu tiên chạy được. Chi tiết đầy đủ: xem CHANGELOG 08/09/2026.
+- `/xoanen`: remove.bg xóa nền, gửi lại document giữ transparency.
+- `/tomtat`: OCR **song song 2 nguồn** (OCR.space + Mistral Vision qua OpenRouter) → AI tổng hợp
+  ra tiếng Việt, emoji, đúng Markdown Telegram.
+- **CẦN LÀM TRƯỚC KHI DÙNG THẬT**: tạo 2 credential trong n8n UI — `remove.bg API` và
+  `OCR.space API` (dạng httpTemplatedCustomAuth) — không tự động hóa được vì cần API key thật.
+  Khuyến nghị tạo key MỚI, không dùng lại key cũ đã lộ trong `original/Telebot_main.json` và
+  `original/Elite_Crawl_Bot.json`.
+- Chưa test thật qua Telegram (đang chờ user tạo 2 credential trên) — cần test `/xoanen` và
+  `/tomtat` với ảnh thật trước khi coi là hoàn tất.
 
 ### ⚪ Còn treo, chưa ưu tiên
 6. Workflow ID cho Help Bot GPT → gắn Gateway.
