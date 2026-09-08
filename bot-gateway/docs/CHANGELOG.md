@@ -4,6 +4,50 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-08 (tiếp, cuối phiên) — /xoanen HOẠT ĐỘNG THẬT; /tomtat + cutover đang hoàn thiện
+- **`/xoanen` xác nhận chạy được với ảnh Telegram thật** sau chuỗi debug live qua execution log:
+  1. Node "Có Ảnh Không" lỗi kiểu dữ liệu — thiếu `singleValue: true` trong operator `array.exists`
+     (so với bản gốc `Telebot_main.json`).
+  2. `wrong file_id` — do vẫn dùng credential Telegram cũ sau khi cutover; **file_id của 1 bot
+     KHÔNG dùng được với bot khác** — mọi node Get File trong sub-workflow phải cùng credential với
+     bot Gateway đang nhận tin nhắn.
+  3. **Bug build gốc nghiêm trọng nhất**: node "Gọi remove.bg API" chưa từng gửi ảnh thật — SDK n8n
+     Workflow Builder không hỗ trợ khai báo `bodyParameters` kiểu `formBinaryData` qua type an toàn,
+     nên lúc build ban đầu chỉ có tham số `size=auto`, thiếu hẳn `image_file`. Phải vá bằng
+     `setNodeParameter` raw JSON sau khi tạo, đúng như cảnh báo tự đặt ra lúc build nhưng quên thực
+     hiện — **bài học: LUÔN verify bằng 1 lần chạy thật ngay sau khi build node dùng SDK cho phần
+     không có type hỗ trợ đầy đủ, đừng tin suông là đã thêm đủ tham số.**
+  4. Credential `REMOVE.BG` ban đầu chứa API key sai/hết hạn — xác nhận độc lập bằng `curl` trực
+     tiếp (không qua n8n) trước khi kết luận là lỗi key, không phải lỗi workflow.
+  5. `parameterType: "formBinaryData"` không hiện trong TS type định nghĩa httpRequest v4.5 khi build
+     qua SDK, nhưng node vẫn CHẤP NHẬN khi set qua raw `update_workflow` — xác nhận: SDK typing không
+     đầy đủ = giới hạn của lớp SDK, không phải giới hạn thật của node.
+  6. Đặt tên file kết quả rõ ràng `.png` (remove.bg trả PNG có alpha) thay vì tên mặc định không rõ
+     định dạng.
+- **`/tomtat` đang debug tiếp** — đã qua bug Telegram/credential, còn vướng:
+  - `Gọi OCR.space API` báo `E572: Missing apikey` — do gán NHẦM dùng chung credential với
+    `REMOVE.BG` lúc đầu (2 API key khác nhau, credential khác nhau).
+  - Sau khi gán đúng credential `Spaceocr` (Simplified Custom Auth riêng) — đang chờ user xác nhận
+    kết quả.
+  - **User đã tự nâng cấp** node Vision từ Mistral-qua-OpenRouter sang **Mistral Cloud thật**
+    (`mistral-ocr-latest` qua credential `mistralCloudApi` mới) — model chuyên OCR, giữ nguyên
+    hướng đi này, không revert.
+- **Cutover PROD bot (Giai đoạn 4) hoàn tất cho**: `GW_Gateway_Telegram.json` (11 node),
+  `Telebot_ClickUp_Reader.json` (`USE_PROD_BOT=true` + 4 node), `Bot_Image_Processing.json`
+  (7 node) — tất cả dùng `Elite Clickupbot` (`@Elite_clickup_bot`).
+- **Bug phát sinh do người dùng thật (không phải admin) nhắn bot PROD lần đầu**: node
+  "Không có quyền bot này" crash với `can't find end of the entity` — `bot_key` như `telebot_main`
+  (có dấu `_`) bị hiểu nhầm là markup Markdown khi thiếu `parse_mode` tường minh. Đã fix bằng cách
+  set rõ `parse_mode: HTML`. **Bài học: MỌI node Telegram chèn giá trị động vào text đều nên set
+  `parse_mode` tường minh, không dựa vào default ngầm định.**
+- **Vấn đề vận hành phát hiện thêm**: `update_workflow` qua MCP có thể bị **user tự lưu đè lại** nếu
+  họ mở workflow trong UI trước khi bản publish của Claude kịp áp dụng (credential Telegram bị quay
+  lại giá trị cũ 2 lần trong phiên này) — khi nghi ngờ 1 fix "biến mất", kiểm tra lại
+  `get_workflow_details` trước khi debug tiếp theo hướng khác.
+- **Format `/task chitiet_<id>` v3**: link giờ hiển thị **2 lớp** — tiêu đề in đậm bọc `<a href>`
+  (bấm mở link) + dòng dưới bọc `<code>` (chạm copy nguyên văn URL), đồng bộ cho cả
+  `Telebot_ClickUp_Reader.json` và `Telebot_Admin_System.json`.
+
 ## 2026-09-08 (tiếp) — CUTOVER sang bot PROD (Giai đoạn 4) + fix format /task
 - **Cutover chính thức theo `GO_LIVE_CHECKLIST.md`**: đổi bot DEV (`@elite_n8n_test_bot`) sang PROD
   (`@Elite_clickup_bot`) cho `GW_Gateway_Telegram.json` (11 node: Trigger + 10 reply/notify),
