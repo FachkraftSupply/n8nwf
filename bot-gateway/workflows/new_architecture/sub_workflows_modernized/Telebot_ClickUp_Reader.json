@@ -5,26 +5,26 @@
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "c2ec4e81-01b0-4192-9ec1-9f5293f044bb",
+      "id": "94bc3bad-a7b0-420e-8998-5b8120220fe0",
       "name": "sub workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.2,
       "position": [
-        -3200,
-        400
+        -816,
+        2672
       ]
     },
     {
       "parameters": {
         "jsCode": "\n// Router: nhan Message Envelope (spec ARCHITECTURE.md muc 3) tu Gateway.\n// 07/09/2026: bo han /sync* + /sync_status + /db_status - da tach rieng sang\n// Telebot_Admin_System.json (bot System rieng, admin dung). Bot thuong (qua Gateway) chi con:\n// help / task / chitiet / free_text.\nconst items = $input.all();\n\nfunction parseCommand(rawText) {\n  let command = '';\n  let params = '';\n  if ((rawText || '').startsWith('/')) {\n    const parts = rawText.trim().split(/\\s+/);\n    command = parts[0].toLowerCase();\n    params = parts.slice(1).join(' ');\n  } else {\n    params = rawText || '';\n  }\n  return { command, params };\n}\n\nfunction computeRoute(command, params) {\n  if (params.startsWith('chitiet_')) {\n    return { route: 'chitiet', params: 'chitiet', taskId: params.replace('chitiet_', '').trim() };\n  }\n  if (command === '/task') return { route: 'task', params, taskId: null };\n  if (command === '/help' || command === '/start') return { route: 'help', params, taskId: null };\n  if (!command && params) return { route: 'free_text', params, taskId: null };\n  return { route: 'unknown_command', params, taskId: null };\n}\n\nreturn items.map(it => {\n  const env = it.json ?? {};\n  const isCallback = env.kind === 'callback';\n  const rawText = isCallback ? (env.callback?.data || '') : (env.text || '');\n\n  let route, command = '', params = '', taskId = null;\n\n  if (isCallback) {\n    if (rawText.startsWith('chitiet_')) {\n      route = 'chitiet'; taskId = rawText.replace('chitiet_', '').trim(); params = 'chitiet';\n    } else {\n      route = 'unknown_command'; params = rawText;\n    }\n  } else {\n    const parsed = parseCommand(rawText);\n    command = parsed.command;\n    const r = computeRoute(parsed.command, parsed.params);\n    route = r.route; params = r.params; taskId = r.taskId;\n  }\n\n  const legacyMessage = !isCallback ? {\n    text: env.text || '',\n    chat: { id: env.chat_id },\n    message_id: env.raw?.message_id ?? null,\n    from: { id: env.user_id, username: env.username }\n  } : undefined;\n  const legacyCallback = isCallback ? {\n    id: env.callback?.id,\n    data: env.callback?.data,\n    message: { chat: { id: env.chat_id }, message_id: env.callback?.message_id }\n  } : undefined;\n\n  return {\n    json: {\n      route, command, params, taskId,\n      chatId: env.chat_id,\n      messageId: isCallback ? (env.callback?.message_id ?? null) : (env.raw?.message_id ?? null),\n      isCallback,\n      originalData: { ...env, message: legacyMessage, callback_query: legacyCallback }\n    }\n  };\n});\n"
       },
-      "id": "4f405de8-ae07-4928-8d4f-6b583c3f95e5",
+      "id": "41be8482-684b-483a-bf64-cdae3a4d0d48",
       "name": "Phân tích lệnh",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2960,
-        400
+        -576,
+        2672
       ]
     },
     {
@@ -109,13 +109,13 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "c87ee8f7-31d5-4fd9-8a3b-9eb41b88b5e6",
+      "id": "4dd43c31-7eb9-4272-a904-c8ec3708dfa0",
       "name": "Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        -2688,
-        400
+        -304,
+        2672
       ]
     },
     {
@@ -127,18 +127,18 @@
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
-      "id": "f2c91f97-dc26-4f59-8899-51be0d22c5ad",
+      "id": "2a6e2a38-c434-4046-ac22-b0e8f89ec1d4",
       "name": "Reply Unknown Command",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2384,
-        900
+        0,
+        3184
       ],
       "credentials": {
         "telegramApi": {
-          "id": "stuiyiJvXIuqhNuc",
-          "name": "Telegram Bot (PROD)"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -146,13 +146,13 @@
       "parameters": {
         "jsCode": "\nconst input = $json;\nconst helpText = `<b>\\U0001F4D8 Danh sach lenh Telegram</b>\\n\\n` +\n  `\\U0001F449 <code>/task &lt;tu khoa&gt;</code> - Tim task\\n` +\n  `\\U0001F449 <code>/task chitiet_&lt;id&gt;</code> - Chi tiet task\\n\\n` +\n  `\\U0001F4CC <i>Vi du:</i>\\n<code>/task linh nhi</code>`;\nreturn [{ json: { ...input, text: helpText, parse_mode: \"HTML\" } }];\n"
       },
-      "id": "1dfa376b-eb8c-4957-a58b-4271dc293133",
+      "id": "9f08c587-a777-4ae0-921f-75b40faf61f0",
       "name": "Nội dung lệnh help",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2384,
-        -300
+        0,
+        1984
       ]
     },
     {
@@ -164,18 +164,18 @@
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
-      "id": "e9cf20b1-7964-4653-8092-9f4f34186bb9",
+      "id": "06348aa7-1932-46e3-838e-298ce66bc557",
       "name": "help",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2112,
-        -300
+        272,
+        1984
       ],
       "credentials": {
         "telegramApi": {
-          "id": "stuiyiJvXIuqhNuc",
-          "name": "Telegram Bot (PROD)"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -204,13 +204,13 @@
         },
         "options": {}
       },
-      "id": "dae27bb5-8e50-4d0a-b45f-91d8dcae9cf3",
+      "id": "1cd26e02-b393-458f-be2f-0c944068e70b",
       "name": "If (có từ khóa)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -2384,
-        100
+        0,
+        2384
       ]
     },
     {
@@ -222,18 +222,18 @@
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
-      "id": "64d01f25-f716-4ad9-9d33-908557abd7d0",
+      "id": "b1adbb75-ec96-4faf-85e1-770ad53b01f0",
       "name": "no content in task command",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -2112,
-        200
+        272,
+        2480
       ],
       "credentials": {
         "telegramApi": {
-          "id": "stuiyiJvXIuqhNuc",
-          "name": "Telegram Bot (PROD)"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -241,13 +241,13 @@
       "parameters": {
         "jsCode": "\nconst raw = ($json.params || '').trim();\nconst normalize = (s) => (s || '')\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/\\u0111/g, 'd').replace(/\\u0110/g, 'D').toLowerCase();\nreturn [{ json: { ...$json, originalText: raw, originalText_khong_dau: normalize(raw) } }];\n"
       },
-      "id": "b30b41dc-a3eb-4882-aea3-feebc8bfaf6f",
+      "id": "ae14bbff-86c5-49b6-b99d-c9e0594fcbea",
       "name": "Prepare Search",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2112,
-        0
+        272,
+        2272
       ]
     },
     {
@@ -258,34 +258,33 @@
           "queryReplacement": "={{ [$json.originalText_khong_dau] }}"
         }
       },
-      "id": "8e4fe921-48c0-4e09-9a96-8363e48d9222",
+      "id": "4186158a-db23-41a1-80b8-1019496cca98",
       "name": "PostgreSQL (search tasks)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        -1856,
-        0
+        528,
+        2272
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "GwUFREmcXzXXj5mZ",
           "name": "Postgres account"
         }
-      },
-      "alwaysOutputData": true
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst searchText = $('Prepare Search').first().json.originalText || '';\nconst all = $input.all().map(i => i.json).filter(t => t && t.id); // loc bo item rong (alwaysOutputData placeholder)\n\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cleanLink = (l) => (l || '').replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim();\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nif (all.length === 0) {\n  return [{ json: { chatId,\n    text: `❌ Không tìm thấy kết quả nào phù hợp với từ khóa <b>${escapeHtml(searchText)}</b>`,\n    parse_mode: \"HTML\" } }];\n}\n\nconst formatTask = (task, index) => {\n  const link = `https://t.me/${botUsername}?start=chitiet_${task.id}`;\n  const onedrive = task.onedrive_link ? cleanLink(task.onedrive_link) : '';\n  const clickupUrl = task.url ? cleanLink(task.url) : '';\n  return (\n`<b>${index + 1}.</b> <a href=\"${link}\">${escapeHtml(task.name)}</a>\n├ Trạng thái: ${escapeHtml(task.status) || 'Không rõ'}\n├ List: ${task.list_name ? escapeHtml(task.list_name) : 'Không rõ'}\n${onedrive ? `├ 📁 <a href=\"${onedrive}\">Xem OneDrive</a>\\n` : ''}└ 🔗 <a href=\"${clickupUrl}\">Xem trong ClickUp</a>`\n  );\n};\n\n// total_count lay tu COUNT(*) OVER() trong query - la con so CHINH XAC, khong bi anh huong boi LIMIT\nconst totalCount = all.length > 0 ? Number(all[0].total_count) : 0;\nconst shown = all; // da gioi han LIMIT 10 san trong query\nconst hasMore = totalCount > shown.length;\n\nconst header = hasMore\n  ? `🔍 <b>Kết quả tìm kiếm: ${escapeHtml(searchText)}</b>\\nTìm thấy <b>${totalCount}</b> kết quả phù hợp, hiển thị ${shown.length} kết quả gần đúng nhất:`\n  : `🔍 <b>Kết quả tìm kiếm: ${escapeHtml(searchText)}</b>\\nTìm thấy ${totalCount} kết quả:`;\n\nconst lines = [header];\nshown.forEach((task, i) => lines.push(formatTask(task, i)));\nif (hasMore) {\n  lines.push(`💡 Còn ${totalCount - shown.length} kết quả khác chưa hiển thị — vui lòng nhập từ khóa cụ thể hơn để thu hẹp kết quả.`);\n}\n\nreturn [{ json: { chatId, text: lines.join('\\n\\n'), parse_mode: \"HTML\" } }];\n",
-        "alwaysOutputData": true
+        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst searchText = $('Prepare Search').first().json.originalText || '';\nconst all = $input.all().map(i => i.json).filter(t => t && t.id); // loc bo item rong (alwaysOutputData placeholder)\n\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cleanLink = (l) => (l || '').replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim();\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nif (all.length === 0) {\n  return [{ json: { chatId,\n    text: `❌ Không tìm thấy kết quả nào phù hợp với từ khóa <b>${escapeHtml(searchText)}</b>`,\n    parse_mode: \"HTML\" } }];\n}\n\nconst formatTask = (task, index) => {\n  const link = `https://t.me/${botUsername}?start=chitiet_${task.id}`;\n  const onedrive = task.onedrive_link ? cleanLink(task.onedrive_link) : '';\n  const clickupUrl = task.url ? cleanLink(task.url) : '';\n  return (\n`<b>${index + 1}.</b> <a href=\"${link}\">${escapeHtml(task.name)}</a>\n├ Trạng thái: ${escapeHtml(task.status) || 'Không rõ'}\n├ List: ${task.list_name ? escapeHtml(task.list_name) : 'Không rõ'}\n${onedrive ? `├ 📁 <a href=\"${onedrive}\">Xem OneDrive</a>\\n` : ''}└ 🔗 <a href=\"${clickupUrl}\">Xem trong ClickUp</a>`\n  );\n};\n\n// total_count lay tu COUNT(*) OVER() trong query - la con so CHINH XAC, khong bi anh huong boi LIMIT\nconst totalCount = all.length > 0 ? Number(all[0].total_count) : 0;\nconst shown = all; // da gioi han LIMIT 10 san trong query\nconst hasMore = totalCount > shown.length;\n\nconst header = hasMore\n  ? `🔍 <b>Kết quả tìm kiếm: ${escapeHtml(searchText)}</b>\\nTìm thấy <b>${totalCount}</b> kết quả phù hợp, hiển thị ${shown.length} kết quả gần đúng nhất:`\n  : `🔍 <b>Kết quả tìm kiếm: ${escapeHtml(searchText)}</b>\\nTìm thấy ${totalCount} kết quả:`;\n\nconst taskBlocks = shown.map((task, i) => formatTask(task, i));\n\n// Fallback nếu quá dài (giới hạn Telegram sendMessage: 4096 ký tự) — bớt dần task hiển thị\n// từ cuối danh sách cho tới khi vừa, không cắt giữa 1 block để tránh vỡ thẻ HTML.\nconst MAX_LEN = 3900;\nlet cutCount = 0;\nfunction buildText(blocks, extraCut) {\n  const lines = [header, ...blocks];\n  if (extraCut > 0) {\n    lines.push(`💡 Đã rút gọn bớt ${extraCut} kết quả do tin nhắn quá dài — nhập từ khóa cụ thể hơn để thu hẹp kết quả.`);\n  } else if (hasMore) {\n    lines.push(`💡 Còn ${totalCount - shown.length} kết quả khác chưa hiển thị — vui lòng nhập từ khóa cụ thể hơn để thu hẹp kết quả.`);\n  }\n  return lines.join('\\n\\n');\n}\nlet blocks = taskBlocks.slice();\nlet text = buildText(blocks, cutCount);\nwhile (text.length > MAX_LEN && blocks.length > 1) {\n  blocks.pop();\n  cutCount++;\n  text = buildText(blocks, cutCount);\n}\n\nreturn [{ json: { chatId, text, parse_mode: \"HTML\" } }];\n"
       },
-      "id": "4a5d3a30-7777-4226-a73f-809986516b1e",
+      "id": "98fd1e8b-5cb7-41b6-a17e-43227f4ffca3",
       "name": "Beautify full",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1600,
-        0
+        784,
+        2272
       ]
     },
     {
@@ -298,18 +297,18 @@
           "reply_to_message_id": "={{ $('Phân tích lệnh').first().json.messageId }}"
         }
       },
-      "id": "28a426e6-82e8-4f19-a911-29f416107533",
+      "id": "cbf91e77-d46d-4015-9279-00622b6b2434",
       "name": "Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1344,
-        0
+        1040,
+        2272
       ],
       "credentials": {
         "telegramApi": {
-          "id": "stuiyiJvXIuqhNuc",
-          "name": "Telegram Bot (PROD)"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -333,47 +332,46 @@
         },
         "options": {}
       },
-      "id": "f3b2c00b-1c3f-4fba-9c09-cbba913d58f3",
+      "id": "2e253d2b-2a0b-47e7-9be4-8a6b74f8fc76",
       "name": "task_detail_sql",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        -2384,
-        600
+        0,
+        2880
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "GwUFREmcXzXXj5mZ",
           "name": "Postgres account"
         }
-      },
-      "alwaysOutputData": true
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst taskRows = $('task_detail_sql').all().map(i => i.json).filter(t => t && t.id);\nconst linkRows = $input.all().map(i => i.json).filter(r => r && r.order_task_id);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cleanLink = (l) => (l || '').replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim();\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nif (taskRows.length === 0) {\n  return [{ json: { chatId, text: '❌ Không tìm thấy task này.', parse_mode: 'HTML' } }];\n}\nconst task = taskRows[0];\nconst lines = [];\nlines.push(`<b>${escapeHtml(task.name)}</b>`);\nlines.push(`├ Mô tả: ${escapeHtml(task.description?.trim()) || 'Không rõ'}`);\nlines.push(`├ Trạng thái: ${escapeHtml(task.status) || 'Không rõ'}`);\nlines.push(`├ List: ${task.list_name ? escapeHtml(task.list_name) : 'Không rõ'}`);\nif (task.phu_trach) lines.push(`├ Phụ trách: ${escapeHtml(task.phu_trach)}`);\nif (task.onedrive_link) {\n  // Chi hien link phang - tinh nang \"Xem file\" (Graph API, liet ke tung file) TAM TAT theo yeu cau,\n  // se lam lai o phien ban sau.\n  lines.push(`├ 📁 <a href=\"${cleanLink(task.onedrive_link)}\">Xem OneDrive</a>`);\n}\n\n// Y tuong #3: thong ke + link toi cac task Don Hang lien quan qua DKPV/PVTC\n// Ca 2 loai deu co the co NHIEU nam (hoc sinh apply lai qua cac nam khac nhau cho cung 1 don hang)\n// - nhom theo (link_type, year), hien tach rieng tung nam.\nfunction groupByYear(rows) {\n  const byYear = {};\n  rows.forEach(r => {\n    const y = r.year || 'khác';\n    if (!byYear[y]) byYear[y] = [];\n    byYear[y].push(r);\n  });\n  return byYear;\n}\nfunction renderGroup(label, byYear) {\n  for (const [year, rows] of Object.entries(byYear)) {\n    lines.push(`├ ${label} ${year}: <b>${rows.length}</b> đơn hàng`);\n    rows.forEach(r => {\n      const link = `https://t.me/${botUsername}?start=chitiet_${r.order_task_id}`;\n      lines.push(`│   • <a href=\"${link}\">${escapeHtml(r.order_task_name)}</a> (${escapeHtml(r.order_task_status) || 'không rõ'})`);\n    });\n  }\n}\n\nconst dkpvByYear = groupByYear(linkRows.filter(r => r.link_type === 'dkpv'));\nconst pvtcByYear = groupByYear(linkRows.filter(r => r.link_type === 'pvtc'));\n\nrenderGroup('📝 Đăng ký phỏng vấn (DKPV)', dkpvByYear);\nrenderGroup('✅ Được nhận (PVTC)', pvtcByYear);\n\nlines.push(`└ 🔗 <a href=\"${cleanLink(task.url)}\">Xem trong ClickUp</a>`);\n\nreturn [{ json: { chatId, text: lines.join('\\n'), parse_mode: 'HTML' } }];\n",
-        "alwaysOutputData": true
+        "jsCode": "\nconst chatId = $('Phân tích lệnh').first().json.chatId;\nconst taskRows = $('task_detail_sql').all().map(i => i.json).filter(t => t && t.id);\nconst linkRows = $input.all().map(i => i.json).filter(r => r && r.order_task_id);\nconst escapeHtml = (t) => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cleanLink = (l) => (l || '').replace(/^'+|'+$/g, '').replace(/[{}]/g, '').trim();\nconst botUsername = $('⚙️ Config').first().json.botUsername;\n\nif (taskRows.length === 0) {\n  return [{ json: { chatId, text: '❌ Không tìm thấy task này.', parse_mode: 'HTML' } }];\n}\nconst task = taskRows[0];\n\nfunction linkBlock(label, emoji, url) {\n  const u = escapeHtml(cleanLink(url));\n  return `<b><a href=\"${u}\">${emoji} ${label}</a></b>\\n<code>${u}</code>`;\n}\n\nconst blocks = [];\nblocks.push(`<b>${escapeHtml(task.name)}</b>`);\nblocks.push(`<b>Mô tả:</b>\\n${escapeHtml(task.description?.trim()) || 'Không rõ'}`);\nblocks.push(`<b>Trạng thái:</b>\\n${escapeHtml(task.status) || 'Không rõ'}`);\nblocks.push(`<b>List:</b>\\n${task.list_name ? escapeHtml(task.list_name) : 'Không rõ'}`);\nif (task.phu_trach) blocks.push(`<b>Phụ trách:</b>\\n${escapeHtml(task.phu_trach)}`);\nif (task.youtube_link) blocks.push(linkBlock('Youtube', '🎬', task.youtube_link));\nif (task.onedrive_link) blocks.push(linkBlock('OneDrive', '📁', task.onedrive_link));\nif (task.url) blocks.push(linkBlock('ClickUp', '🔗', task.url));\n\nfunction groupByYear(rows) {\n  const byYear = {};\n  rows.forEach(r => {\n    const y = r.year || 'khác';\n    if (!byYear[y]) byYear[y] = [];\n    byYear[y].push(r);\n  });\n  return byYear;\n}\nfunction renderGroup(label, byYear) {\n  const out = [];\n  for (const [year, rows] of Object.entries(byYear)) {\n    const items = rows.map(r => {\n      const link = `https://t.me/${botUsername}?start=chitiet_${r.order_task_id}`;\n      return `• <a href=\"${link}\">${escapeHtml(r.order_task_name)}</a> (${escapeHtml(r.order_task_status) || 'không rõ'})`;\n    }).join('\\n');\n    out.push(`<b>${label} ${year} (${rows.length}):</b>\\n${items}`);\n  }\n  return out;\n}\n\nconst dkpvByYear = groupByYear(linkRows.filter(r => r.link_type === 'dkpv'));\nconst pvtcByYear = groupByYear(linkRows.filter(r => r.link_type === 'pvtc'));\nblocks.push(...renderGroup('📝 Đăng ký phỏng vấn (DKPV)', dkpvByYear));\nblocks.push(...renderGroup('✅ Phỏng vấn thành công (PVTC)', pvtcByYear));\n\nconst MAX_LEN = 3900;\nfunction build(arr, cutCount) {\n  const notice = cutCount > 0\n    ? `\\n\\n⚠️ <i>(Nội dung quá dài, đã rút gọn ${cutCount} mục — xem đầy đủ trong ClickUp)</i>`\n    : '';\n  return arr.join('\\n\\n') + notice;\n}\nlet arr = blocks.slice();\nlet cutCount = 0;\nlet text = build(arr, cutCount);\nwhile (text.length > MAX_LEN && arr.length > 1) {\n  arr.pop();\n  cutCount++;\n  text = build(arr, cutCount);\n}\n\nreturn [{ json: { chatId, text, parse_mode: 'HTML' } }];\n"
       },
-      "id": "f57ccada-426d-4962-b468-e401e8da725d",
+      "id": "d8fa45df-1b64-4bce-92fb-893685c59379",
       "name": "Beautify chi tiết",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2112,
-        600
+        272,
+        2880
       ]
     },
     {
       "parameters": {
-        "jsCode": "\n// Cau hinh chung cho workflow - doi 1 dong nay khi cutover sang bot PROD (Giai doan 4, xem PROJECT_STATUS.md)\nconst USE_PROD_BOT = false; // false = dang dung bot DEV (test) | true = da cutover, dung bot PROD\n\nconst config = {\n  botUsername: USE_PROD_BOT ? 'Elite_clickup_bot' : 'elite_n8n_test_bot',\n  ADMIN_CHAT_ID: '975005174', // dung chung voi Gateway/Live Update - doi neu can\n};\n\nreturn [{ json: { ...$json, ...config } }];\n"
+        "jsCode": "\n// Cau hinh chung cho workflow - doi 1 dong nay khi cutover sang bot PROD (Giai doan 4, xem PROJECT_STATUS.md)\nconst USE_PROD_BOT = true; // false = dang dung bot DEV (test) | true = da cutover, dung bot PROD\n\nconst config = {\n  botUsername: USE_PROD_BOT ? 'Elite_clickup_bot' : 'elite_n8n_test_bot',\n  ADMIN_CHAT_ID: '975005174', // dung chung voi Gateway/Live Update - doi neu can\n};\n\nreturn [{ json: { ...$json, ...config } }];\n"
       },
-      "id": "405a438b-337a-4611-8a47-2f34bb009f38",
+      "id": "f89af5e8-d76c-4535-bdff-40ace8f9cbc6",
       "name": "⚙️ Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2828,
-        400
+        -448,
+        2672
       ]
     },
     {
@@ -384,13 +382,13 @@
           "queryReplacement": "={{ [$('Phân tích lệnh').first().json.taskId] }}"
         }
       },
-      "id": "02a4d190-2f2a-4d91-859b-08ee072a016d",
+      "id": "871762b6-8c59-4800-a0af-760a432f6e21",
       "name": "Lấy Task Links",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        -2248,
-        600
+        144,
+        2880
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -564,7 +562,9 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
   },
   "pinData": {}
 }
