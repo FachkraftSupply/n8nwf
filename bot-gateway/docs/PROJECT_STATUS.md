@@ -8,7 +8,53 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
-## 🌙 PHIÊN HÔM NAY (Giai đoạn A — Admin backup tools) — cập nhật cuối ngày
+## 🌙 PHIÊN MỚI NHẤT (08/09/2026 tối) — Sửa lỗi routing Admin System + bắt đầu backlog tính năng mới
+
+**Bug đã sửa & publish (Telebot Admin System `eWtu7Qs85Hes0HuP` + GW Gateway `xmEKeIUnzxm2F7dF`):**
+1. **`Xác nhận với admin` (Gateway) dùng SAI credential Telegram** — dùng `Elite Clickupbot` thay vì
+   `Telegram System Bot`, khiến tin xác nhận approve/deny gửi cho admin bị lẫn từ bot ClickUp thay vì
+   bot admin. Đã đổi credential đúng.
+2. **`Có Admin Extra Route?` (IF node) — output true/false bị nối SAI CHỖ**: cả `Phân tích lệnh` (parser
+   lệnh thường) VÀ `Check Admin (Extras)` (nhánh admin-extras) đều bị nối vào CÙNG output index 0, khiến
+   MỌI lệnh thường (`/help`, `/task`...) khi `extraRoute` rỗng bị dead-end — KHÔNG trả lời gì cả (bug
+   nặng hơn báo cáo ban đầu, không chỉ `/user_list`).
+3. **`Check Admin (Extras)` (IF node) — cùng lỗi**: `Reply Không Có Quyền (Extras)` bị nối vào output
+   TRUE (admin đã pass) thay vì output FALSE, nên dù đúng admin vẫn luôn nhận "🚫 Bạn không có quyền".
+4. **`Switch (Admin Extras)` (Switch 9 output) — TẤT CẢ 12 node xuôi dòng đều bị nối chung vào output
+   index 0 (`approve_user`)**, thay vì phân đúng theo `outputKey` của từng rule
+   (`deny_user`=1, `users_list`=2, `users_back`=3, `users_manage`=4, `grant_menu`=5, `revoke_menu`=6,
+   `grant_confirm`=7, `revoke_confirm`=8). Đây là lý do `/user_list` tính đúng route nhưng không trả
+   kết quả — output `users_list` không có kết nối nào cả. Đã nối lại đúng cho toàn bộ 9 nhánh.
+
+**⚠️ GHI NHỚ KỸ THUẬT MỚI (thêm vào mục "GHI NHỚ KỸ THUẬT QUAN TRỌNG NHẤT" bên dưới):** khi dùng
+`update_workflow` qua n8n MCP để build node IF/Switch nhiều output, PHẢI khai báo `sourceIndex` tường
+minh cho từng `addConnection` — nếu không cẩn thận (hoặc build bằng tay ngoài UI rồi generate JSON),
+rất dễ bị tất cả connection dồn về `sourceIndex: 0` dù node có nhiều output. Sau này mỗi khi thêm/sửa
+1 node IF hoặc Switch nào, BẮT BUỘC kiểm tra lại `connections` JSON để xác nhận mỗi output thực sự trỏ
+đúng node xuôi dòng của NÓ, không phải dồn hết vào 1 output — lỗi này im lặng hoàn toàn (không có node
+nào báo error, workflow chạy "success" nhưng chỉ 1 nhánh có tác dụng thật).
+
+**Đang làm dở / backlog lớn user yêu cầu (chưa bắt đầu hoặc chưa xong):**
+- `/user_list` → cần xác nhận lại đã trả kết quả đúng sau fix trên (đang chờ user test).
+- Nâng cấp UX `/user_list`: bấm vào user (hyperlink) → xem chi tiết (Postgres/Supabase) kèm 3 inline
+  button: Thêm quyền / Xóa quyền / Quay lại danh sách. Cập nhật cả permission ở CẢ Postgres Docker VÀ
+  Supabase khi grant/revoke (pattern dual-write đã có sẵn ở Approve/Deny, áp dụng tương tự).
+  ⚠️ Lưu ý: RULES.md có khuyến nghị KHÔNG dùng inline keyboard mặc định (lịch sử không ổn định), nhưng
+  user đã yêu cầu RÕ RÀNG dùng inline button cho tính năng này — theo đúng ngoại lệ trong RULES.md.
+- Tính năng mới: nút inline "Upload OneDrive" trong `chi tiết task` → form chọn tên nhanh (BAV, Kammer,
+  EZB, Schulbestätigung, Spateinstieg + tên học sinh) HOẶC tên tùy chỉnh, HOẶC giữ nguyên tên file gốc →
+  upload lên đúng folder OneDrive gắn với task đó; báo lỗi nếu task chưa có OneDrive folder.
+- Tính năng mới: `/version` (bot admin) + tài liệu changelog dạng bảng: tên tính năng ↔ bot ↔ mô tả ↔
+  cập nhật ở phiên bản nào.
+- Cập nhật `/help` (Admin System) để liệt kê đầy đủ các lệnh/tính năng mới trên.
+- Định tuyến lại 3 loại thông báo vào 3 topic khác nhau trong group `https://t.me/c/3647848349/`:
+  cập nhật ClickUp (không phải tìm task) → topic 2, thông báo hệ thống/task schedule → topic 6, lỗi →
+  topic 4. (Group id thật cần tra từ link: `-1003647848349`, topic = `message_thread_id`.)
+- CHƯA RÕ NGHĨA, cần hỏi lại user trước khi làm: "xây dựng workflow cho nhóm nhat" (nhóm Telegram tên
+  gì, mục đích?), và "backup toàn bộ chat theo nhóm/user + AI tổng hợp theo ngày" (lưu Postgres nào,
+  tần suất, group nào, model AI nào).
+
+## 🌙 PHIÊN TRƯỚC (Giai đoạn A — Admin backup tools) — cập nhật cuối ngày
 
 **Đã hoàn tất trong phiên này:**
 - Tạo `SQL_Backup_System.json` (workflow riêng, Manual + Schedule Chủ nhật 2h sáng + Execute Workflow
