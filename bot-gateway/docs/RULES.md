@@ -99,3 +99,15 @@ an toàn), không nhảy cóc qua nhiều node.**
   ```
   Cách này đảm bảo LUÔN ra đúng 1 dòng output (bất kể câu INSERT bên trong ghi bao nhiêu dòng), mang
   theo đúng field cần thiết — không cần tham chiếu ngược ở bất kỳ node nào phía sau.
+
+## 12. ⚠️ Workflow ACTIVE (có Trigger đang lắng nghe) — BẮT BUỘC publish sau mỗi lần sửa qua MCP
+`update_workflow` qua MCP chỉ tạo ra 1 **bản nháp (draft, `versionId` mới)** — nếu workflow đang
+**active** (có Telegram Trigger/Webhook đang chạy thật), draft này **KHÔNG tự động áp dụng**, bản
+đang chạy vẫn là `activeVersionId` CŨ cho tới khi gọi `publish_workflow`. Đã từng sửa xong 1 tính năng,
+báo "xong" với user, nhưng user test vẫn ra kết quả cũ hoàn toàn — vì quên bước publish này (xảy ra
+với cả `GW_Gateway_Telegram.json` lẫn `Telebot_ClickUp_Reader.json` cùng lúc, 08/09/2026).
+**Quy tắc: sau MỌI lần `update_workflow` trên 1 workflow đang `active`, gọi `publish_workflow` ngay
+lập tức trước khi báo hoàn tất với user.** Nếu `publish_workflow` báo lỗi vì tham chiếu tới 1
+sub-workflow (`→ Sub: ...`) CHƯA publish — publish sub-workflow đó trước.
+Nếu gặp lỗi "Cannot modify workflow while it is being edited by a user in the editor" — user đang mở
+workflow đó trong tab n8n, đợi họ đóng tab/chuyển tab rồi thử lại (không phải lỗi thật).
