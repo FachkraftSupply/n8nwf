@@ -19,8 +19,8 @@
       "name": "Telegram Trigger Gateway",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       },
       "webhookId": "9e5cefc0-af9b-4e9f-87f1-c94a1a353073"
@@ -351,8 +351,8 @@
       "name": "Báo user chờ duyệt",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       },
       "onError": "continueRegularOutput"
@@ -428,8 +428,8 @@
       "name": "Báo admin duyệt user",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -452,8 +452,8 @@
       "name": "Nhắc đang chờ duyệt",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -476,8 +476,8 @@
       "name": "Thông báo từ chối",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -725,7 +725,8 @@
         "text": "=🔒 Bạn chưa được cấp quyền dùng chức năng {{ $json.bot_key }}. Liên hệ quản trị viên để được cấp thêm.",
         "additionalFields": {
           "appendAttribution": false,
-          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}"
+          "reply_to_message_id": "={{ $('GW-01 Envelope').first().json.message_id }}",
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -738,8 +739,8 @@
       "name": "Không có quyền bot này",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -762,8 +763,8 @@
       "name": "Hướng dẫn lệnh",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -964,8 +965,8 @@
       "name": "Xác nhận với admin",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
@@ -987,8 +988,8 @@
       "name": "Báo user được duyệt",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       },
       "onError": "continueRegularOutput"
@@ -1011,8 +1012,8 @@
       "name": "Báo user bị từ chối",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       },
       "onError": "continueRegularOutput"
@@ -1036,8 +1037,8 @@
       "name": "Bỏ qua (không phải admin)",
       "credentials": {
         "telegramApi": {
-          "id": "REPLACE_TELEGRAM_DEV_BOT",
-          "name": "Telegram Dev Bot"
+          "id": "BHVAx8GV38yQEn1I",
+          "name": "Elite Clickupbot"
         }
       }
     },
