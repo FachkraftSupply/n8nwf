@@ -4,6 +4,31 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-08 (tiếp) — Backup Credential + Config (mã hóa), subagent, restore tool
+- Thêm nhánh **backup Credential thật** (decrypted) vào `SQL_Backup_System.json`: export qua
+  `n8n export:credentials --all --decrypted`, mã hóa AES-256-CBC bằng `openssl` + passphrase
+  lưu tại `/root/.n8n_backup_passphrase` (chmod 600, KHÔNG nằm trong workflow/GitHub) trước khi
+  rời VPS, xóa plaintext ngay trong cùng 1 lệnh. User tự paste 6 node vào canvas (thao tác này bị
+  auto-mode classifier chặn khi Claude thử tự làm qua MCP — hợp lý vì tự động hóa export secret
+  thật là hành động nhạy cảm, cần user xác nhận qua thao tác thủ công).
+- Thêm nhánh **backup Config** (docker-compose.yml của 3 stack: n8n_stack, fachkraft_db,
+  portainer) — cùng cơ chế mã hóa AES-256, dùng chung passphrase với Credential backup. Lý do:
+  phát hiện các file compose này (định nghĩa container/network/port) KHÔNG được backup ở đâu cả
+  trước đây — nếu VPS sập, chỉ có SQL/workflow/credential vẫn không đủ để dựng lại đúng stack.
+- `Config` backupType giờ hỗ trợ 4 giá trị: `n8n` | `db` | `credential` | `config` | `both`
+  (`both` = chạy tất cả).
+- Viết `restore.sh` — script khôi phục Postgres + Credentials (giải mã) + Workflows sau khi VPS
+  sập, chạy trên VPS mới đã dựng lại đúng docker-compose. **CHƯA test thật trên production** (rủi
+  ro tạo trùng lặp dữ liệu) — cần test trên 1 n8n instance rỗng trước khi tin dùng.
+- **Nghi vấn cần điều tra**: file backup n8n workflow (`Upload Backup N8N (OneDrive)`) có dấu hiệu
+  vẫn giữ tên cũ `file.json` thay vì `n8n_backup_YYYY-MM-DD.json` trên OneDrive dù tham số
+  `fileName` đã set đúng (nhánh DB backup vẫn đặt tên đúng bình thường) — có thể do OneDrive node
+  match theo item ID cũ (đã có sẵn 1 file tên `file.json` trong folder từ lần test rất sớm) thay
+  vì tạo mới theo tên — CHƯA xác nhận nguyên nhân, cần kiểm tra lại khi rảnh.
+- Tạo subagent Claude Code `n8n-vps-ops` (`~/.claude/agents/n8n-vps-ops.md`) — gom kiến thức hạ
+  tầng (container name, credential ID, passphrase path, quy tắc an toàn) để phiên chat sau không
+  cần đọc lại toàn bộ lịch sử debug.
+
 ## 2026-09-08 — Backup Postgres qua SSH thật (Phase 3 DB backup) HOÀN TẤT
 - **`SQL_Backup_System.json`**: nhánh backup DB đổi từ 3 node Postgres SELECT (tasks/task_links/
   sync_targets, gộp JSON) sang **pg_dump SQL thật** qua 4 node SSH mới:
