@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {},
-      "id": "e2ed8e75-1589-436d-b762-7a5bd286910b",
+      "id": "ea4f137b-8b4a-4e0f-aa5c-38d9c224b745",
       "name": "Manual Trigger (Test)",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -2560,
-        400
+        -272,
+        -832
       ]
     },
     {
@@ -18,47 +18,44 @@
           "interval": [
             {
               "field": "weeks",
-              "triggerAtDay": [
-                0
-              ],
               "triggerAtHour": 2
             }
           ]
         }
       },
-      "id": "f5ee2070-52ef-43af-94a7-ee5f3ca4f178",
+      "id": "d1ad224f-2122-44eb-884b-80adb3519f49",
       "name": "Schedule (Chủ nhật, 2h sáng)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -2560,
-        560
+        -272,
+        -672
       ]
     },
     {
       "parameters": {
         "inputSource": "passthrough"
       },
-      "id": "2ae1b3a7-11d0-4c11-b747-bce1f155390f",
+      "id": "e30a8e31-1e7f-4ef0-8011-0aa968b9cbf8",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.2,
       "position": [
-        -2560,
-        720
+        -272,
+        -512
       ]
     },
     {
       "parameters": {
         "jsCode": "\nconst input = $json || {};\nconst config = {\n  backupType: input.backupType || 'both',   // 'n8n' | 'db' | 'both'\n  notifyChatId: input.notifyChatId || '975005174', // ADMIN_CHAT_ID mac dinh\n};\nreturn [{ json: config }];\n"
       },
-      "id": "875cba65-358b-418e-8e0d-e053e1f754e5",
+      "id": "d3ea8398-7fe0-486b-82b1-452d1e2bc61d",
       "name": "⚙️ Config",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2304,
-        560
+        -16,
+        -672
       ]
     },
     {
@@ -94,13 +91,13 @@
         },
         "options": {}
       },
-      "id": "3e27c8c6-42e4-47a8-ab57-29caefd2889d",
+      "id": "978145a8-b483-465b-9965-e66637b6264b",
       "name": "Cần Backup N8N?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -2048,
-        400
+        240,
+        -832
       ]
     },
     {
@@ -108,63 +105,73 @@
         "filters": {},
         "requestOptions": {}
       },
-      "id": "32b9651f-7db0-4f8c-a412-404b8687d6c7",
+      "id": "0addb4c9-4eb4-4c1a-8d54-c2202a5cded7",
       "name": "n8n - Lấy Toàn Bộ Workflow",
       "type": "n8n-nodes-base.n8n",
       "typeVersion": 1,
       "position": [
-        -1792,
-        320
-      ]
+        496,
+        -912
+      ],
+      "credentials": {
+        "n8nApi": {
+          "id": "THlNx2WS7V5G8mxr",
+          "name": "n8n account"
+        }
+      }
     },
     {
       "parameters": {
         "operation": "toJson",
         "options": {}
       },
-      "id": "bd227b4e-544c-4a86-9366-843840d98e8c",
+      "id": "8ec697a0-7984-4e6b-a72b-7d54684b5b6a",
       "name": "Convert Workflow To File",
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        -1536,
-        320
+        752,
+        -912
       ]
     },
     {
       "parameters": {
-        "resource": "file",
-        "operation": "upload",
-        "parentId": "",
         "fileName": "={{ `n8n_backup_${new Date().toISOString().slice(0,10)}.json` }}",
-        "binaryData": true,
-        "binaryPropertyName": "data"
+        "parentId": "9C1E52ABCED5A0C6!s03f51eb6700c4beaae562e99399f4726",
+        "binaryData": true
       },
-      "id": "087600b1-8459-49a4-9a76-b52bff0d525f",
+      "id": "6e52fef8-bd49-46d9-a7d7-9c60364b952c",
       "name": "Upload Backup N8N (OneDrive)",
       "type": "n8n-nodes-base.microsoftOneDrive",
       "typeVersion": 1,
       "position": [
-        -1280,
-        320
-      ]
+        1008,
+        -912
+      ],
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "zYx8tEnjQW4Idpk4",
+          "name": "Microsoft Drive account"
+        }
+      }
     },
     {
       "parameters": {
         "chatId": "={{ $('⚙️ Config').first().json.notifyChatId }}",
-        "text": "={{ '✅ Đã backup xong toàn bộ workflow n8n lên Google Drive.\\n🔗 ' + $json.webViewLink }}",
+        "text": "=✅ Đã backup xong toàn bộ workflow n8n lên OneDrive.\n🔗 {{ $json.webUrl }}",
         "additionalFields": {
           "appendAttribution": false
         }
       },
-      "id": "2254e248-3403-4aa4-b4c9-3e1c629ba858",
+      "id": "620ff296-8641-4909-be97-ac028eb9269c",
       "name": "Notify Backup N8N Xong",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1024,
-        320
+        1264,
+        -912
       ],
+      "webhookId": "1d48ab94-ac5b-4722-99f4-2ed7f0821af7",
       "credentials": {
         "telegramApi": {
           "id": "zSZ6vVapow5LNpFT",
@@ -205,49 +212,53 @@
         },
         "options": {}
       },
-      "id": "fe67aee2-788c-4a19-b59b-23f82e43e0c6",
+      "id": "f6dd93d6-938b-4d9c-9c25-76b5abd5b875",
       "name": "Cần Backup DB?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -2048,
-        720
+        240,
+        -512
       ]
     },
     {
       "parameters": {
-        "resource": "file",
-        "operation": "upload",
-        "parentId": "",
-        "fileName": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.json` }}",
-        "binaryData": true,
-        "binaryPropertyName": "data"
+        "fileName": "={{ `postgres_backup_${new Date().toISOString().slice(0,10)}.sql` }}",
+        "parentId": "9C1E52ABCED5A0C6!s03f51eb6700c4beaae562e99399f4726",
+        "binaryData": true
       },
-      "id": "a684291e-9195-4c1f-98f1-f7f3b2d23c2f",
+      "id": "80d01475-8cb0-457c-9447-eabadc6eadc3",
       "name": "Upload Backup DB (OneDrive)",
       "type": "n8n-nodes-base.microsoftOneDrive",
       "typeVersion": 1,
       "position": [
-        -1280,
-        720
-      ]
+        1168,
+        -512
+      ],
+      "credentials": {
+        "microsoftOneDriveOAuth2Api": {
+          "id": "zYx8tEnjQW4Idpk4",
+          "name": "Microsoft Drive account"
+        }
+      }
     },
     {
       "parameters": {
         "chatId": "={{ $('⚙️ Config').first().json.notifyChatId }}",
-        "text": "={{ '✅ Đã backup xong Postgres lên Google Drive.\\n🔗 ' + $json.webViewLink }}",
+        "text": "=✅ Đã backup xong Postgres lên OneDrive.\n🔗 {{ $json.webUrl }}",
         "additionalFields": {
           "appendAttribution": false
         }
       },
-      "id": "1ae2a5e2-64b3-48dc-b3b2-d7e60b691b1c",
+      "id": "02057849-bced-4689-8a17-3d668b68fc43",
       "name": "Notify Backup DB Xong",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        -1024,
-        720
+        1600,
+        -576
       ],
+      "webhookId": "4c388bf3-9fae-4a51-ac2e-dc568e91bc31",
       "credentials": {
         "telegramApi": {
           "id": "zSZ6vVapow5LNpFT",
@@ -257,93 +268,88 @@
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT * FROM clickup.tasks;",
-        "options": {}
+        "authentication": "privateKey",
+        "command": "=docker exec n8n_stack-postgres-1 pg_dump -U n8n -d n8n -n clickup -n gateway -f /tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql"
       },
-      "id": "a8ad4d83-c0e9-49ef-8986-8347a7a34e65",
-      "name": "Query Tasks",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "id": "98451bb6-f79f-4f08-981f-32da15aa963c",
+      "name": "SSH - Dump Postgres (docker exec)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
       "position": [
-        -1792,
-        640
+        496,
+        -528
       ],
       "credentials": {
-        "postgres": {
-          "id": "GwUFREmcXzXXj5mZ",
-          "name": "Postgres account"
+        "sshPrivateKey": {
+          "id": "cGWTuMBqxyFXr6VV",
+          "name": "SSH Private Key account"
         }
       }
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT * FROM clickup.task_links;",
-        "options": {}
+        "authentication": "privateKey",
+        "command": "=docker cp n8n_stack-postgres-1:/tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql /tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql"
       },
-      "id": "fbed3414-2c8d-4a55-8cca-90100f0a8fa3",
-      "name": "Query Task Links",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "id": "e7ac8b4b-eb36-4c09-903a-ffd739f31da8",
+      "name": "SSH - Copy File Ra Host",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
       "position": [
-        -1792,
-        760
+        688,
+        -528
       ],
       "credentials": {
-        "postgres": {
-          "id": "GwUFREmcXzXXj5mZ",
-          "name": "Postgres account"
+        "sshPrivateKey": {
+          "id": "cGWTuMBqxyFXr6VV",
+          "name": "SSH Private Key account"
         }
       }
     },
     {
       "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT * FROM clickup.sync_targets;",
-        "options": {}
+        "authentication": "privateKey",
+        "resource": "file",
+        "operation": "download",
+        "path": "=/tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql",
+        "options": {
+          "fileName": "={{ 'postgres_backup_' + new Date().toISOString().slice(0,10) + '.sql' }}"
+        }
       },
-      "id": "2d46a069-dcad-4ff2-a336-5a97905fdaaa",
-      "name": "Query Sync Targets (Backup)",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.7,
+      "id": "7c5336bb-b255-4f2b-857a-3f8f298958f0",
+      "name": "SSH - Tải File Về n8n",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
       "position": [
-        -1792,
-        880
+        880,
+        -528
       ],
       "credentials": {
-        "postgres": {
-          "id": "GwUFREmcXzXXj5mZ",
-          "name": "Postgres account"
+        "sshPrivateKey": {
+          "id": "cGWTuMBqxyFXr6VV",
+          "name": "SSH Private Key account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "\nconst tasks = $('Query Tasks').all().map(i => i.json);\nconst taskLinks = $('Query Task Links').all().map(i => i.json);\nconst syncTargets = $('Query Sync Targets (Backup)').all().map(i => i.json);\n\nconst backup = {\n  backup_at: new Date().toISOString(),\n  tables: {\n    'clickup.tasks': tasks,\n    'clickup.task_links': taskLinks,\n    'clickup.sync_targets': syncTargets,\n  }\n};\nreturn [{ json: backup }];\n"
+        "authentication": "privateKey",
+        "command": "=rm -f /tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql && docker exec n8n_stack-postgres-1 rm -f /tmp/pg_backup_{{ new Date().toISOString().slice(0,10) }}.sql"
       },
-      "id": "3adfa2d4-2ad5-4d5a-95bd-e1d10925486d",
-      "name": "Gộp Dữ Liệu Backup",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "13664ed0-fd50-40b3-87bd-728057d481c0",
+      "name": "SSH - Dọn File Tạm (Host + Container)",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
       "position": [
-        -1536,
-        760
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "toJson",
-        "options": {}
-      },
-      "id": "5fbc34cf-3e8e-4790-985b-3176b9b0a32e",
-      "name": "Convert DB Backup To File",
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        -1280,
-        760
-      ]
+        864,
+        112
+      ],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "cGWTuMBqxyFXr6VV",
+          "name": "SSH Private Key account"
+        }
+      }
     }
   ],
   "connections": {
@@ -444,17 +450,7 @@
       "main": [
         [
           {
-            "node": "Query Tasks",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Query Task Links",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Query Sync Targets (Backup)",
+            "node": "SSH - Dump Postgres (docker exec)",
             "type": "main",
             "index": 0
           }
@@ -472,55 +468,38 @@
         ]
       ]
     },
-    "Query Tasks": {
+    "SSH - Dump Postgres (docker exec)": {
       "main": [
         [
           {
-            "node": "Gộp Dữ Liệu Backup",
+            "node": "SSH - Copy File Ra Host",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Query Task Links": {
+    "SSH - Copy File Ra Host": {
       "main": [
         [
           {
-            "node": "Gộp Dữ Liệu Backup",
+            "node": "SSH - Tải File Về n8n",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Query Sync Targets (Backup)": {
-      "main": [
-        [
-          {
-            "node": "Gộp Dữ Liệu Backup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gộp Dữ Liệu Backup": {
-      "main": [
-        [
-          {
-            "node": "Convert DB Backup To File",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Convert DB Backup To File": {
+    "SSH - Tải File Về n8n": {
       "main": [
         [
           {
             "node": "Upload Backup DB (OneDrive)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SSH - Dọn File Tạm (Host + Container)",
             "type": "main",
             "index": 0
           }
@@ -529,7 +508,9 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
   },
   "pinData": {}
 }
