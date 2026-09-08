@@ -4,6 +4,36 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-08 (tiếp) — CUTOVER sang bot PROD (Giai đoạn 4) + fix format /task
+- **Cutover chính thức theo `GO_LIVE_CHECKLIST.md`**: đổi bot DEV (`@elite_n8n_test_bot`) sang PROD
+  (`@Elite_clickup_bot`) cho `GW_Gateway_Telegram.json` (11 node: Trigger + 10 reply/notify),
+  `Telebot_ClickUp_Reader.json` (`USE_PROD_BOT=true` + 4 node Telegram), và `Bot_Image_Processing.json`
+  (7 node, mới thêm hôm nay nên không có sẵn trong checklist gốc — đã bổ sung tương tự).
+  `Telebot_Admin_System.json` KHÔNG đổi (dùng System Bot cố định theo RULES.md #9).
+- **Bug nghiêm trọng phát hiện + đã sửa**: TOÀN BỘ node Telegram reply trong
+  `Telebot_ClickUp_Reader.json` trước đó dùng NHẦM credential "Telegram System Bot" thay vì bot Gateway
+  thật đang nhận tin nhắn — khiến câu trả lời `/task` luôn gửi sang MỘT BOT KHÁC với bot user vừa nhắn
+  (dễ hiểu nhầm là "bot không phản hồi"). Đã sửa toàn bộ 4 node.
+- **Bài học mới quan trọng nhất phiên này — ghi vào `RULES.md` #12**: `update_workflow` qua MCP trên
+  1 workflow đang **active** chỉ tạo bản NHÁP, KHÔNG tự áp dụng vào bản đang chạy thật
+  (`activeVersionId`) cho tới khi gọi `publish_workflow`. Đã sửa xong tính năng `/xoanen`/`/tomtat`
+  gắn Gateway từ sáng nhưng **CHƯA TỪNG hoạt động thật** vì quên publish cả Gateway lẫn
+  ClickUp Reader — user test nhiều lần vẫn ra kết quả cũ. Từ giờ: LUÔN publish ngay sau update trên
+  workflow active.
+- **Format `/task chitiet_<id>` — redesign theo yêu cầu user**:
+  - Thêm `youtube_link` (cột đã có sẵn trong DB, trước đó chưa từng được đọc).
+  - Mỗi field: nhãn in đậm + xuống dòng riêng (dễ phân biệt), không còn ký tự cây `├└│`.
+  - Thứ tự mới: Mô tả → Trạng thái → List → Phụ trách → **Youtube → OneDrive → ClickUp** → Đăng ký
+    phỏng vấn (DKPV) → Phỏng vấn thành công (PVTC).
+  - Mỗi link hiển thị **2 dòng**: tiêu đề in đậm bọc `<a href>` (bấm để MỞ link) + dòng dưới bọc
+    `<code>` (chạm để COPY nguyên văn URL) — giải quyết yêu cầu "copy được plain text của link".
+  - Thêm fallback tự cắt bớt nếu vượt giới hạn 4096 ký tự của Telegram (cắt theo block hoàn chỉnh,
+    không cắt giữa dòng để tránh vỡ thẻ HTML). Áp dụng cho cả `Beautify chi tiết` và `Beautify full`.
+  - Đồng bộ y hệt cho cả `Telebot_ClickUp_Reader.json` (qua Gateway) và
+    `Telebot_Admin_System.json` (bot Admin riêng).
+- **Xác nhận header xác thực thật** (đọc tài liệu chính thức, không đoán): remove.bg dùng
+  `X-Api-Key`, OCR.space dùng `apikey` — khớp đúng cấu hình node đã build trước đó.
+
 ## 2026-09-08 (tiếp) — Backup Credential + Config (mã hóa), subagent, restore tool
 - Thêm nhánh **backup Credential thật** (decrypted) vào `SQL_Backup_System.json`: export qua
   `n8n export:credentials --all --decrypted`, mã hóa AES-256-CBC bằng `openssl` + passphrase
