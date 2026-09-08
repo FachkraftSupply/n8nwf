@@ -8,6 +8,50 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
+## 🔜 VIỆC TIẾP THEO — bắt đầu ngay khi mở phiên mới (đọc mục này ĐẦU TIÊN)
+
+**User yêu cầu cuối phiên 08/09/2026, CHƯA BẮT ĐẦU LÀM (chỉ mới ghi nhận yêu cầu):**
+
+1. **Test lại `/user_list`** trước tiên — xem "Fix thêm cho /user_list" bên dưới đã publish nhưng
+   CHƯA được user xác nhận chạy thật.
+2. **Test lại tính năng Upload OneDrive** (xem mục bên dưới) — đã build xong nhưng CHƯA test thật
+   lượt nào qua Telegram thật.
+3. **Bổ sung 3 tính năng mới cho panel chi tiết user trong `/user_list`** (`Telebot Admin System`,
+   node liên quan: `Send Detail Panel`, `Switch (Admin Extras)`, cần thêm output + node xử lý):
+   - **🗑️ Xóa hoàn toàn user**: DELETE hẳn record khỏi `gateway.bot_users` VÀ `gateway.bot_permissions`
+     ở CẢ Postgres Docker lẫn Supabase (dual-write giống pattern approve/deny hiện có). Cần hỏi lại
+     user 1 điều trước khi làm: có cần bước xác nhận 2 lần (confirm dialog) trước khi xóa vĩnh viễn
+     không, vì đây là hành động không thể hoàn tác — nên có nút "⚠️ Xác nhận xóa" riêng giống pattern
+     `grant_confirm`/`revoke_confirm` đã có, tránh bấm nhầm xóa nhầm user.
+   - **⛔ Block user**: khác với "Từ chối" (deny — dành cho user MỚI đang xin quyền, set status=
+     'denied'). Block là chặn user ĐANG active/đã từng được duyệt — cần thêm giá trị status mới
+     (vd `status='blocked'`) và đảm bảo Gateway's `GW-02b Merge Auth` xử lý đúng (hiện tại code chỉ
+     phân biệt active/pending/denied — cần thêm nhánh blocked, chặn y hệt denied nhưng có thể muốn
+     thông báo khác cho user, hoặc im lặng không phản hồi tuỳ ý user).
+   - **⚡ Cấp tất cả quyền nhanh**: 1 nút bấm 1 lần cấp toàn bộ `AVAILABLE_BOTS` cho user đó, khác
+     với menu chọn từng bot hiện có (`Send Grant Menu`). Có thể tái dùng logic `ALL` đã có trong
+     Gateway's approve flow (`ap:<uid>:ALL`) làm tham khảo.
+4. **UX: tự xóa tin nhắn cũ trước khi gửi tin nhắn mới** cho các lệnh admin (để đỡ chiếm màn hình).
+   Cách làm dự kiến: dùng Telegram Bot API `deleteMessage` (n8n Telegram node có operation
+   `deleteMessage` ở resource `message` hoặc `chat`) ngay trước mỗi lần gửi panel/menu mới, cần
+   `message_id` của tin nhắn TRƯỚC ĐÓ trong cùng luồng — với callback thì `message_id` chính là
+   `$json.callback.message_id` (tin nhắn chứa nút vừa bấm) nên xóa được luôn (n8n Telegram node hỗ
+   trợ `editMessageText`/`deleteMessage`); với tin nhắn gõ tay (vd nhập tên tùy chỉnh) sẽ khó xoá tin
+   nhắn CỦA USER (bot không tự xoá tin user gửi trừ khi có quyền admin trong group, và về mặt UX có
+   lẽ chỉ cần xoá tin nhắn CỦA BOT trước đó là đủ theo đúng yêu cầu). Cần rà soát toàn bộ các luồng
+   admin (task list, user list, sync menu, backup...) để áp dụng nhất quán — phạm vi khá rộng, nên
+   hỏi user xác nhận có áp dụng cho TẤT CẢ lệnh admin hay chỉ riêng `/user_list`/`/task` trước.
+   ⚠️ Lưu ý: cần message_id của tin nhắn bot gửi LẦN TRƯỚC — với các luồng nhiều bước (vd Send Detail
+   Panel → Send Grant Menu → Grant Confirm), phải LƯU LẠI message_id đó (trong callback đã có sẵn vì
+   callback luôn kèm message_id của tin nhắn chứa nút vừa bấm — dùng chính message_id đó để xoá trước
+   khi gửi tin mới là đủ, không cần lưu state riêng).
+
+**Việc CHƯA làm từ backlog trước (giữ nguyên thứ tự ưu tiên user đã chọn):** `/version` + changelog
+→ định tuyến 3 topic (ClickUp update → topic 2, system/schedule → topic 6, lỗi → topic 4, group
+`-1003647848349`) → cuối cùng mới tới tính năng backup toàn bộ chat + AI tổng hợp (đã hoãn, xem hỏi
+đáp cấu hình đã chốt: dual-write Postgres+Supabase, scope "tất cả group bot admin có mặt", model AI
+chưa chốt — hỏi lại khi tới lượt làm).
+
 ## 🌙 PHIÊN MỚI NHẤT 2 (08/09/2026 tối, sau phiên fix routing) — Fix /user_list sâu hơn + Upload OneDrive
 
 **Fix thêm cho `/user_list` (tiếp phiên trước) — bug thứ 3 CÙNG LOẠI phát hiện thêm:**
