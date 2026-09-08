@@ -334,7 +334,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Bạn là trợ lý đọc hiểu văn bản từ ảnh (OCR), tổng hợp thông tin bằng tiếng Việt, trình bày đẹp cho Telegram: dùng emoji phù hợp, xuống dòng rõ ràng giữa các ý, dùng đúng cú pháp Markdown của Telegram (*chữ đậm*, _chữ nghiêng_, gạch đầu dòng bằng • hoặc -).\n\n📄 Kết quả OCR từ OCR.space (có thể có lỗi chính tả do nhận diện tự động):\n{{ $json.ParsedResults && $json.ParsedResults[0] ? $json.ParsedResults[0].ParsedText : '(không đọc được chữ)' }}\n\n📄 Kết quả OCR từ Mistral Vision (độ chính xác thường cao hơn với chữ viết tay/phức tạp):\n{{ $json.text }}\n\n💬 Ghi chú thêm từ người gửi (bỏ qua nếu chỉ là lệnh /tomtat trống):\n{{ $(\"Nhận Envelope Từ Gateway\").item.json.text }}\n\nHãy đối chiếu CẢ 2 KẾT QUẢ OCR trên để đưa ra bản văn bản/đoạn tóm tắt nội dung CHÍNH XÁC nhất. Nếu 2 nguồn khác nhau ở chi tiết nào đó, ưu tiên nguồn rõ ràng hơn và nêu rõ sự không chắc chắn nếu cần.",
+        "text": "=Bạn là trợ lý đọc hiểu văn bản từ ảnh (OCR), tổng hợp thông tin bằng tiếng Việt, trình bày đẹp cho Telegram: dùng emoji phù hợp, xuống dòng rõ ràng giữa các ý, dùng đúng cú pháp Markdown của Telegram (*chữ đậm*, _chữ nghiêng_, gạch đầu dòng bằng • hoặc -).\n\n📄 Kết quả OCR từ OCR.space (có thể có lỗi chính tả do nhận diện tự động):\n{{ $json.ParsedResults && $json.ParsedResults[0] ? $json.ParsedResults[0].ParsedText : '(không đọc được chữ)' }}\n\n📄 Kết quả OCR từ Mistral (model chuyên OCR, thường chính xác hơn với chữ viết tay/phức tạp):\n{{ $json.pages && $json.pages[0] ? $json.pages[0].markdown : '(không đọc được chữ)' }}\n\n💬 Ghi chú thêm từ người gửi (bỏ qua nếu chỉ là lệnh /tomtat trống):\n{{ $(\"Nhận Envelope Từ Gateway\").item.json.text }}\n\nHãy đối chiếu CẢ 2 KẾT QUẢ OCR trên để đưa ra bản văn bản/đoạn tóm tắt nội dung CHÍNH XÁC nhất. Nếu 2 nguồn khác nhau ở chi tiết nào đó, ưu tiên nguồn rõ ràng hơn và nêu rõ sự không chắc chắn nếu cần.",
         "messages": {
           "messageValues": []
         },
@@ -441,29 +441,6 @@
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "=Trích xuất (OCR) TOÀN BỘ văn bản đọc được trong ảnh này, giữ nguyên thứ tự và xuống dòng như trong ảnh nếu có thể. KHÔNG mô tả bối cảnh, không nhận xét, không thêm giải thích — chỉ trả về đúng phần chữ/số đọc được. Nếu không có chữ nào, trả về đúng chuỗi: (không có chữ).",
-        "messages": {
-          "messageValues": [
-            {
-              "type": "HumanMessagePromptTemplate",
-              "messageType": "imageBinary"
-            }
-          ]
-        },
-        "batching": {}
-      },
-      "id": "4021f414-a648-46cd-a35f-5e821778037f",
-      "name": "Mô Tả Ảnh Bằng AI (Vision)",
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
-      "position": [
-        -480,
-        400
-      ]
-    },
-    {
-      "parameters": {
         "mode": "combine",
         "combineBy": "combineByPosition",
         "options": {}
@@ -478,18 +455,23 @@
       ]
     },
     {
-      "parameters": {
-        "model": "mistral-ocr-latest",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "id": "bb90335a-4c84-4616-88a3-ac15ba4f750b",
+      "name": "OCR Mistral (Native)",
+      "type": "n8n-nodes-base.mistralAi",
       "typeVersion": 1,
       "position": [
-        -560,
-        608
+        -480,
+        400
       ],
-      "id": "6342e3e6-c51b-4817-9cd2-92fb3298cf44",
-      "name": "Mistral Cloud Chat Model",
+      "parameters": {
+        "resource": "document",
+        "operation": "extractText",
+        "model": "mistral-ocr-latest",
+        "documentType": "image_url",
+        "inputType": "binary",
+        "binaryProperty": "data",
+        "options": {}
+      },
       "credentials": {
         "mistralCloudApi": {
           "id": "qIYJyRpSG4x8pUsN",
@@ -650,20 +632,9 @@
       "main": [
         [
           {
-            "node": "Mô Tả Ảnh Bằng AI (Vision)",
+            "node": "OCR Mistral (Native)",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Mô Tả Ảnh Bằng AI (Vision)": {
-      "main": [
-        [
-          {
-            "node": "Gộp OCR + Vision",
-            "type": "main",
-            "index": 1
           }
         ]
       ]
@@ -679,13 +650,13 @@
         ]
       ]
     },
-    "Mistral Cloud Chat Model": {
-      "ai_languageModel": [
+    "OCR Mistral (Native)": {
+      "main": [
         [
           {
-            "node": "Mô Tả Ảnh Bằng AI (Vision)",
-            "type": "ai_languageModel",
-            "index": 0
+            "node": "Gộp OCR + Vision",
+            "type": "main",
+            "index": 1
           }
         ]
       ]
