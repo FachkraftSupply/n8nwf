@@ -29,6 +29,35 @@ nếu cần.
   tầng (container name, credential ID, passphrase path, quy tắc an toàn) để phiên chat sau không
   cần đọc lại toàn bộ lịch sử debug.
 
+## 2026-09-08 (tiếp) — Bot Xử Lý Ảnh mới: /xoanen + /tomtat (gắn Gateway)
+- **`Bot_Image_Processing.json`** (19 node, sub-workflow mới, gắn qua Gateway giống Telebot ClickUp
+  Reader/Help Bot/Crawl Bot):
+  - `/xoanen`: Telegram Get File → **remove.bg API** (xóa nền) → gửi lại document (giữ alpha
+    transparency, không dùng sendPhoto vì Telegram nén JPEG mất nền trong suốt).
+  - `/tomtat`: OCR **CẢ 2 nguồn song song** — OCR.space (text-based OCR qua base64) VÀ Mistral
+    Vision (`mistralai/pixtral-12b` qua OpenRouter, đọc ảnh trực tiếp qua `chainLlm` với
+    `messageType: imageBinary`) — gộp bằng node Merge (combine by position) — AI tổng hợp
+    (`mistralai/mistral-small-3.2-24b-instruct` qua OpenRouter) đối chiếu cả 2 nguồn, ưu tiên
+    nguồn rõ ràng hơn nếu mâu thuẫn, xuất ra tiếng Việt có emoji + xuống dòng + cú pháp Markdown
+    Telegram thật (`*đậm*`, `_nghiêng_`) — gửi với `parse_mode: Markdown` để render đúng định dạng.
+- **Gateway (`GW_Gateway_Telegram.json`)**: thêm node `→ Sub: Image Bot`, case `image_bot` trong
+  switch `Route bot?` (output index 5), `COMMAND_MAP` thêm `xoanen`/`tomtat` → `image_bot`,
+  `AVAILABLE_BOTS` thêm `image_bot`. Đã update `gateway.config.available_bots` (DB) tương ứng và
+  cấp quyền `image_bot` cho admin để test.
+- **Build bằng n8n Workflow SDK** (`create_workflow_from_code` qua MCP) cho phần khung, sau đó
+  dùng `update_workflow` (raw node/connection ops) để thêm nhánh Vision song song — SDK không có
+  cú pháp xác nhận rõ ràng cho fan-out 1 node ra nhiều nhánh song song trong cùng 1 câu lệnh, nên
+  dùng addConnection nhiều lần (đã proven từ SQL_Backup_System) để nối 1 nguồn ra nhiều đích an toàn.
+- **Lỗi đã gặp khi build**: `autoAssignedCredentials` của `create_workflow_from_code` gán NHẦM
+  credential Telegram (`@csfsintbot` thay vì `Telegram Dev Bot` — bot thật Gateway đang dùng) —
+  phải kiểm tra + sửa lại bằng `setNodeCredential` cho từng node Telegram ngay sau khi tạo. Bài
+  học: luôn xác nhận credential thật bằng cách đọc trực tiếp `get_workflow_details` của Gateway
+  live, không tin auto-assign theo tên gần giống.
+- **Cần user tự làm sau khi đọc file này**: tạo 2 credential mới trong n8n (`remove.bg API`,
+  `OCR.space API`, cả 2 dạng httpTemplatedCustomAuth) — có API key thật nên không thể tự động
+  hóa qua MCP; nên tạo key MỚI thay vì dùng lại key cũ đã lộ công khai trong
+  `original/Telebot_main.json` (remove.bg) và `original/Elite_Crawl_Bot.json` (OCR.space).
+
 ## 2026-09-08 — Backup Postgres qua SSH thật (Phase 3 DB backup) HOÀN TẤT
 - **`SQL_Backup_System.json`**: nhánh backup DB đổi từ 3 node Postgres SELECT (tasks/task_links/
   sync_targets, gộp JSON) sang **pg_dump SQL thật** qua 4 node SSH mới:
