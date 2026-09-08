@@ -239,18 +239,23 @@ hay (B).
 5. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng, user xác nhận
    CHƯA CẦN làm ngay, giữ nguyên hiện trạng.
 
-### ✅ Đã xong (08/09/2026) — Bot Xử Lý Ảnh (/xoanen + /tomtat), gắn Gateway
-- `Bot_Image_Processing.json` (19 node) — hạng mục "Bot System Main (xử lý ảnh)" trong roadmap coi
-  như đã bắt đầu và có tính năng đầu tiên chạy được. Chi tiết đầy đủ: xem CHANGELOG 08/09/2026.
-- `/xoanen`: remove.bg xóa nền, gửi lại document giữ transparency.
-- `/tomtat`: OCR **song song 2 nguồn** (OCR.space + Mistral Vision qua OpenRouter) → AI tổng hợp
-  ra tiếng Việt, emoji, đúng Markdown Telegram.
-- **CẦN LÀM TRƯỚC KHI DÙNG THẬT**: tạo 2 credential trong n8n UI — `remove.bg API` và
-  `OCR.space API` (dạng httpTemplatedCustomAuth) — không tự động hóa được vì cần API key thật.
-  Khuyến nghị tạo key MỚI, không dùng lại key cũ đã lộ trong `original/Telebot_main.json` và
-  `original/Elite_Crawl_Bot.json`.
-- Chưa test thật qua Telegram (đang chờ user tạo 2 credential trên) — cần test `/xoanen` và
-  `/tomtat` với ảnh thật trước khi coi là hoàn tất.
+### ✅ Đã xong + TEST THẬT OK (08/09/2026, cuối phiên) — Bot Xử Lý Ảnh (/xoanen + /tomtat)
+- **`/xoanen` xác nhận chạy được với ảnh Telegram thật** — remove.bg xóa nền, gửi lại document
+  `.png` giữ transparency.
+- **`/tomtat` xác nhận chạy được** — OCR song song 2 nguồn (OCR.space + Mistral Cloud
+  `mistral-ocr-latest`, KHÔNG dùng OpenRouter cho vision nữa) → AI tổng hợp (`Mistral (qua
+  OpenRouter)` node — hiện đang set model `google/gemini-3.5-flash-lite`, tên node giữ nguyên
+  "Mistral (qua OpenRouter)" nhưng model thật là Gemini, cân nhắc đổi tên node cho khỏi nhầm) ra
+  tiếng Việt, emoji, Markdown Telegram, link dạng bấm-mở + copy-plaintext.
+- **Vision (Mistral Cloud) prompt đã đơn giản hoá về OCR THUẦN** (không mô tả bối cảnh) theo yêu
+  cầu user — vừa đúng nhu cầu vừa nhanh hơn. ⚠️ User báo Mistral Cloud vẫn khá chậm — nếu cần tối ưu
+  thêm tốc độ, cân nhắc bỏ hẳn 1 trong 2 nguồn OCR (chỉ OCR.space hoặc chỉ Mistral) thay vì chạy
+  song song, hỏi ý kiến user trước khi đổi.
+- Toàn bộ 3 credential cần thiết đã tạo xong và xác nhận đúng: `REMOVE.BG` (X-Api-Key),
+  `Spaceocr`/OCR.space (đã sửa template đúng header `apikey`, ban đầu bị nhầm copy header của
+  remove.bg), `Mistral Cloud account`.
+- Chi tiết đầy đủ chuỗi debug (6+ lỗi khác nhau đã gặp và sửa): xem CHANGELOG mục 08/09/2026 (2
+  entry cuối cùng trong ngày).
 
 ### ⚪ Còn treo, chưa ưu tiên
 6. Workflow ID cho Help Bot GPT → gắn Gateway.
