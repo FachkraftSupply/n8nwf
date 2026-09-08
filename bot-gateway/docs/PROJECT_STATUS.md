@@ -226,15 +226,32 @@ hay (B).
 
 ## VẤN ĐỀ CŨ (ưu tiên thấp hơn 3 phát hiện trên) — chưa test lại
 
-## CHECKLIST — Việc tiếp theo (cập nhật 07/09/2026 cuối phiên)
+## CHECKLIST — Việc tiếp theo (cập nhật 08/09/2026)
 
-1. **(Xem mục trên)** Test lại Full Reconcile với fix mới nhất — 612 task.
-2. Điền Workflow ID thật của `Full Reconcile` vào 2 node `Chạy Sync Cho List Này` +
-   `Chạy Sync List Mặc Định` trong `SQL_ClickUp_Sync_Scheduler.json` — CHƯA làm.
-3. Test multi-list qua `Sync Scheduler` (chuột phải → Execute Workflow).
-4. Test đưa bot vào group Telegram (kiểm tra `reply_to_message_id` giữ đúng group/topic) — CHƯA test.
-5. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng.
+### ✅ Đã xong (xác nhận 08/09/2026)
+1. ~~Test lại Full Reconcile với fix DKPV/PVTC theo năm~~ — XONG.
+2. ~~Điền Workflow ID thật của `Full Reconcile` vào `SQL_ClickUp_Sync_Scheduler.json`~~ — XONG.
+3. ~~Test multi-list qua `Sync Scheduler`~~ — XONG.
+4. ~~Test đưa bot vào group Telegram (`reply_to_message_id` đúng group/topic)~~ — XONG.
+7. ~~Backup Postgres/Credentials/Config → OneDrive (Phase 3)~~ — XONG (xem CHANGELOG 08/09/2026).
+
+### ⏸️ Tạm hoãn (chưa cần thiết)
+5. Xây lại xem file OneDrive (`view_file`, Graph API) — hiện chỉ có link phẳng, user xác nhận
+   CHƯA CẦN làm ngay, giữ nguyên hiện trạng.
+
+### 🔵 Đang làm (08/09/2026)
+- **Sub-workflow xử lý ảnh mới** — nhận ảnh gửi qua Telegram, đọc lệnh trong caption:
+  - `/xoanen` — xóa nền ảnh
+  - `/tomtat` — tóm tắt nội dung ảnh (mô tả/OCR + tóm tắt)
+  - Đây chính là hạng mục "Bot System Main (xử lý ảnh)" trong roadmap — bắt đầu triển khai.
+  - Tham khảo logic xử lý ảnh cũ: `workflows/new_architecture/sub_workflows_modernized/Telebot_main.json`
+    (giữ lại chỉ để tham khảo, KHÔNG dùng trực tiếp — xem ghi chú trong cấu trúc repo ở trên).
+
+### ⚪ Còn treo, chưa ưu tiên
 6. Workflow ID cho Help Bot GPT → gắn Gateway.
-7. Khi rảnh: Bot System Main (xử lý ảnh) + Backup Postgres → OneDrive (Phase 3).
+
+## VẬN HÀNH — Công cụ hỗ trợ
+- `bot-gateway/scripts/restore.sh` — khôi phục Postgres/Credentials/Workflows khi VPS sập.
+  **CHƯA test thật** trên production, cần test trên n8n instance rỗng trước khi tin dùng.
 
 
