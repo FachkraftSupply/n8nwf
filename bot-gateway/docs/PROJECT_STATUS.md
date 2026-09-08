@@ -8,6 +8,50 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
+## 🌙 PHIÊN MỚI NHẤT 2 (08/09/2026 tối, sau phiên fix routing) — Fix /user_list sâu hơn + Upload OneDrive
+
+**Fix thêm cho `/user_list` (tiếp phiên trước) — bug thứ 3 CÙNG LOẠI phát hiện thêm:**
+`Switch (Admin Extras)` (9 output: approve_user/deny_user/users_list/users_back/users_manage/
+grant_menu/revoke_menu/grant_confirm/revoke_confirm) có TẤT CẢ 12 node xuôi dòng bị nối chung vào
+output index 0 (approve_user) thay vì đúng theo `outputKey` từng rule. `/user_list` tính đúng
+`route: users_list` nhưng output đó (index 2) không có kết nối nào → im lặng không trả lời. Đã nối
+lại đúng cả 9 nhánh, publish. **User cần test lại `/user_list` để xác nhận.**
+
+**Tính năng mới ĐÃ BUILD xong (CHƯA TEST THẬT qua Telegram — cần user test):** Upload OneDrive từ
+chi tiết task.
+- `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`): nút inline "📤 Upload OneDrive" xuất hiện trên tin
+  nhắn chi tiết task (chỉ khi task có `onedrive_link`). Bấm vào → menu chọn tên file: 5 preset (BAV,
+  Kammer, EZB, Schulbestätigung, Spateinstieg — tự nối với tên học sinh từ `task.name`), "✏️ Tên tùy
+  chỉnh" (bot hỏi lại, nhận câu trả lời tiếp theo làm tên), "📎 Giữ tên gốc". Sau khi chọn → bot yêu
+  cầu gửi file → user gửi ảnh/tài liệu → bot tải file từ Telegram, resolve `onedrive_link` (dạng
+  share URL `1drv.ms`/`onedrive.live.com`) qua Microsoft Graph `GET /shares/{id}/driveItem`, upload
+  qua `PUT /drives/{driveId}/items/{itemId}:/{filename}:/content`, trả link `webUrl` khi xong.
+- State giữa các bước lưu ở bảng MỚI `clickup.pending_uploads` (chat_id PK, task_id, filename, mode,
+  onedrive_link) trong Postgres Docker (KHÔNG mirror sang Supabase — đây là state tạm thời của bot,
+  không phải dữ liệu nghiệp vụ, khác với bot_users/bot_permissions).
+- `GW Gateway - Telegram (DEV)` (`xmEKeIUnzxm2F7dF`) sửa để hỗ trợ: (1) envelope giờ mang theo
+  `document`/`photo` gốc từ Telegram; (2) thêm bước tra `clickup.pending_uploads` theo `chat_id`
+  ngay sau khi xác định user active — nếu có pending upload, ÉP route về `telebot_main` bất kể
+  COMMAND_MAP/DEFAULT_BOT (để tin nhắn thường/tài liệu gửi tiếp theo không bị lạc sang help_bot);
+  (3) prefix callback `od_` được whitelist route về `telebot_main`.
+- Credential dùng: `Microsoft Drive account` (`zYx8tEnjQW4Idpk4`, `microsoftOneDriveOAuth2Api`) —
+  credential có sẵn từ tính năng backup, CHƯA từng dùng để gọi Graph API trực tiếp qua HTTP Request
+  node kiểu này — **cần xác nhận credential có đủ quyền (scope Files.ReadWrite) để resolve link chia
+  sẻ VÀ ghi file vào đó**, vì trước giờ chỉ dùng qua node OneDrive gốc (upload vào folder của chính
+  chủ tài khoản, không phải qua share link).
+- ⚠️ **CHƯA TEST THẬT lượt nào** (trigger Telegram không execute được qua MCP) — cần user tự đi hết
+  luồng: mở 1 task có OneDrive link → bấm Upload OneDrive → chọn tên → gửi file → xác nhận nhận được
+  tin nhắn kết quả + file THẬT SỰ xuất hiện đúng folder OneDrive của task đó.
+- ⚠️ 2 cảnh báo validate (không chặn publish, cần theo dõi khi test): node `Telegram` (send chung
+  cho search+chi tiết) và `Send OD Menu` báo `inlineKeyboard` "expected object, got string" vì set
+  bằng biểu thức `={{ $json.telegramInlineKeyboard }}` thay vì object tĩnh — về lý thuyết n8n vẫn
+  evaluate binh thường (mọi field đều hỗ trợ expression bất kể type khai báo), nhưng ĐÂY LÀ LẦN ĐẦU
+  dùng cách này trong cả codebase (mọi nơi khác đều set `inlineKeyboard` là object tĩnh) — nếu nút
+  không hiện lên khi test, đây là nghi phạm đầu tiên cần tra.
+- Việc còn lại sau khi user test OK: thêm nút "⬅️ Quay lại" nếu cần, dọn `pending_uploads` cũ quá
+  hạn (chưa có cơ chế hết hạn/cleanup — 1 user chỉ có 1 pending row do PK là chat_id nên tự ghi đè,
+  không tích tụ rác, nhưng chưa có TTL nếu user bỏ dở giữa chừng).
+
 ## 🌙 PHIÊN MỚI NHẤT (08/09/2026 tối) — Sửa lỗi routing Admin System + bắt đầu backlog tính năng mới
 
 **Bug đã sửa & publish (Telebot Admin System `eWtu7Qs85Hes0HuP` + GW Gateway `xmEKeIUnzxm2F7dF`):**
