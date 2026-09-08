@@ -4,6 +4,32 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-08 — Backup Postgres qua SSH thật (Phase 3 DB backup) HOÀN TẤT
+- **`SQL_Backup_System.json`**: nhánh backup DB đổi từ 3 node Postgres SELECT (tasks/task_links/
+  sync_targets, gộp JSON) sang **pg_dump SQL thật** qua 4 node SSH mới:
+  `SSH - Dump Postgres (docker exec)` → `SSH - Copy File Ra Host` → `SSH - Tải File Về n8n`
+  (operation Download, trả binary) → nhánh song song `SSH - Dọn File Tạm (Host + Container)`.
+  Đã test executeWorkflow qua MCP nhiều lần tới khi `status: success` toàn bộ, file `.sql` 3MB
+  lên đúng OneDrive, Telegram báo đúng link.
+- **Xác nhận credential Postgres thật**: `-U n8n -d n8n` (role `postgres` KHÔNG tồn tại, thông tin
+  cũ trong memory dự án sai) — 2 schema cần backup là `clickup` và `gateway`.
+- **3 lỗi thực tế gặp khi build node SSH — ghi lại để tránh lặp lại:**
+  1. Key SSH dạng **ED25519 (OpenSSH format mới)** báo `Cannot parse privateKey: Unsupported key
+     format` trong credential SSH của n8n (thư viện `ssh2` không đọc được) — phải dùng
+     **RSA 4096-bit, định dạng PEM** (`ssh-keygen -t rsa -b 4096 -m PEM`).
+  2. **Tham số `command`/`path` của node SSH bắt buộc phải có dấu `=` ở đầu chuỗi** thì n8n mới
+     coi `{{ }}` là expression — thiếu dấu `=` khiến n8n gửi literal `{{ new Date()... }}` xuống
+     shell, gây `syntax error` (Execute) hoặc `No such file` (Download). Đã xác nhận bằng
+     `get_workflow_execution` qua MCP, không đoán.
+  3. Node SSH Download đọc file trên **host** (qua SFTP), KHÔNG đọc được file bên trong container
+     Docker — phải có bước `docker cp` ra host trước, không thể gộp 2 bước.
+- **Sửa thêm lỗi có sẵn từ trước** (phát hiện khi debug): cả 2 node Notify (`Notify Backup N8N
+  Xong`, `Notify Backup DB Xong`) đọc field `$json.webViewLink` (tên field cũ thời còn dùng Google
+  Drive) — OneDrive trả về field tên `webUrl`, khiến Telegram luôn báo `🔗 undefined`. Đã sửa cả 2.
+- Dùng MCP n8n (search_workflows/get_workflow_details/update_workflow/execute_workflow/
+  get_workflow_execution) để tự sửa + tự test trực tiếp trên n8n live, không cần user copy/paste
+  qua UI — nên có thể dùng cách này cho các lần debug workflow sau nếu MCP còn khả dụng.
+
 ## 2026-09-05
 - **SQL_ClickUp_Full_Reconcile.json — bản FINAL, 18 node.** Gộp toàn bộ fix sau nhiều vòng
   test thực tế với n8n live:
