@@ -17,7 +17,35 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🟡 MỚI (09/09/2026, phiên tiếp 2) — Cách nạp token Zalo (Community, không dùng env var) + workflow test riêng
+## 🟡 MỚI (09/09/2026, phiên tiếp 3) — Đã xác nhận schema payload Zalo thật qua execution
+
+User đã hardcode token Zalo vào workflow (xong). Đọc lại 2 execution thật của `Zalo API - Webhook
+Test` (`eFH2UIbQirfXSH1b`) — execution `1428` và `1432` — phát hiện:
+
+1. **Schema payload webhook Zalo thật** (execution 1428, tin nhắn 1-1 test):
+   ```json
+   {"event_name":"message.text.received","message":{"chat":{"chat_type":"PRIVATE","id":"ca7abe8023cfca9193de"},"from":{"id":"ca7abe8023cfca9193de","display_name":"Hải Anh"},"text":"té"}}
+   ```
+   `chat_id` là CHUỖI CHỮ+SỐ dài (KHÔNG phải số như Telegram), nằm ở `body.message.chat.id`. Nhóm
+   sẽ có `chat_type: "GROUP"` thay vì `"PRIVATE"` — **CHƯA có mẫu thật của 1 nhóm**, cần user thêm
+   bot vào 1 nhóm Zalo + nhắn thử để xác nhận field `id` tương tự.
+2. **`setWebhook` API của Zalo BẮT BUỘC phải kèm `secret_token`** trong body (khác Telegram — ở đó
+   optional). Execution 1432 báo lỗi `"Bad request: The secret_token must not be empty"` khi gọi
+   thiếu field này. Đồng thời header tin nhắn đến (`x-bot-api-secret-token: Haianhtran89`) cho thấy
+   trước đó ĐÃ CÓ 1 lượt đăng ký thành công với secret này (trỏ về URL **test**, chỉ sống khi mở
+   editor bấm Listen — chưa phải URL production).
+   - **Đã sửa**: node `Call Zalo setWebhook` giờ gửi kèm `{"url": "https://n8n.toididuhoc.net/webhook/zalo-test", "secret_token": "Haianhtran89"}`, đã publish. User cần bấm lại
+     "Register Webhook Trigger" → nhánh `Call Zalo setWebhook` 1 lần nữa để webhook trỏ đúng về URL
+     PRODUCTION (workflow đã active nên URL này giờ sống thật, không cần mở editor).
+   - ⚠️ Việc còn treo: CHƯA thêm bước xác thực header `x-bot-api-secret-token` ở phía node nhận
+     (`Zalo Webhook Test`) để chặn request giả mạo không có đúng secret — nên làm khi dọn tính năng
+     này để dùng thật lâu dài (không gấp cho việc lấy chat_id nhóm).
+3. **Việc tiếp theo (đang chờ user)**: sau khi đăng ký lại webhook vào URL production, thêm bot Zalo
+   vào 1 NHÓM thật, nhắn thử 1 tin trong nhóm đó → đọc tin Telegram báo về (hoặc query
+   `gateway.zalo_webhook_test_log`) để lấy đúng `chat_id` dạng nhóm (`chat_type: "GROUP"`) → gửi
+   cho tôi để điền vào `gateway.notify_targets.zalo_chat_id`.
+
+## 🟡 (09/09/2026, phiên tiếp 2) — Cách nạp token Zalo (Community, không dùng env var) + workflow test riêng
 
 User dùng n8n **Community**, không tiện set biến môi trường qua docker-compose. Đã đổi cách tiếp
 cận: **hardcode token trực tiếp vào tham số node trong n8n UI** (user tự dán, Claude không thấy giá
