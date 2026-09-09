@@ -107,13 +107,18 @@ bên dưới trước khi tiếp tục — ĐỪNG build lại từ đầu.
   nhỏ tự phát hiện qua `validationWarnings` (`removeNode` xoá mất connection ĐẦU VÀO của `Build
   Forward Message`, chỉ nối lại được đầu ra ở lần gọi đầu) — đã fix ngay, verify lại connections đầy
   đủ trước khi publish. **Callback `od_delfwd_` vẫn CHƯA có handler — bình thường tới hết Stage 3.**
-- ⬜ **Stage 3/4**: `Phân tích lệnh` (Code node router) thêm parse `od_del_(\d+)` → route `od_del`,
-  `od_delfwd_(\d+)` → route `od_delfwd`. `Switch` (node router chính) thêm 2 output mới `od_del`/
-  `od_delfwd` — LƯU Ý: `Switch` dùng `fallbackOutput: 'extra'` luôn là output CUỐI CÙNG theo vị trí,
-  thêm 2 rule mới sẽ ĐẨY index của fallback (hiện là 17) lên 19 → phải xóa nối cũ
-  (`Switch` output 17 → `Reply Unknown Command`) và nối lại đúng output 19, VÀ nối output 17/18 vào
-  2 chuỗi node mới của Stage 4. Cả 2 node này đều là node ĐÃ TỒN TẠI → dùng `removeNode`+`addNode`
-  cùng `id` (Rule #16), copy nguyên code/rules cũ + thêm phần mới, KHÔNG dùng `updateNodeParameters`.
+- ✅ **Stage 3/4 XONG** (publish `activeVersionId: 8f861731-ecc9-4220-9dfd-61c92e15c155`):
+  `Phân tích lệnh` parse thêm `od_del_(\d+)` → route `od_del`, `od_delfwd_(\d+)` → route `od_delfwd`
+  (check TRƯỚC `unknown_command`, không đụng logic cũ). `Switch` (router chính) thêm 2 rule mới
+  `od_del`/`od_delfwd` — đúng như dự đoán, thêm 2 rule đã ĐẨY index fallback (`extra`) từ 17 lên 19,
+  đã nối lại đủ 17 output gốc (0-16, giữ nguyên target) + fallback ở vị trí MỚI (19 → `Reply Unknown
+  Command`). Output 17 (`od_del`)/18 (`od_delfwd`) ĐANG ĐỂ TRỐNG có chủ đích — sẽ nối vào node xử lý
+  thật ở Stage 4. **Lưu ý cho subagent audit / phiên sau**: response `update_workflow` báo 1 warning
+  `SWITCH_FALLBACK_OUTPUT_DISABLED` dù `options.fallbackOutput` đã đúng là `"extra"` — đã tự
+  `get_workflow_details` đọc lại JSON THẬT ngay sau đó và xác nhận cấu hình + toàn bộ 20 connection
+  (index 0-16 đúng target cũ, 17/18 null, 19→Reply Unknown Command) đều ĐÚNG — kết luận đây là
+  validator false-positive tại thời điểm response (có thể do check chạy giữa lúc áp connection),
+  KHÔNG phải lỗi thật. Vẫn nên audit lại 1 lần nữa cho chắc khi Stage 4 xong.
 - ⬜ **Stage 4/4**: build 2 chuỗi node xử lý thật:
   - `od_del` (7 node): Get Queue (SELECT `drive_id,item_id,fwd_message_id,deleted_at,final_name`) →
     Build Result (Code, guard: không tìm thấy / đã forward rồi (phải dùng nút kia) / đã xóa rồi) →
