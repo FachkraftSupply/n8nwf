@@ -95,16 +95,18 @@ bên dưới trước khi tiếp tục — ĐỪNG build lại từ đầu.
   phải bug, đừng test nút này cho tới khi thấy dòng "Stage 4/4 XONG" ở dưới.**
 
 ### Stage CHƯA làm (làm tiếp theo đúng thứ tự):
-- ⬜ **Stage 2/4**: `Build Forward Message` thêm `queueId: queue.id` vào kết quả trả về (cần cho nút
-  ở bước 3 và cho node lưu `fwd_chat_id`/`fwd_message_id`) + thêm guard `deleted_at`. Chèn 2 node mới
-  `OD Fwd: Extract Send Result` (Code, đọc `message_id`/`chat.id` từ response của `Send Forward
-  Message`, có fallback đọc cả `result.message_id` phòng trường hợp n8n trả khác shape — CHƯA xác
-  nhận được shape thật vì `test_workflow` pin node Telegram, phải chờ test thật) → `OD Fwd: Save
-  Message Info` (Postgres UPDATE `fwd_chat_id`/`fwd_message_id`/`zalo_chat_id_used`, có
-  `alwaysOutputData`+`onError` để không chặn `Confirm Forward Sent` phía sau) — chèn GIỮA `Send
-  Forward Message` và `Confirm Forward Sent` (đang nối thẳng, phải cắt nối cũ, nối lại qua 2 node
-  mới). `Send Forward Copy To User` thêm nút "🗑️ Xóa & thu hồi" → `od_delfwd_{{ $json.queueId }}`
-  (dùng `replyMarkup: "inlineKeyboard"` TĨNH, đúng Rule #21 — KHÔNG dùng expression động).
+- ✅ **Stage 2/4 XONG** (publish `activeVersionId: bd48c9cd-6dfb-44a0-8b4c-534c2b0e4ddc`):
+  `Build Forward Message` trả thêm `queueId` + từ chối forward nếu `deleted_at` đã có. Chèn
+  `OD Fwd: Extract Send Result` (Code, đọc `message_id`/`chat.id` từ response `Send Forward Message`,
+  có fallback đọc `result.message_id` phòng n8n trả khác shape — **CHƯA xác nhận được shape thật**
+  vì `test_workflow` pin node Telegram, phải chờ user test thật, xem log/execution nếu
+  `fwd_chat_id`/`fwd_message_id` bị NULL sau khi forward) → `OD Fwd: Save Message Info` (Postgres
+  UPDATE `fwd_chat_id`/`fwd_message_id`/`zalo_chat_id_used`, có `alwaysOutputData`+`onError`) — chèn
+  GIỮA `Send Forward Message` và `Confirm Forward Sent`. `Send Forward Copy To User` đã có nút
+  "🗑️ Xóa & thu hồi" → `od_delfwd_{{ $json.queueId }}` (`replyMarkup` TĨNH, đúng Rule #21). Có 1 lỗi
+  nhỏ tự phát hiện qua `validationWarnings` (`removeNode` xoá mất connection ĐẦU VÀO của `Build
+  Forward Message`, chỉ nối lại được đầu ra ở lần gọi đầu) — đã fix ngay, verify lại connections đầy
+  đủ trước khi publish. **Callback `od_delfwd_` vẫn CHƯA có handler — bình thường tới hết Stage 3.**
 - ⬜ **Stage 3/4**: `Phân tích lệnh` (Code node router) thêm parse `od_del_(\d+)` → route `od_del`,
   `od_delfwd_(\d+)` → route `od_delfwd`. `Switch` (node router chính) thêm 2 output mới `od_del`/
   `od_delfwd` — LƯU Ý: `Switch` dùng `fallbackOutput: 'extra'` luôn là output CUỐI CÙNG theo vị trí,
