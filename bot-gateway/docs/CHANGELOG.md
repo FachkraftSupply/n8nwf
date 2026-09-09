@@ -4,6 +4,31 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 14) — Button hóa `/lichsu` + mở `/lichsu`/`/timkiem` cho user thường
+
+- **`Telebot Admin System`**: `/lichsu` giờ có luồng bấm nút 3 bước thay vì gõ tay: bấm số ngày
+  (1/3/5/7) → bấm nhóm muốn xem (hoặc "🌐 Tất cả nhóm") → nhận tóm tắt. Có nút ❌ Hủy ở mọi bước.
+  Bước chọn nhóm dùng **deep-link dạng hyperlink** (`t.me/<bot>?start=lchs_g_<days>_<chatId>`),
+  không dùng inline keyboard động — vì số nhóm thay đổi, tránh đúng cái bẫy inlineKeyboard-động ở
+  RULES.md #14. Cú pháp gõ tay cũ (`/lichsu <1|3|5|7> <chat_id>`) vẫn hoạt động song song cho ai
+  quen dùng. `Switch` node của workflow này giờ có 19 rule (thêm `lichsu_day`/`lichsu_pick`/
+  `lichsu_cancel`); tự phát hiện và sửa đúng bẫy fallback-wire ở RULES.md #15 ngay lúc thêm y hệt
+  lần trước (dây fallback cũ ở output 16 bị patch lại đúng vị trí mới là 19 trước khi publish).
+- **Mở `/lichsu` + `/timkiem` cho user thường** (trước đây chỉ admin dùng được, qua bot System
+  riêng): thêm 2 lệnh này vào `Telebot ClickUp Reader` (bot chính `Elite Clickupbot` mà user dùng
+  hàng ngày) với **bộ lọc theo user** — chỉ liệt kê/tóm tắt/tìm trong các nhóm mà chính user đó đã
+  từng nhắn tin (join `EXISTS` vào `gateway.group_chat_log` theo `user_id`, chặn cả trường hợp gõ
+  tay một `chat_id` không thuộc về mình). Cùng luồng bấm nút 3 bước như bản admin, callback dùng
+  prefix riêng `ulchs_` (không trùng `lchs_` của Admin System — hai bot khác nhau, không chung
+  whitelist).
+- **`GW Gateway - Telegram`**: thêm `lichsu`/`timkiem` vào `COMMAND_MAP` (trước đó thiếu, nên gõ
+  lệnh sẽ rơi vào route `unknown` — lỗi phát hiện lúc build tính năng này) và thêm prefix `ulchs_`
+  vào whitelist callback của `GW-03 Router` để route đúng về `telebot_main`.
+- Update `Nội dung lệnh help` của cả 2 bot (Admin System + ClickUp Reader) để liệt kê `/lichsu`
+  và `/timkiem` với mô tả luồng bấm nút mới.
+- Chưa test qua Telegram thật (như lần trước — Trigger không chạy được qua MCP); phần filter theo
+  user đặc biệt cần test kỹ vì liên quan tới việc lộ dữ liệu chat của nhóm khác.
+
 ## 2026-09-09 (tiếp 13) — Ghi log tin nhắn nhóm + tóm tắt AI hàng đêm + `/lichsu` + `/timkiem`
 
 Kiến trúc: tóm tắt AI tính **1 lần/ngày/nhóm** (không tính lại mỗi lần hỏi) để tiết kiệm chi phí —
