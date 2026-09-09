@@ -4,6 +4,35 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 — Fix panel gall/bl/dl bị lệch route, thêm `/version`, phát hiện lỗi tham số nối dây
+
+- **Xung đột giữa 2 phiên chat chạy song song trên cùng workflow `Telebot Admin System`**: 1 phiên
+  khác đã tự sửa lỗi routing `Switch (Admin Extras)` VÀ tự thêm 3 nút mới (⚡ Cấp tất cả quyền,
+  ⛔ Block user, 🗑️ Xóa hoàn toàn — 13 output tổng cộng) trong lúc phiên này đang làm việc song song
+  mà không biết. Phiên này vô tình ghi đè lại `rules` của `Switch (Admin Extras)` với 12 output cũ
+  (thiếu route `delete_prompt`/`delete_confirm`), làm lệch khớp với 13 connection đã có sẵn. Đã phát
+  hiện qua PROJECT_STATUS.md (đọc lại khi user cung cấp link) và sửa lại đúng 13 route khớp với
+  node/connection thực tế đang tồn tại: `approve_user, deny_user, users_list, users_back,
+  users_manage, grant_menu, revoke_menu, grant_confirm, revoke_confirm, grant_all, block_user,
+  delete_prompt, delete_confirm`.
+- **⚠️ Phát hiện kỹ thuật mới quan trọng**: tham số đúng cho `addConnection`/`removeConnection` qua
+  n8n MCP là `sourceIndex`/`targetIndex`, KHÔNG PHẢI `sourceOutput`/`targetInput` — dùng sai tên bị
+  ÂM THẦM bỏ qua (mặc định về index 0), không báo lỗi. Đây nhiều khả năng là nguyên nhân gốc của lỗi
+  "connection dồn hết vào 1 output" đã từng gặp và tự tin fix trước đó. Xem `RULES.md` mục 13.
+- **Thêm lệnh `/version`** (chỉ admin, gate qua `Check Admin (Version)`): đọc bảng mới
+  `gateway.changelog` (SQL: `sql/03_gateway_changelog.sql`, seed sẵn v1-v8 theo mốc ngày thật), hiện
+  phiên bản mới nhất + 6 thay đổi gần nhất + link sang `FEATURE_CATALOG.md` đầy đủ. Nối vào `Switch`
+  chính (không đụng `Switch (Admin Extras)` đang nhạy cảm) để giảm rủi ro va chạm lần nữa.
+- Cập nhật `/help` (Admin System): thêm mục `/user_list` và `/version`.
+- Route thông báo duyệt user mới: Gateway giờ gửi qua `Telegram System Bot` (trước đó gửi nhầm qua
+  `Elite Clickupbot`) — nút Approve/Deny được `Telebot Admin System` xử lý (không còn xử lý ở
+  Gateway, vì callback giờ đến từ bot khác với bot nhận tin Gateway).
+- **CHƯA làm trong phiên này** (backlog user yêu cầu, theo thứ tự): định tuyến 3 loại thông báo
+  (cập nhật ClickUp / hệ thống-lịch / lỗi) vào 3 topic khác nhau trong group
+  `https://t.me/c/3647848349/` (topic 2/6/4, group id `-1003647848349`); debug tiếp Upload OneDrive
+  (vẫn chưa phản hồi khi bấm nút, xem đầu PROJECT_STATUS.md); form upload cần thêm lựa chọn
+  "giữ tên gốc" / "tên tùy chỉnh" (có vẻ đã có trong bản build trước, cần xác nhận lại khi debug).
+
 ## 2026-09-08 (tiếp, cuối phiên) — /xoanen HOẠT ĐỘNG THẬT; /tomtat + cutover đang hoàn thiện
 - **`/xoanen` xác nhận chạy được với ảnh Telegram thật** sau chuỗi debug live qua execution log:
   1. Node "Có Ảnh Không" lỗi kiểu dữ liệu — thiếu `singleValue: true` trong operator `array.exists`

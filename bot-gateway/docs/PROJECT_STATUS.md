@@ -8,6 +8,43 @@
 > Lỗi thường gặp + cách đã sửa (tra cứu nhanh): xem `docs/FAQ.md`.
 > ⚠️ QUY TẮC BẮT BUỘC khi sửa workflow — ĐỌC TRƯỚC: xem `docs/RULES.md`.
 
+## 🆕 PHIÊN MỚI NHẤT (09/09/2026) — Xung đột 2 phiên song song đã hoà giải + `/version` mới
+
+**⚠️ Phát hiện quan trọng**: phiên này chạy SONG SONG với 1 phiên khác (không biết về nhau) trên
+CÙNG workflow `Telebot Admin System`. Phiên kia đã tự thêm 3 nút mới (Cấp tất cả quyền/Block/Xóa
+hoàn toàn, 13 output) VÀ tự sửa lỗi routing — trong lúc phiên này vô tình ghi đè `Switch (Admin
+Extras)` về 12 output cũ, làm lệch khớp với 13 connection đã có. Đã hoà giải bằng cách đọc lại
+PROJECT_STATUS.md này (link GitHub user cung cấp giữa chừng) và dựng lại đúng 13 route khớp thực
+tế. **Bài học: khi thấy nodeCount/connections không khớp kỳ vọng, LUÔN nghi ngờ có phiên khác đang
+sửa song song trước khi cho là mình đang nhớ nhầm — đọc lại PROJECT_STATUS.md mới nhất trên GitHub
+(không tin bộ nhớ hội thoại) khi có dấu hiệu bất thường.**
+
+**Phát hiện kỹ thuật quan trọng khác** (đã thêm `RULES.md` #13): tham số đúng cho
+`addConnection`/`removeConnection` là `sourceIndex`/`targetIndex`, không phải `sourceOutput`/
+`targetInput` — sai tên bị âm thầm bỏ qua (mặc định index 0), rất có thể là nguyên nhân gốc của
+các lỗi "connection dồn 1 output" đã gặp trước đây.
+
+**Đã xong + publish trong phiên này**:
+- Fix routing `/user_list` panel (13 route đúng khớp: approve_user, deny_user, users_list,
+  users_back, users_manage, grant_menu, revoke_menu, grant_confirm, revoke_confirm, grant_all,
+  block_user, delete_prompt, delete_confirm).
+- Gateway: thông báo duyệt user mới chuyển sang gửi qua `Telegram System Bot` thay vì
+  `Elite Clickupbot`; nút Approve/Deny xử lý tại `Telebot Admin System` (không còn ở Gateway).
+- Lệnh mới `/version` (chỉ admin) — đọc bảng `gateway.changelog` (seed v1-v8), trỏ link sang
+  `FEATURE_CATALOG.md`.
+- `/help` cập nhật thêm `/user_list` + `/version`.
+
+**⚠️ CHƯA test thật qua Telegram trong phiên này** (không có quyền execute Telegram Trigger qua
+MCP): `/user_list` toàn bộ panel (đặc biệt 3 nút mới gall/bl/dl chưa ai xác nhận chạy), `/version`.
+**Việc user yêu cầu tiếp theo (chưa bắt đầu)**:
+1. Test lại toàn bộ `/user_list` + `/version`.
+2. Debug tiếp Upload OneDrive (xem mục 🔴 ngay bên dưới — vẫn treo từ phiên trước).
+3. Định tuyến 3 loại thông báo vào 3 topic khác nhau trong group `https://t.me/c/3647848349/`:
+   cập nhật ClickUp (không phải tìm task) → topic 2, hệ thống/task lịch → topic 6, lỗi → topic 4
+   (group id thật `-1003647848349`, topic = `message_thread_id`).
+4. Form upload OneDrive: xác nhận có đủ 2 lựa chọn "giữ tên gốc" / "tên tùy chỉnh" (user nhắc lại
+   yêu cầu này — có thể đã có sẵn trong bản build trước, cần kiểm tra lại khi debug mục 2).
+
 ## 🔴 XÁC NHẬN: Upload OneDrive VẪN CHƯA hoạt động (sau khi đã vá lỗi alwaysOutputData)
 
 User đã test lại sau khi vá sự cố P0 (mục ngay bên dưới) — nút "📤 Upload OneDrive" **vẫn không có

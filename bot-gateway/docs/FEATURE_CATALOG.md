@@ -70,6 +70,7 @@ workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
 | ⛔ Block user (MỚI) | Chặn truy cập 1 user đang active (khác "Từ chối" — dành cho user MỚI xin quyền) | Callback `bl:<uid>` → UPDATE `status='blocked'` (dual-write); Gateway tự coi mọi status khác active/pending là bị chặn, không cần sửa thêm | 2026-09-08 (tối, phiên 3) — CHƯA TEST |
 | 🗑️ Xóa hoàn toàn user (MỚI) | Xóa vĩnh viễn record user khỏi hệ thống, có bước xác nhận vì không thể hoàn tác | Callback `dl:<uid>` → panel xác nhận (✅/❌) → `dlc:<uid>` mới thực sự DELETE `bot_users`+`bot_permissions` (dual-write) | 2026-09-08 (tối, phiên 3) — CHƯA TEST, khuyến nghị thử trên user không quan trọng trước |
 | ⬅️ Quay lại danh sách | Điều hướng quay lại `/user_list` từ bất kỳ panel con nào | Callback `ub` | 2026-09-08 (tối) |
+| **`/version`** (MỚI) | Xem phiên bản hiện tại + các thay đổi gần nhất, link sang file này | Query bảng mới `gateway.changelog` (seed v1-v8), chỉ admin (`Check Admin (Version)`) | 2026-09-09 — CHƯA TEST |
 
 ## 5. Workflow nền (không có lệnh Telegram trực tiếp, chạy tự động)
 

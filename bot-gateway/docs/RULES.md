@@ -111,3 +111,18 @@ lập tức trước khi báo hoàn tất với user.** Nếu `publish_workflow`
 sub-workflow (`→ Sub: ...`) CHƯA publish — publish sub-workflow đó trước.
 Nếu gặp lỗi "Cannot modify workflow while it is being edited by a user in the editor" — user đang mở
 workflow đó trong tab n8n, đợi họ đóng tab/chuyển tab rồi thử lại (không phải lỗi thật).
+
+## 13. ⚠️ Tham số ĐÚNG cho `addConnection`/`removeConnection` qua n8n MCP là `sourceIndex`/`targetIndex`, KHÔNG PHẢI `sourceOutput`/`targetInput`
+Đã dùng nhầm tên tham số `sourceOutput`/`targetInput` (nghe hợp lý nhưng SAI) khi nối dây cho node
+IF/Switch nhiều output qua `update_workflow`. Hậu quả: tool **ÂM THẦM bỏ qua giá trị index truyền
+vào và luôn mặc định output/input = 0** — không báo lỗi, không cảnh báo gì trong response. Đây
+chính là nguyên nhân gốc của lỗi "tất cả connection dồn hết vào 1 output" đã gặp nhiều lần với
+`Switch (Admin Extras)` (08-09/09/2026) — tưởng là lỗi build tay/tool, thực ra là sai tên field.
+**Cách xác nhận đúng tên field**: gọi operation với object rỗng/thiếu field bắt buộc để tool trả về
+lỗi liệt kê đúng tên field (vd gọi `addNode` với `node:{}` → lỗi liệt kê `name`/`type`/`typeVersion`
+là bắt buộc). Với `addConnection`/`removeConnection`, chỉ `source`/`target` là bắt buộc — `sourceIndex`
+và `targetIndex` là optional (mặc định 0 nếu không truyền, ĐÚNG cho node chỉ có 1 output/input).
+**Quy tắc bắt buộc**: bất cứ khi nào nối dây cho 1 node có ≥2 output (IF, Switch) qua `addConnection`,
+LUÔN dùng đúng tên `sourceIndex` (không phải `sourceOutput`) — và sau khi nối xong 1 batch lớn, gọi
+lại `get_workflow_details` (hoặc test 1 route thật) để xác nhận từng output THỰC SỰ trỏ đúng node,
+không tin tưởng riêng response `appliedOperations` (nó không phát hiện được lỗi loại này).
