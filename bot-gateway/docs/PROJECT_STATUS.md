@@ -17,7 +17,33 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🔴 SỬA LẠI (09/09/2026, phiên tiếp 4) — `secret_token` KHÔNG hề được áp dụng 2 lần liên tiếp
+## ✅ HOÀN TẤT (09/09/2026, phiên tiếp 5) — Mirror OneDrive forward sang Zalo: TEST THẬT OK, hoạt động
+
+Đã test thật qua `execute_workflow` (chạy thật, không phải giả lập) trên `Zalo API - Webhook Test`:
+1. **Webhook production đã đăng ký thành công** — `Call Zalo setWebhook` trả về
+   `{"ok":true,"result":{"url":"https://n8n.toididuhoc.net/webhook/zalo-test","verification":{"ok":true,"outcome":"webhook.ok"}}}`.
+   Trước đó Zalo đang trỏ vào URL **test** (chỉ sống khi mở editor bấm Listen) — user tự phát hiện
+   và hỏi, đã xác nhận đúng là rủi ro thật rồi sửa lại URL production ngay.
+2. **`chat_id` nhóm Zalo thật** lấy từ execution `1438`: `zgr-891bfa57540ebd50e41f` (`chat_type:
+   "GROUP"`, khác `"PRIVATE"` của chat 1-1). Đã `UPDATE gateway.notify_targets SET zalo_chat_id =
+   'zgr-891bfa57540ebd50e41f'` cho CẢ 3 category (`od_kammer_bav`, `od_hoadon`, `od_giayto`) — user
+   xác nhận Zalo chỉ có 1 nhóm, không chia topic, nên dùng chung 1 chat_id là đúng.
+3. **Gửi tin nhắn thật vào nhóm Zalo — THÀNH CÔNG**, user tự xác nhận đã nhận được trong nhóm.
+   `sendMessage` trả `{"ok":true,"result":{"message_id":"...","date":...}}`.
+4. Tính năng "Mirror thông báo forward sang Zalo" (`Send Zalo Notify` trong `Telebot ClickUp
+   Reader`) giờ **CÓ ĐỦ ĐIỀU KIỆN HOẠT ĐỘNG THẬT** khi user thực hiện 1 lượt Upload OneDrive →
+   forward vào nhóm Telegram → tự động mirror sang Zalo. **CHƯA test qua đúng luồng Telegram thật**
+   (chỉ mới test isolate cuộc gọi Zalo trực tiếp) — cần user tự đi hết luồng thật 1 lần: Upload
+   OneDrive 1 file → bấm forward vào 1 trong 3 category → xác nhận tin nhắn đến CẢ Telegram VÀ Zalo.
+
+**Ghi chú kỹ thuật phát sinh trong lúc test (đã thêm RULES.md #16 mở rộng)**: sửa `jsonBody` thêm
+`secret_token` qua `setNodeParameter` rồi `updateNodeParameters(replace:true)` ĐỀU báo thành công
+nhưng **không hề áp dụng** — chỉ `removeNode`+`addNode` mới thực sự sửa được. Đã dọn sạch 4 node
+tạm (`TEMP ...`) dùng để verify qua `execute_workflow` (nodes có credential — Postgres, Telegram —
+bị "pinned"/giả lập khi dùng `test_workflow`, phải dùng `execute_workflow` với
+`executionMode:"manual"` mới chạy thật kể cả gọi external API/DB thật).
+
+## 🔴 (09/09/2026, phiên tiếp 4) — `secret_token` KHÔNG hề được áp dụng 2 lần liên tiếp
 
 User báo "không thấy dòng secret_token ở đâu" sau khi phiên trước báo đã sửa xong — kiểm tra lại
 `get_workflow_details` xác nhận ĐÚNG: cả 2 lần sửa trước (`setNodeParameter` rồi
@@ -135,7 +161,7 @@ best-effort, không chặn luồng chính nếu gọi Zalo lỗi.
 | Bot / Workflow | Trạng thái | Ghi chú |
 |---|---|---|
 | **Gateway** (`GW Gateway - Telegram`, `xmEKeIUnzxm2F7dF`) | ✅ Hoạt động, PROD (`@Elite_clickup_bot`) | Auth, router, callback whitelist (`od_`, `odfwd_`, `odhelp`, `chitiet_`, `sync_`) |
-| **Telebot ClickUp Reader** (`9JJRrh36H2rLwtnu`, chạy qua Gateway, `bot_key: telebot_main`) | ✅ Hoạt động đầy đủ · 🟡 Mirror Zalo MỚI build, chưa hoạt động | `/task`, chi tiết task, Upload OneDrive (chọn tên/preset/tùy chỉnh/giữ gốc, forward thông báo vào nhóm Telegram, `/cancel`) — TẤT CẢ đã user xác nhận chạy thật. Mirror thông báo forward sang nhóm Zalo — đã build, ĐANG CHỜ `ZALO_BOT_TOKEN` + `zalo_chat_id` từ user (xem mục ngay trên) |
+| **Telebot ClickUp Reader** (`9JJRrh36H2rLwtnu`, chạy qua Gateway, `bot_key: telebot_main`) | ✅ Hoạt động đầy đủ · ✅ Mirror Zalo đủ điều kiện chạy thật (test isolate OK, chưa test full luồng Telegram) | `/task`, chi tiết task, Upload OneDrive (chọn tên/preset/tùy chỉnh/giữ gốc, forward thông báo vào nhóm Telegram, `/cancel`) — TẤT CẢ đã user xác nhận chạy thật. Mirror thông báo forward sang nhóm Zalo — token đã hardcode, `zalo_chat_id` đã điền cho cả 3 category, gửi thử trực tiếp tới Zalo THÀNH CÔNG (xem mục "phiên tiếp 5" ở trên) — còn thiếu 1 lượt test qua ĐÚNG luồng Upload OneDrive → forward Telegram thật |
 | **Bot Xử Lý Ảnh** (`6I4MnJiJCiv2JOIr`, qua Gateway, `bot_key: image_bot`) | ✅ `/xoanen`, `/tomtat` hoạt động OK · ⏸️ AI xoá nền/upscale TẠM DEACTIVATE | Tính năng 🤖 AI xoá nền / 🔍 Upscale đã build xong nhưng đang **tạm tắt** (2 node `Call OpenRouter (...)` set `disabled`, 2 nút bấm đã gỡ khỏi tin nhắn kết quả) theo yêu cầu 09/09/2026 — chờ user tạo credential rồi bật lại. Xem mục checklist |
 | **Telebot Admin System** (`eWtu7Qs85Hes0HuP`, bot riêng `@elite_n8n_system_bot`) | ✅ Hoạt động đầy đủ | `/task`, `/sync`, `/sync_status`, `/db_status`, `/backup_n8n`, `/backup_db`, `/version`, `/cancel`, `/user_list` (danh sách + panel quản lý quyền đầy đủ 13 route) |
 | **SQL - ClickUp Full Reconcile** (`G1R0okF0rUziySu9`) | ✅ Hoạt động, đã fix DKPV/PVTC | Xem mục "DKPV/PVTC" bên dưới |
