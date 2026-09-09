@@ -166,7 +166,33 @@ số lượng operation gửi lên, NÊN gọi lại `get_workflow_details` đ�
 gọi SAU (vì nó chỉ xác nhận các operation trong CHÍNH lần gọi đó, không xác nhận lại các operation đã
 "tưởng như" thành công ở lần gọi trước đó bị rollback).
 
-## 16. ⚠️ Đổi CREDENTIAL của 1 node đang tồn tại qua `updateNodeParameters` KHÔNG đáng tin — dùng `removeNode` + `addNode`
+## 16. ⚠️ Sửa 1 node ĐANG TỒN TẠI qua `updateNodeParameters`/`setNodeParameter` KHÔNG đáng tin (không chỉ credential) — dùng `removeNode` + `addNode`
+
+**Cập nhật 09/09/2026**: lỗi này KHÔNG CHỈ xảy ra với `credentials` (phát hiện ban đầu) mà còn xảy
+ra với tham số THƯỜNG (vd `jsonBody` của node `httpRequest`). Gặp lại y hệt khi thêm field
+`secret_token` vào `jsonBody` của node `Call Zalo setWebhook` (workflow `Zalo API - Webhook Test`):
+gọi `setNodeParameter` với `path: "/parameters/jsonBody"` → response thành công, nhưng
+`get_workflow_details` lại cho thấy giá trị bị lồng SAI CHỖ (`node.parameters.parameters.jsonBody`
+thay vì `node.parameters.jsonBody`) — n8n đọc field ở vị trí gốc nên hoàn toàn không có gì thay đổi.
+Thử lại lần 2 bằng `updateNodeParameters` với `replace: true` (đúng cú pháp, đúng vị trí top-level)
+— response VẪN báo thành công, nhưng đọc lại `get_workflow_details` thì field mới **vẫn không có**,
+không có lời giải thích nào từ response. Cả 2 lần đều không có warning/error gì để nhận biết.
+
+**Kết luận chung (áp dụng cho MỌI lần sửa node đã tồn tại, không riêng credential)**: đừng tin
+`appliedOperations` khớp số lượng = đã áp dụng đúng. Sau BẤT KỲ `updateNodeParameters`/
+`setNodeParameter` nào sửa 1 node đã có sẵn (không phải `addNode` mới), **BẮT BUỘC gọi lại
+`get_workflow_details` để xác nhận giá trị mới thực sự có mặt ĐÚNG VỊ TRÍ** trước khi `publish_workflow`. Nếu xác nhận sai/thiếu — đừng thử `updateNodeParameters`/`setNodeParameter` lần
+2 cho CÙNG node đó (có vẻ dễ gặp lại cùng lỗi) — chuyển thẳng sang cách dưới đây, đã xác nhận hoạt
+động 100% cả 2 lần gặp lỗi này:
+
+**Cách ĐÚNG, đã xác nhận hoạt động (2/2 lần)**: `removeNode` node đó rồi `addNode` lại với **cùng
+`id`**, copy nguyên các field khác (`parameters`, `webhookId`, `position`, `credentials` nếu giữ
+nguyên) như cũ, chỉ thay đúng phần cần sửa, trong CÙNG 1 batch `update_workflow` (kèm
+`addConnection` để nối lại các connection đã mất do `removeNode` xoá theo — `removeNode` xoá cả
+connection tới/từ node đó, phải nối lại thủ công). Luôn `get_workflow_details` lại lần nữa để xác
+nhận trước khi `publish_workflow`.
+
+### Trường hợp cụ thể ban đầu (CREDENTIAL) — giữ nguyên tham khảo
 Gọi `updateNodeParameters` với `parameters: {}` (hoặc rỗng) kèm field `credentials` để chỉ đổi
 credential của 1 node — response báo `appliedOperations` thành công, KHÔNG có warning, nhưng khi
 `get_workflow_details` lại thì credential **vẫn là credential CŨ**, hoàn toàn không đổi. Gặp bug

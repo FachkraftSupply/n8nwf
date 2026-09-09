@@ -17,7 +17,25 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🟡 MỚI (09/09/2026, phiên tiếp 3) — Đã xác nhận schema payload Zalo thật qua execution
+## 🔴 SỬA LẠI (09/09/2026, phiên tiếp 4) — `secret_token` KHÔNG hề được áp dụng 2 lần liên tiếp
+
+User báo "không thấy dòng secret_token ở đâu" sau khi phiên trước báo đã sửa xong — kiểm tra lại
+`get_workflow_details` xác nhận ĐÚNG: cả 2 lần sửa trước (`setNodeParameter` rồi
+`updateNodeParameters replace:true`) đều báo `appliedOperations` thành công nhưng **thực tế không
+áp dụng gì cả** — đây là lỗi CÙNG LOẠI với RULES.md #16 (trước chỉ biết xảy ra với `credentials`,
+giờ xác nhận xảy ra cả với tham số thường như `jsonBody`). Đã cập nhật RULES.md #16 mở rộng phạm vi
+cảnh báo. **Đã sửa dứt điểm bằng `removeNode`+`addNode`** (cách duy nhất xác nhận hoạt động), verify
+lại bằng `get_workflow_details` TRƯỚC khi publish lần này — xác nhận đúng, đã publish.
+
+Node `Call Zalo setWebhook` giờ gửi `secret_token: "Haianhtran89"` đúng thật (dạng expression
+`={{ {...} }}` thay vì object tĩnh, để tránh nghi ngờ object tĩnh là nguyên nhân — chưa rõ nguyên
+nhân gốc của bug này, chỉ biết cách né).
+
+**Việc tiếp theo cho user**: bấm lại "Register Webhook Trigger" → `Call Zalo setWebhook` 1 lần nữa
+(lần này chắc chắn có secret_token) → xác nhận `ok:true` → thêm bot vào 1 nhóm Zalo, nhắn thử → lấy
+`chat_id` dạng nhóm gửi cho tôi.
+
+## 🟡 (09/09/2026, phiên tiếp 3) — Đã xác nhận schema payload Zalo thật qua execution
 
 User đã hardcode token Zalo vào workflow (xong). Đọc lại 2 execution thật của `Zalo API - Webhook
 Test` (`eFH2UIbQirfXSH1b`) — execution `1428` và `1432` — phát hiện:
