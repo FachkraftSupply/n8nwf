@@ -18,7 +18,33 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🔴 SỬA (09/09/2026, phiên tiếp 8) — Lỗi THẬT SỰ khác: quên thêm cột vào `pending_uploads`
+## ✅ SỬA (09/09/2026, phiên tiếp 9) — Luồng ổn định, sửa nốt "Học sinh: Không rõ" + đổi hashtag
+
+User xác nhận luồng Upload OneDrive → forward giờ CHẠY ỔN ĐỊNH, chỉ còn tin nhắn hiện
+"🎓 Học sinh: Không rõ" thay vì đúng tên.
+
+**Nguyên nhân**: khi nối dữ liệu `student_name`/`task_url` xuyên workflow (phiên tiếp 6), tôi CHỈ sửa
+bảng `pending_uploads` + `upload_notify_queue` bên `Telebot ClickUp Reader`, **quên mất bước Gateway
+đọc lại `pending_uploads`** (`GW-04 Check Pending Upload` trong `xmEKeIUnzxm2F7dF`) — query đó vẫn
+chỉ SELECT các cột cũ (`task_id, filename, mode, onedrive_link`), nên `pendingUpload.student_name`
+luôn `undefined` khi tới bước build tin nhắn, hiển thị "Không rõ". Đã thêm `student_name, task_url`
+vào SELECT đó, verify + publish.
+
+**Đổi hashtag theo yêu cầu**: bỏ hẳn `#UploadOneDrive`, giữ `#CapNhatHoSo`, thêm hashtag theo loại
+giấy tờ đã chọn — lấy từ phần chữ trước dấu `" - "` trong tên file cuối cùng, so khớp với 5 preset
+(`BAV/Kammer/EZB/Schulbestätigung/Spateinstieg`, bỏ dấu để so sánh) → ra đúng `#BAV`/`#EZB`/...;
+nếu là tên tùy chỉnh hoặc giữ tên gốc (không khớp preset nào) → fallback `#GIAYTOKHAC`.
+
+**Bài học lặp lại (đã có ở "phiên tiếp 8")**: mỗi khi thêm 1 cột dữ liệu mới cần "đi nhờ" qua nhiều
+workflow, phải liệt kê ĐỦ MỌI ĐIỂM đọc/ghi cột đó trước khi coi là xong — lần này bỏ sót đúng 1 điểm
+đọc (Gateway) dù đã nhớ sửa đủ 2 điểm ghi (2 bảng ở ClickUp Reader). Nên cân nhắc: mỗi khi thêm cột
+mới, `grep` tên cột đó xuyên suốt code TRƯỚC khi publish, không chỉ dựa vào trí nhớ danh sách các
+chỗ cần sửa.
+
+**Việc cần user làm**: test lại 1 lượt upload+forward mới, xác nhận tên học sinh hiện đúng và
+hashtag đúng loại giấy tờ đã chọn.
+
+## 🔴 (09/09/2026, phiên tiếp 8) — Lỗi THẬT SỰ khác: quên thêm cột vào `pending_uploads`
 
 User báo tiếp tục bị "xóa tin cũ nhanh hơn hiện tin mới", đề xuất thử thêm node Wait 10s. Tra lại
 execution thật (1474, 1480 — SAU khi publish fix "phiên tiếp 7") lộ ra **đây KHÔNG PHẢI race
