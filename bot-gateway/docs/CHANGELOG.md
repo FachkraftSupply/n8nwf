@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp) — Fix Upload OneDrive (nút không hiện) + tự xóa panel cũ khi điều hướng admin
+
+- **Root cause thật của "Upload OneDrive không phản hồi"**: xác nhận qua execution thật (đúng nghi
+  phạm đã ghi ở CHANGELOG hôm trước) — `inlineKeyboard`/`replyMarkup` set bằng 1 expression động cho
+  CẢ field (`={{ $json.telegramInlineKeyboard }}`) thay vì object tĩnh, khiến Telegram node âm thầm
+  gửi tin nhắn KHÔNG có nút nào (không lỗi, không cảnh báo). Sửa bằng cách tách nhánh IF trước khi
+  gửi (đúng số nút cố định ở mỗi nhánh): `Telebot ClickUp Reader` — `Beautify chi tiết`→`Telegram`
+  (chi tiết task, 0 hoặc 1 nút) và `Build OD Menu`→`Send OD Menu` (menu chọn tên, 0 hoặc 4 hàng nút
+  cố định: BAV/Kammer, EZB/Schulbestätigung, Spateinstieg, Tên tùy chỉnh/Giữ tên gốc).
+- **Thêm UX tự xóa tin nhắn panel cũ khi điều hướng giữa các chức năng admin** (`Telebot Admin
+  System`): mọi lần bấm nút (callback) trong luồng `/user_list`/duyệt user giờ tự xóa tin nhắn chứa
+  nút vừa bấm (`Delete Old Panel Message`, dùng `callback.message_id` có sẵn) TRƯỚC khi gửi panel
+  tiếp theo — đỡ tốn diện tích màn hình khi thao tác nhiều bước liên tiếp. Không áp dụng cho tin
+  nhắn gõ tay (lệnh `/user_list`, `/version`...) vì không có tin nhắn nút nào để xóa.
+- **CHƯA test thật qua Telegram** cả 2 việc trên — cần user xác nhận.
+
 ## 2026-09-09 — Fix panel gall/bl/dl bị lệch route, thêm `/version`, phát hiện lỗi tham số nối dây
 
 - **Xung đột giữa 2 phiên chat chạy song song trên cùng workflow `Telebot Admin System`**: 1 phiên

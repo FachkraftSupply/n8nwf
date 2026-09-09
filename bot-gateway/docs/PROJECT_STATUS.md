@@ -45,7 +45,34 @@ MCP): `/user_list` toàn bộ panel (đặc biệt 3 nút mới gall/bl/dl chưa
 4. Form upload OneDrive: xác nhận có đủ 2 lựa chọn "giữ tên gốc" / "tên tùy chỉnh" (user nhắc lại
    yêu cầu này — có thể đã có sẵn trong bản build trước, cần kiểm tra lại khi debug mục 2).
 
-## 🔴 XÁC NHẬN: Upload OneDrive VẪN CHƯA hoạt động (sau khi đã vá lỗi alwaysOutputData)
+## 🟢 UPLOAD ONEDRIVE — TÌM RA NGUYÊN NHÂN THẬT + ĐÃ SỬA (09/09/2026, chưa test qua Telegram)
+
+Đúng như nghi phạm số 1 đã ghi ở phiên trước: `inlineKeyboard`/`replyMarkup` được set bằng
+**expression động** (`={{ $json.telegramInlineKeyboard }}`) thay vì OBJECT TĨNH — xác nhận qua
+execution thật (`execution 1097`, lệnh `/start chitiet_86ewhmyrj`): node `Beautify chi tiết` tính
+đúng `telegramInlineKeyboard` có 1 nút, nhưng tin nhắn Telegram THỰC TẾ gửi ra (`result.text`/
+`result.entities`) hoàn toàn KHÔNG có nút nào — n8n không áp dụng field này khi set bằng expression
+động cho toàn bộ field (chỉ áp dụng khi set TRỰC TIẾP giá trị field con bên trong 1 object tĩnh).
+
+**Đã sửa** cả 2 chỗ trong `Telebot ClickUp Reader` theo đúng hướng "tách 2 node Telegram riêng" đã
+đề xuất trước:
+- `Beautify chi tiết` → `Telegram` (chi tiết task): thêm `Has OD Button?` (IF) rẽ 2 nhánh — có
+  OneDrive thì qua node MỚI `Telegram (Chi Tiết + OD)` (inlineKeyboard tĩnh, 1 nút, chỉ
+  `callback_data` là expression `={{ $json.taskId }}`), không thì qua node `Telegram` cũ (đã dọn
+  sạch `replyMarkup`/`inlineKeyboard` động, giờ luôn `replyMarkup: 'none'`).
+- `Build OD Menu` → `Send OD Menu` (chọn tên file): thêm `Has OD Menu Keyboard?` (IF) rẽ 2 nhánh —
+  có link thì qua node MỚI `Send OD Menu (Keyboard)` (4 hàng nút TĨNH: BAV/Kammer, EZB/
+  Schulbestätigung, Spateinstieg, Tên tùy chỉnh/Giữ tên gốc — đúng đủ 2 lựa chọn tên file user yêu
+  cầu), không có link thì qua `Send OD Menu` cũ (đã dọn sạch, giờ plain text).
+- Đã publish. **CHƯA test thật qua Telegram** (không execute được Telegram Trigger qua MCP) — cần
+  user tự đi hết luồng: `/task <từ khóa>` có OneDrive → bấm 📤 Upload OneDrive → chọn tên (thử cả
+  preset lẫn tùy chỉnh lẫn giữ nguyên) → gửi file → xác nhận nhận link OneDrive thật VÀ file thật sự
+  nằm đúng folder.
+- Nếu vẫn lỗi sau lần sửa này: nghi phạm tiếp theo là luồng Graph API (`Resolve OneDrive Folder`/
+  `Upload To OneDrive`) — credential `Microsoft Drive account` trước giờ chỉ dùng qua node OneDrive
+  gốc, CHƯA từng gọi Graph API thô qua share-link kiểu này, có thể thiếu scope `Files.ReadWrite`.
+
+## 🔴 XÁC NHẬN: Upload OneDrive VẪN CHƯA hoạt động (sau khi đã vá lỗi alwaysOutputData) — LỊCH SỬ, xem mục 🟢 bên trên để biết nguyên nhân thật + đã sửa
 
 User đã test lại sau khi vá sự cố P0 (mục ngay bên dưới) — nút "📤 Upload OneDrive" **vẫn không có
 phản hồi**. Vậy sự cố alwaysOutputData KHÔNG PHẢI nguyên nhân duy nhất (hoặc không phải nguyên nhân
