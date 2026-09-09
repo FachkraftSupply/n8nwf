@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 23) — Xóa file OneDrive vừa upload + xóa & thu hồi tin đã forward
+
+Build 4 stage (mỗi stage publish riêng để chống mất tiến độ giữa chừng): thêm 6 cột vào
+`clickup.upload_notify_queue` (`drive_id`, `item_id`, `fwd_chat_id`, `fwd_message_id`,
+`zalo_chat_id_used`, `deleted_at`) + 2 nút mới (`od_del_<id>` trên tin upload result, `od_delfwd_<id>`
+trên tin lưu riêng sau forward) + 2 chuỗi xử lý (17 node mới tổng cộng): xóa file trên OneDrive qua
+Graph API `DELETE`, xóa tin đã forward trong nhóm Telegram qua `deleteMessage`, và báo hủy vào nhóm
+Zalo bằng 1 tin nhắn mới (Zalo Bot API không có API xóa/thu hồi theo tài liệu chính thức). Cả 2
+callback đều bắt đầu `od_` nên tự khớp whitelist Gateway có sẵn — không cần sửa `GW Gateway -
+Telegram`. Toàn bộ HTTP/Telegram delete dùng `onError: continueRegularOutput` (thiết kế
+best-effort). Audit độc lập qua subagent: PASS toàn bộ, không có bug thật. Chưa test qua Telegram
+thật — 1 rủi ro mở: giả định shape response của node Telegram `Send Forward Message`
+(`message_id`/`chat.id`) chưa xác nhận được vì `test_workflow` pin node Telegram.
+**Việc cần user làm**: dán token Zalo thật vào node `OD Delfwd: Announce Zalo Deleted`, rồi test cả
+2 nút qua Telegram thật.
+
 ## 2026-09-09 (tiếp 22) — Gửi bản lưu riêng vào chat cá nhân khi forward tin nhắn upload OneDrive
 
 Sau khi fix "❓ Trợ giúp" (tiếp 20-21 bên PROJECT_STATUS đánh số "phiên tiếp 11/12") được user xác

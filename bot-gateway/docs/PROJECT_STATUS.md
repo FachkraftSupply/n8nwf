@@ -58,11 +58,12 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🚧 ĐANG BUILD DỞ (09/09/2026, phiên tiếp 14) — Xóa file OneDrive vừa upload + thu hồi tin forward
+## ✅ BUILD XONG + AUDIT PASS (09/09/2026, phiên tiếp 14) — Xóa file OneDrive vừa upload + thu hồi tin forward
 
-**QUAN TRỌNG NẾU ĐỌC LẠI FILE NÀY Ở PHIÊN MỚI**: tính năng này ĐANG XÂY DỞ, chia làm 4 stage, mỗi
-stage publish riêng để không mất tiến độ nếu hết token giữa chừng. Đọc đúng mục "Stage nào đã xong"
-bên dưới trước khi tiếp tục — ĐỪNG build lại từ đầu.
+Build xong cả 4 stage, publish, audit độc lập PASS toàn bộ. **CHỈ CÒN CHỜ user**: (1) dán token Zalo
+thật + (2) test qua Telegram thật (xem "Việc cần user làm" ở cuối mục này) — chưa test thật nên
+chưa đóng hẳn mục này, nhưng về mặt kỹ thuật đã hoàn tất, không cần build/sửa gì thêm trừ khi test
+thật phát hiện vấn đề (khả năng cao nhất nằm ở rủi ro #1 dưới — shape response Telegram).
 
 **Yêu cầu user (nguyên văn ý)**: 2 nút mới —
 1. Trên tin nhắn kết quả upload (`Send Upload Result`, chat riêng, TRƯỚC khi forward): nút
@@ -129,11 +130,15 @@ bên dưới trước khi tiếp tục — ĐỪNG build lại từ đầu.
   `Send Zalo Notify` cùng workflow) thì tính năng báo-xóa-Zalo mới hoạt động**, nếu không thì
   nhánh Zalo sẽ lỗi (nhưng nhờ `onError: continueRegularOutput` nên KHÔNG chặn phần xóa
   OneDrive/Telegram, chỉ riêng phần báo Zalo không gửi được).
-  Đã spawn 1 subagent audit độc lập (đọc lại toàn bộ workflow JSON thật, đối chiếu RULES.md/FAQ.md,
-  verify riêng vấn đề `SWITCH_FALLBACK_OUTPUT_DISABLED` có phải false-positive thật không) — **CHỜ
-  KẾT QUẢ audit trước khi coi tính năng là "XONG" hoàn toàn** (nếu đọc lại status này mà chưa thấy
-  dòng "✅ Audit PASS" ở dưới, nghĩa là audit chưa xong hoặc phiên trước bị ngắt giữa chừng — nhớ
-  check lại kết quả audit, đừng giả định là PASS).
+  **✅ Audit PASS (09/09/2026)**: subagent độc lập đọc lại toàn bộ JSON thật của cả 2 workflow
+  (`9JJRrh36H2rLwtnu` + `xmEKeIUnzxm2F7dF`), xác nhận PASS cả 8 mục build + 4 mục thiết kế (schema,
+  2 nút, guard `deleted_at`, Gateway whitelist không cần sửa, Switch fallback KHÔNG bị lỗi thật —
+  `SWITCH_FALLBACK_OUTPUT_DISABLED` xác nhận đúng là false-positive, cả 2 chuỗi `od_del`/`od_delfwd`,
+  cách xử lý Zalo (gửi tin mới, không gọi API xóa không có thật), `onError`/`alwaysOutputData` đúng
+  vị trí, không có `replyMarkup` động, `final_name` được escape HTML đúng chỗ). Không tìm thấy bug
+  thật nào. 1 góp ý nhỏ không bắt buộc: `OD Del: Reply Error`/`OD Delfwd: Reply Error` dùng `$json.chatId`
+  trần thay vì tham chiếu tường minh qua tên node như các node Reply Success khác — hợp lệ theo Rule #2
+  (IF đứng ngay trước, 1 item) nhưng khác style, có thể sửa sau nếu muốn, không ảnh hưởng chức năng.
   **2 rủi ro CHƯA kiểm chứng được bằng test giả lập (RULES.md #21 mở rộng)**, chỉ xác nhận được qua
   Telegram thật:
   1. `OD Fwd: Extract Send Result` giả định response của node Telegram `Send Forward Message` có
