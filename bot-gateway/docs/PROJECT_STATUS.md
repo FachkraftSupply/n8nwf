@@ -3,22 +3,88 @@
 > Đọc file này (hoặc link GitHub của nó) vào đầu chat mới để nắm được trạng thái hiện tại mà
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
->
-> **Trước khi sửa bất kỳ workflow nào**: đọc `docs/RULES.md` — đặc biệt mục 12-16 và **mục 18 (MỚI,
-> đã lặp lại 3 LẦN)**: `addNode` thêm node mới vào chuỗi đang sống mà THIẾU `setNodeSettings`
-> (`alwaysOutputData`/`onError`) TRONG CÙNG BATCH sẽ làm gãy toàn bộ chuỗi phía sau, không báo lỗi
-> gì. Đây là nguyên nhân gây bug im lặng đã gặp NHIỀU LẦN NHẤT, không phải lý thuyết suông.
->
-> Tài liệu khác: `docs/ARCHITECTURE.md` (thiết kế hệ thống + mục 9 nợ kỹ thuật/refactor),
-> `docs/GUIDE_SQL_CLICKUP_SYNC.md` (vận hành sync), `docs/GO_LIVE_CHECKLIST.md`,
-> `docs/FEATURE_CATALOG.md` (bảng đầy đủ tính năng theo từng bot), `docs/FAQ.md`.
+
+## ⚙️ QUY TRÌNH BẮT BUỘC khi build/sửa workflow (áp dụng MỌI phiên, không có ngoại lệ)
+
+Đúc kết sau nhiều lần dính lỗi im lặng (xem RULES.md, hiện 19 mục) — quy trình dưới đây tồn tại vì
+LÝ DO CỤ THỂ, không phải thủ tục hình thức. Bỏ qua bước nào cũng từng gây hậu quả thật (có lần sập
+toàn bộ bot cho mọi user).
+
+**Trước khi sửa:**
+1. Đọc `docs/RULES.md` (toàn bộ, không chỉ lướt tiêu đề) + `docs/FAQ.md` — đặc biệt các mục liên
+   quan trực tiếp tới loại thay đổi sắp làm (thêm node mới → mục 18; sửa node cũ → mục 16; thêm cột
+   dữ liệu đi qua nhiều workflow → mục 19; sửa inline keyboard → mục 14).
+2. Gọi **n8n skill** phù hợp trước khi viết code/thiết kế node (dùng tool `Skill`, KHÔNG tự đoán
+   cú pháp/pattern từ trí nhớ) — tối thiểu 1 trong số: `n8n-workflow-patterns` (chọn đúng pattern
+   trước khi build), `n8n-node-configuration` (tham số chính xác của node cụ thể), `n8n-validation-expert`
+   (đọc hiểu lỗi validate), `n8n-code-javascript` (viết Code node đúng chuẩn), `n8n-subworkflows`
+   (khi động tới ranh giới Gateway ↔ sub-workflow), `n8n-expression-syntax`, `n8n-error-handling`.
+3. Nếu tính năng đi qua ranh giới Gateway ↔ sub-workflow, hoặc thêm 1 cột dữ liệu mới — liệt kê rõ
+   TẤT CẢ điểm đọc + ghi liên quan (RULES.md #19) trước khi bắt đầu sửa, không sửa xong rồi mới nhớ ra.
+
+**Trong lúc sửa:**
+4. Node mới (DDL/gọi API ngoài) → `setNodeSettings` (`alwaysOutputData`/`onError`) TRONG CÙNG batch
+   `update_workflow` với `addNode` (RULES.md #18) — không tách 2 lần gọi.
+5. Sửa tham số/credential của node ĐÃ TỒN TẠI → ưu tiên `updateNodeParameters`/`setNodeParameter`,
+   nhưng KHÔNG tin ngay — xem bước 6.
+
+**Sau khi sửa, TRƯỚC khi publish:**
+6. `get_workflow_details` đọc lại workflow, xác nhận ĐÚNG giá trị mới có mặt ở ĐÚNG vị trí — không
+   tin `appliedOperations` khớp số lượng nghĩa là đã áp dụng đúng (RULES.md #16). Nếu sai/thiếu →
+   `removeNode` + `addNode` lại (đã xác nhận hoạt động 100%), không thử lại y hệt thao tác cũ.
+7. Nếu trigger không execute trực tiếp qua MCP được (Telegram Trigger, `executeWorkflowTrigger`) —
+   dùng `prepare_workflow_pin_data` + `test_workflow` mô phỏng input thật (Code/IF/Switch chạy logic
+   thật, Postgres/Telegram/HTTP tự động bị pin nên an toàn không gửi tin/ghi DB thật) để xác nhận
+   OUTPUT đúng trước khi để user tự test qua Telegram thật.
+8. `publish_workflow` — BẮT BUỘC ngay sau mỗi lần update workflow đang active (RULES.md #12).
+
+**Sau khi publish, trước khi báo "xong" cho user:**
+9. Với thay đổi vừa/lớn (≥3 node bị sửa, hoặc đụng ranh giới Gateway↔sub-workflow, hoặc thêm cột dữ
+   liệu mới) — dùng tool `Agent` (subagent_type mặc định, chạy độc lập/background) giao nhiệm vụ
+   AUDIT LẠI: đọc RULES.md/FAQ.md mới nhất, đọc lại CHÍNH workflow vừa sửa qua `get_workflow_details`
+   (không tin mô tả của phiên chính, tự tra JSON thật), đối chiếu từng thay đổi có đúng ý định không,
+   báo PASS/FAIL kèm bằng chứng cụ thể (tên node + giá trị field). Đây là lớp kiểm tra ĐỘC LẬP thứ 2,
+   không phải lặp lại bước 6 — subagent không có ngữ cảnh "tin tưởng sẵn" vào các bước trước.
+10. Cập nhật `PROJECT_STATUS.md` (mục mới lên đầu) + `CHANGELOG.md` ngay, dù user chưa test xong —
+    ghi rõ "ĐÃ BUILD, CHƯA TEST THẬT" nếu chưa có xác nhận qua Telegram thật.
+
+> Tài liệu khác: `docs/ARCHITECTURE.md` (thiết kế hệ thống, mục 4b tính năng Upload OneDrive/Zalo,
+> mục 9 nợ kỹ thuật/refactor), `docs/GUIDE_SQL_CLICKUP_SYNC.md` (vận hành sync), `docs/GO_LIVE_CHECKLIST.md`,
+> `docs/FEATURE_CATALOG.md` (bảng đầy đủ tính năng theo từng bot), `docs/FAQ.md`, `docs/RULES.md`
+> (19 mục, cập nhật liên tục — đọc TRƯỚC bước 1 ở trên, không phải đọc lướt qua).
 >
 > **⚠️ Rủi ro đã xảy ra thật**: 2 phiên chat khác nhau từng sửa CÙNG 1 workflow song song mà không
 > biết về nhau, gây lệch dữ liệu (xem CHANGELOG 09/09/2026). Nếu thấy `nodeCount`/`connections` khác
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## ✅ SỬA (09/09/2026, phiên tiếp 9) — Luồng ổn định, sửa nốt "Học sinh: Không rõ" + đổi hashtag
+## ✅ SỬA (09/09/2026, phiên tiếp 10) — Nút "❓ Trợ giúp" giờ có nút forward, đã test trước khi publish
+
+User báo: bấm "❓ Trợ giúp" trên tin upload OneDrive → hiện hướng dẫn nhưng KHÔNG có nút nào để bấm
+tiếp, phải quay lại tin gốc mới forward được.
+
+**Nguyên nhân**: nút "❓ Trợ giúp" có `callback_data` TĨNH `"odhelp"`, không mang theo `queueId` —
+nên khi bấm vào, bot không biết đây là hướng dẫn cho lượt upload nào, không thể tự dựng lại đúng 3
+nút `odfwd_<queueId>_<targetId>`.
+
+**Đã sửa** (`Telebot ClickUp Reader`, `9JJRrh36H2rLwtnu`): đổi nút thành `odhelp_{{ $json.id }}`
+(mang theo queueId, giống pattern 3 nút forward) → `Phân tích lệnh` parse thêm regex `odhelp_(\d+)`
+→ `OD Help: Query Targets` thêm cột `id` vào SELECT → `Build Help Text` dựng lại đúng 3 nút forward
++ nút ❌ Hủy → `Send Help Text` dùng pattern `replyMarkup` động đã proven (`Send OD Menu`).
+
+**Đã test bằng `prepare_workflow_pin_data`+`test_workflow` TRƯỚC KHI publish** (đúng quy trình mới ở
+đầu file) — xác nhận `Build Help Text` dựng đúng cả text lẫn 3 nút với `queueId` giữ nguyên
+(`odfwd_999_1`/`odfwd_999_2`/`odfwd_999_3`), không cần đợi user test qua Telegram thật mới biết
+đúng/sai. Verify param qua `get_workflow_details` xong mới publish.
+
+**Đã lập quy trình chính thức** (xem mục "⚙️ QUY TRÌNH BẮT BUỘC" đầu file — user yêu cầu 09/09/2026):
+mọi lần build/sửa lớn từ nay LUÔN gọi n8n skill trước khi code, đọc RULES.md/FAQ.md trước khi sửa,
+verify + test trước khi publish, và với thay đổi vừa/lớn — spawn 1 Agent độc lập audit lại toàn bộ
+so với RULES.md/FAQ.md sau khi publish (không phải tự mình tự chấm điểm mình). Đã chạy thử ngay
+trong phiên này cho đúng fix "Trợ giúp" ở trên — kết quả audit: xem CHANGELOG/lần chạy kế tiếp khi
+subagent trả lời (job chạy nền, chưa có kết quả tại thời điểm ghi dòng này).
+
+## ✅ (09/09/2026, phiên tiếp 9) — Luồng ổn định, sửa nốt "Học sinh: Không rõ" + đổi hashtag
 
 User xác nhận luồng Upload OneDrive → forward giờ CHẠY ỔN ĐỊNH, chỉ còn tin nhắn hiện
 "🎓 Học sinh: Không rõ" thay vì đúng tên.

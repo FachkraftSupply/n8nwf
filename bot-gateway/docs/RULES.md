@@ -292,3 +292,21 @@ khi mở rộng 1 cấu trúc dữ liệu đang "đi nhờ" qua nhiều workflow
    hoặc dùng `test_workflow`/`prepare_workflow_pin_data` để mô phỏng input thật xuyên node logic
    (Code/IF/Switch chạy thật, Postgres/HTTP/Telegram bị pin nên an toàn không gửi tin thật) khi
    không thể test qua Telegram thật ngay lúc đó.
+
+## 20. ⚙️ Quy trình bắt buộc build/sửa workflow (quyết định 09/09/2026 — xem đầy đủ ở `PROJECT_STATUS.md` mục "QUY TRÌNH BẮT BUỘC")
+
+Tóm tắt (bản đầy đủ + lý do ở PROJECT_STATUS.md, luôn đọc ở đó trước — file này chỉ trỏ lại):
+1. Đọc RULES.md + FAQ.md liên quan TRƯỚC khi sửa (không lướt tiêu đề).
+2. Gọi n8n skill phù hợp (`n8n-workflow-patterns`, `n8n-node-configuration`, `n8n-validation-expert`,
+   `n8n-code-javascript`, `n8n-subworkflows`...) TRƯỚC khi viết code/thiết kế node.
+3. Thêm cột dữ liệu mới/đụng ranh giới Gateway↔sub-workflow → liệt kê ĐỦ điểm đọc + ghi trước (#19).
+4. `addNode` cho node DDL/API ngoài → `setNodeSettings` NGAY TRONG CÙNG batch (#18).
+5. Sau khi sửa, `get_workflow_details` xác nhận đúng giá trị TRƯỚC khi publish — không tin
+   `appliedOperations` (#16). Sai → `removeNode`+`addNode` lại, không thử lại y hệt.
+6. Trigger không execute trực tiếp qua MCP được → `prepare_workflow_pin_data`+`test_workflow` mô
+   phỏng trước khi để user tự test qua Telegram thật.
+7. `publish_workflow` ngay sau mỗi update trên workflow active (#12).
+8. Thay đổi vừa/lớn (≥3 node, đụng ranh giới Gateway↔sub-workflow, hoặc thêm cột dữ liệu mới) → dùng
+   tool `Agent` spawn 1 subagent ĐỘC LẬP audit lại so với RULES.md/FAQ.md sau khi publish, trước khi
+   báo "xong" cho user — không tự chấm điểm chính mình bằng đúng các bước vừa làm.
+9. Cập nhật `PROJECT_STATUS.md` + `CHANGELOG.md` ngay, dù chưa có xác nhận test thật qua Telegram.
