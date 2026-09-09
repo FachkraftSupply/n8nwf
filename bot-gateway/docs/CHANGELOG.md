@@ -4,6 +4,33 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 21) — Tách bot ghi log nhóm ra riêng (Elite Crawl Bot) + retention 14/365 ngày
+
+Sửa lại đúng theo yêu cầu user làm rõ lại (bản trước "tiếp 20" hiểu NHẦM — credential
+`Elite Crawl Bot` không phải để gửi thông báo backup, đã revert lại `SQL - Backup System` về dùng
+`Telegram System Bot` như cũ).
+
+- **Workflow mới `GW Crawl Bot - Group Capture`** (`SNNrXneenXVnLHh6`): Telegram Trigger riêng
+  dùng credential `Elite Crawl Bot`, CHỈ lắng nghe tin nhắn + ghi `gateway.group_chat_log` —
+  không có lệnh/command nào. Đây là bot chuyên trách "backup tin nhắn nhóm", tách biệt hoàn toàn
+  khỏi Elite Clickupbot (bot chính vẫn ở trong Gateway, chỉ lo xử lý lệnh `/task`, `/lichsu`,
+  `/timkiem`, `/sum`...).
+- **Tắt nhánh ghi log cũ trong `GW Gateway - Telegram`** (`Là Tin Nhắn Nhóm?` +
+  `Ghi Log Tin Nhắn Nhóm`, `disabled: true`) — vì Elite Clickupbot vẫn ở trong cùng các nhóm để
+  dùng lệnh, nếu để cả 2 nhánh chạy song song sẽ ghi TRÙNG 2 lần mỗi tin nhắn.
+- **Retention tự động** (thêm vào `GW Daily Chat Summary`, chạy chung lịch 1h sáng mỗi ngày, chạy
+  song song độc lập với nhánh tóm tắt AI):
+  - `Cleanup Old Group Chat Log (14 ngày)`: `DELETE FROM gateway.group_chat_log WHERE ts < now() -
+    interval '14 days'` — tin nhắn gốc chỉ giữ 14 ngày gần nhất (đủ cho `/timkiem` tra cứu gần đây),
+    xóa hẳn sau đó để tiết kiệm DB, vì đã có tóm tắt AI lưu lâu dài.
+  - `Cleanup Old Daily Summaries (365 ngày)`: `DELETE FROM gateway.daily_chat_summary WHERE
+    summary_date < CURRENT_DATE - interval '365 days'` — bảng tóm tắt theo ngày giữ tối đa 1 năm.
+  - **Hệ quả cần lưu ý**: sau 14 ngày, `/timkiem` (tìm nội dung gốc) sẽ không còn tìm thấy tin nhắn
+    cũ hơn — chỉ `/lichsu`/`/sum` (đọc từ bảng tóm tắt, giữ 365 ngày) vẫn còn dữ liệu xa hơn.
+- User yêu cầu rõ: phải hỏi xác nhận trước khi đổi các workflow đang chạy tốt — đã hỏi 3 câu qua
+  AskUserQuestion (tắt nhánh cũ? ý nghĩa "14 ngày"? bảng tổng hợp có cần tạo mới không?) và chỉ
+  thực hiện sau khi có xác nhận rõ ràng cho cả 3.
+
 ## 2026-09-09 (tiếp 20) — Đổi bot gửi thông báo backup sang "Elite Crawl Bot"
 
 - User tạo sẵn 1 bot Telegram mới (credential `Elite Crawl Bot`, id `V8w3wIjyeVaz9Um9`) — token

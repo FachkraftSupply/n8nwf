@@ -32,8 +32,8 @@
 | **GW Error Handler** (`34ccboHpyoY2r691`) | ✅ Hoạt động | Báo lỗi vào nhóm topic 4 + ghi `gateway.error_logs` |
 | **GW Weekly Error Report** (`ZJvP7L2aVPpeCGGW`, MỚI) | 🟡 Đã build, CHƯA test thật | Thứ 2 8h sáng, DM admin — xem checklist |
 | **Help Bot GPT** | ⏳ Code xong, CHƯA gắn Gateway | Chờ Workflow ID thật (placeholder `REPLACE_HELP_BOT_ID`) |
-| ~~Crawl Bot~~ | ❌ Đã đóng hẳn (09/09/2026) | Ý tưởng ban đầu = "Nhóm chat capture" (đã có, xem dòng bên dưới) — không xây riêng nữa. `/crawl` bỏ hẳn; `/sum` giữ lại nhưng đổi ý nghĩa (xem dòng bên dưới) |
-| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (bấm nút + mở cho user thường + `/sum` tóm tắt tuần), CHƯA test thật lượt nào | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` dạng bấm nút 3 bước (Admin System = mọi nhóm; ClickUp Reader = filtered theo user) + `/sum` (chỉ ClickUp Reader — tóm tắt nhanh tất cả nhóm của user từ đầu tuần, không cần bấm nút). **⚠️ Cần tắt Privacy Mode qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
+| ~~Crawl Bot (khái niệm lệnh `/crawl`)~~ | ❌ Lệnh đã bỏ hẳn (09/09/2026) | `/crawl` không còn tồn tại. Nhưng Ý TƯỞNG "bot lắng nghe + ghi Postgres" đã tách thành workflow riêng `GW Crawl Bot - Group Capture` (dùng credential `Elite Crawl Bot`) — xem dòng "Nhóm chat capture" bên dưới |
+| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (bot riêng + bấm nút + user thường + `/sum` + retention), CHƯA test thật lượt nào | Ghi log giờ do workflow RIÊNG `GW Crawl Bot - Group Capture` (`SNNrXneenXVnLHh6`, bot `Elite Crawl Bot`) đảm nhiệm — nhánh ghi log cũ trong Gateway (bot Elite Clickupbot) đã bị `disabled` để tránh ghi trùng 2 lần/tin nhắn. Tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + retention tự động (raw message giữ 14 ngày, bảng tóm tắt giữ 365 ngày). `/lichsu`/`/timkiem` dạng bấm nút 3 bước (Admin System = mọi nhóm; ClickUp Reader = filtered theo user) + `/sum` (chỉ ClickUp Reader). **⚠️ Cần tắt Privacy Mode cho bot `Elite Crawl Bot` (KHÔNG PHẢI Elite Clickupbot) qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
 
 ## ✅ Đã xác nhận SỬA XONG — Phương án A cho DKPV/PVTC (quyết định 09/09/2026)
 
@@ -107,11 +107,13 @@ execute được qua MCP nên phần này bắt buộc phải test tay. Làm đ�
 
 ### Bước 0 — Điều kiện tiên quyết (bắt buộc, làm trước tất cả)
 
-1. Mở @BotFather trên Telegram → `/setprivacy` → chọn bot Gateway (`@Elite_clickup_bot`) →
-   **Disable**. Nếu không làm bước này, bot chỉ nhận được tin nhắn dạng lệnh (`/...`) trong nhóm —
-   KHÔNG nhận được tin nhắn thường, nên `gateway.group_chat_log` sẽ gần như trống.
-2. Đảm bảo bot đã có mặt trong ít nhất 1 nhóm/supergroup thật (không phải chat riêng) để có dữ
-   liệu ghi log.
+1. Mở @BotFather trên Telegram → `/setprivacy` → chọn bot **`Elite Crawl Bot`** (KHÔNG PHẢI
+   Elite Clickupbot — từ 09/09/2026 việc ghi log đã tách sang bot riêng này, xem CHANGELOG
+   "tiếp 21") → **Disable**. Nếu không làm bước này, bot chỉ nhận được tin nhắn dạng lệnh (`/...`)
+   trong nhóm — KHÔNG nhận được tin nhắn thường, nên `gateway.group_chat_log` sẽ gần như trống.
+2. Đảm bảo `Elite Crawl Bot` đã được thêm vào (add member) tất cả nhóm/supergroup cần ghi log
+   (không phải Elite Clickupbot — 2 bot khác nhau, Elite Clickupbot vẫn ở trong nhóm để dùng lệnh
+   nhưng KHÔNG còn ghi log nữa).
 
 ### Bước 1 — Test ghi log tin nhắn nhóm
 
@@ -134,6 +136,10 @@ Workflow này chạy tự động 1h sáng. Để test ngay không cần đợi:
    SELECT chat_id, chat_title, summary_date, message_count, summary_text
    FROM gateway.daily_chat_summary ORDER BY summary_date DESC;
    ```
+   **Lưu ý (09/09/2026)**: workflow này giờ chạy thêm 2 job dọn dẹp song song mỗi lần chạy (kể cả
+   chạy tay) — xóa `gateway.group_chat_log` cũ hơn 14 ngày và `gateway.daily_chat_summary` cũ hơn
+   365 ngày. Vô hại lúc mới test (chưa đủ dữ liệu cũ để xóa) nhưng cần nhớ về sau: `/timkiem`
+   (tìm nội dung tin nhắn gốc) sẽ KHÔNG còn tìm thấy gì cũ hơn 14 ngày.
 3. Nếu không có dòng nào cho nhóm đã nhắn tin ở Bước 1 → kiểm tra credential DeepSeek
    (`lmChatDeepSeek`, id `F7tLItIIVtzpZGqS`) còn hợp lệ không, và `gateway.group_chat_log` có dữ
    liệu của NGÀY HÔM ĐÓ hay không (query nhóm theo `message_count > 0`).
