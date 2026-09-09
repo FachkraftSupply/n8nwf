@@ -4,6 +4,16 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 6) — Chuẩn hóa tên file Upload OneDrive: tối đa 5 từ, không emoji/số/ký tự đặc biệt
+
+- Thêm hàm `sanitizeFilenamePart()` (bỏ emoji, bỏ số, bỏ ký tự đặc biệt — chỉ giữ chữ cái có dấu và
+  khoảng trắng — giới hạn tối đa 5 từ) áp dụng ở 2 nơi tạo tên file trong `Telebot ClickUp Reader`:
+  - Chọn preset (BAV/Kammer/EZB/Schulbestätigung/Spateinstieg): áp dụng lên preset + tên học sinh
+    GỘP LẠI (tổng tối đa 5 từ, không phải 5 từ riêng cho tên học sinh).
+  - Nhập tên tùy chỉnh: áp dụng lên toàn bộ nội dung user gõ.
+  - "📎 Giữ tên gốc" KHÔNG bị ảnh hưởng (giữ nguyên tên file gốc theo đúng ý nghĩa lựa chọn này).
+  - Đuôi file (`.pdf`, `.png`...) được nối vào SAU khi làm sạch, không bị ảnh hưởng bởi bộ lọc.
+
 ## 2026-09-09 (tiếp 5) — Fix nút forward mất tích (batch rollback cũ), thêm nút ❌ Hủy cho menu admin
 
 - **Nút forward sau upload (Kammer/BAV/Hóa đơn/Giấy tờ/Trợ giúp) không hiện**: cùng loại lỗi đã gặp
