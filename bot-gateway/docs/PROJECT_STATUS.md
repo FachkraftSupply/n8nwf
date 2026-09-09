@@ -17,7 +17,43 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🟡 MỚI (09/09/2026, phiên tiếp) — Mirror thông báo Upload OneDrive sang nhóm Zalo
+## 🟡 MỚI (09/09/2026, phiên tiếp 2) — Cách nạp token Zalo (Community, không dùng env var) + workflow test riêng
+
+User dùng n8n **Community**, không tiện set biến môi trường qua docker-compose. Đã đổi cách tiếp
+cận: **hardcode token trực tiếp vào tham số node trong n8n UI** (user tự dán, Claude không thấy giá
+trị thật) thay vì `{{ $env.ZALO_BOT_TOKEN }}`. Node `Send Zalo Notify` (`Telebot ClickUp Reader`,
+`9JJRrh36H2rLwtnu`) hiện có URL dạng:
+`https://bot-api.zaloplatforms.com/botPASTE_YOUR_ZALO_BOT_TOKEN_HERE/sendMessage` — user cần tự mở
+node trong n8n, thay `PASTE_YOUR_ZALO_BOT_TOKEN_HERE` bằng token thật.
+
+**⚠️ Đã thêm RULES.md mục 17** (đọc trước khi commit bất kỳ workflow nào chứa cách hardcode này):
+vì repo git public, TRƯỚC KHI commit file export JSON của workflow có node dạng này, PHẢI kiểm tra
+lại xem đoạn token trong file có phải vẫn là placeholder `PASTE_YOUR_..._TOKEN_HERE` hay không —
+nếu user đã điền thật rồi export ra, phải thay lại thành placeholder trước khi add/commit. Danh
+sách node đang dùng cách này: xem RULES.md mục 17 (2 workflow, cập nhật khi thêm mới).
+
+**Workflow mới**: `Zalo API - Webhook Test` (n8n ID `eFH2UIbQirfXSH1b`, project cá nhân
+"Hai Anh Tran <haianhtran89@live.de>") — dựng riêng để khám phá format payload thật của Zalo
+webhook (tài liệu `bot.zapps.me/docs` không liệt kê đầy đủ schema `getUpdates`/webhook), đặc biệt
+là tìm đúng field chứa `chat_id` của 1 GROUP Zalo (khác với chat 1-1). Gồm 2 nhánh:
+- **Nhánh Webhook** (`Zalo Webhook Test`, path `/webhook/zalo-test`, POST, `responseMode: onReceived`
+  tự trả 200 ngay): mọi update Zalo gửi tới đây được ghi vào bảng mới `gateway.zalo_webhook_test_log`
+  (cột `payload JSONB`, tự tạo bảng qua node `Ensure Zalo Log Table`) VÀ báo cho admin qua Telegram
+  System Bot kèm preview payload (cắt 600 ký tự đầu) + câu SQL sẵn để xem đầy đủ.
+- **Nhánh Manual Trigger** (`Register Webhook Trigger`, bấm tay trong n8n): 2 nhánh song song —
+  `Call Zalo getMe` (kiểm tra token còn sống, trả về username/id bot) và `Call Zalo setWebhook`
+  (đăng ký `https://n8n.toididuhoc.net/webhook/zalo-test` làm webhook nhận update cho bot Zalo).
+- Có sticky note hướng dẫn 5 bước ngay trong workflow (điền token → test getMe → đăng ký webhook →
+  thêm bot vào nhóm Zalo + nhắn thử → đọc payload thật để tìm field chat_id → điền vào
+  `gateway.notify_targets.zalo_chat_id`).
+- **CHƯA test được gì cả** — vẫn đang chờ đúng 1 thứ: token Zalo thật do user điền vào 2 node
+  `Call Zalo setWebhook`/`Call Zalo getMe` trong workflow test này VÀ node `Send Zalo Notify` trong
+  ClickUp Reader (3 chỗ, cùng 1 token — xem RULES.md #17 để không nhầm chỗ nào).
+- ⚠️ Lưu ý: URL webhook `/webhook/zalo-test` chỉ hoạt động ở chế độ **production** (workflow phải
+  active/published) — n8n cũng có URL `/webhook-test/zalo-test` riêng chỉ sống khi đang mở editor
+  bấm "Listen for test event", KHÔNG dùng URL đó để `setWebhook` (sẽ chết ngay khi đóng editor).
+
+## 🟡 (09/09/2026, phiên tiếp 1) — Mirror thông báo Upload OneDrive sang nhóm Zalo
 
 Đã đọc tài liệu `https://bot.zapps.me/docs` — API Bot Zalo có cấu trúc gần giống hệt Telegram Bot
 API: `POST https://bot-api.zaloplatforms.com/bot<BOT_TOKEN>/sendMessage`, body
@@ -32,11 +68,12 @@ best-effort, không chặn luồng chính nếu gọi Zalo lỗi.
 - Node mới: `Has Zalo Target?` (IF, chỉ chạy tiếp nếu `zalo_chat_id` có giá trị) → `Send Zalo
   Notify` (HTTP Request, `onError: continueRegularOutput`).
 - **CHƯA thể test/hoạt động thật vì thiếu 2 thứ, cần user cung cấp:**
-  1. **Zalo Bot Token** — tạo bot qua Zalo Bot Creator (`bot.zapps.me`) rồi lấy token. **KHÔNG dán
-     token vào chat với Claude** — thêm biến môi trường `ZALO_BOT_TOKEN=<token>` vào docker-compose
-     của n8n (cùng chỗ với các biến môi trường khác của container n8n trên VPS) rồi restart
-     container n8n. Node `Send Zalo Notify` đã trỏ sẵn tới `{{ $env.ZALO_BOT_TOKEN }}` — chỉ cần
-     set đúng tên biến này là chạy được ngay, không cần sửa lại workflow.
+  1. **Zalo Bot Token** — tạo bot qua Zalo Bot Creator (`bot.zapps.me`) rồi lấy token.
+     ⚠️ **ĐÃ ĐỔI CÁCH LÀM** (xem mục "phiên tiếp 2" ngay bên trên — user dùng n8n Community, không
+     tiện set biến môi trường): KHÔNG còn dùng `{{ $env.ZALO_BOT_TOKEN }}` nữa. Giờ user tự hardcode
+     token thẳng vào URL của node `Send Zalo Notify` ngay trong n8n UI (thay đoạn
+     `PASTE_YOUR_ZALO_BOT_TOKEN_HERE`). Xem RULES.md #17 về việc redact trước khi commit workflow
+     này lên git.
   2. **Zalo group chat_id** cho từng category (Kammer/BAV, Hóa đơn, Giấy tờ khác) — sau khi thêm
      bot vào nhóm Zalo và nhắn thử 1 tin, có thể lấy chat_id qua Zalo Bot Creator dashboard hoặc
      gọi `getUpdates`. Cho tôi biết chat_id (không phải bí mật, có thể gửi thẳng trong chat) để

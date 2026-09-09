@@ -181,3 +181,32 @@ copy nguyên `parameters`/`webhookId`/`position` như cũ, chỉ thay `credentia
 `update_workflow` (kèm `addConnection` để nối lại các connection đã mất do `removeNode` xoá theo).
 Luôn `get_workflow_details` lại để xác nhận `credentials` đã đổi thật trước khi `publish_workflow`
 — đừng tin response `appliedOperations` của `updateNodeParameters` cho việc đổi credential.
+
+## 17. ⚠️ Token/secret hardcode TRỰC TIẾP trong tham số node (không qua credential vault) — BẮT BUỘC redact trước khi commit lên git
+
+Một số API (vd Zalo Bot API — token nằm ngay trong URL path `.../bot<TOKEN>/sendMessage`, không
+phải header/query nên KHÔNG credential type nào của n8n inject được vào đúng chỗ) buộc phải hardcode
+giá trị bí mật thẳng vào tham số node (thường là `url` của node `httpRequest`) thay vì dùng
+credential vault hay biến môi trường — quyết định 09/09/2026 vì user dùng n8n Community, không tiện
+sửa biến môi trường qua docker-compose.
+
+**Hệ quả bắt buộc phải nhớ**: file JSON export của workflow đó (khi commit vào repo
+`workflows/new_architecture/...` để lưu lịch sử) sẽ chứa NGUYÊN VĂN secret nếu không xử lý — repo
+này **public**. Quy tắc:
+
+1. **Claude KHÔNG BAO GIỜ tự gõ/dán giá trị secret thật vào tham số node** — luôn để lại 1 placeholder
+   rõ ràng dạng `PASTE_YOUR_<TEN_SERVICE>_TOKEN_HERE` ngay trong chuỗi URL/tham số, để user tự vào n8n
+   UI điền giá trị thật. Không hỏi user gõ token vào chat để Claude điền hộ.
+2. **Trước khi `git add`/`git commit` bất kỳ file JSON export nào của workflow có node loại này**:
+   BẮT BUỘC `grep`/tìm trong file JSON sắp commit xem có đoạn nào KHÔNG PHẢI placeholder (tức đã bị
+   user điền giá trị thật rồi export ra) — nếu thấy, thay thế bằng đúng placeholder gốc
+   (`PASTE_YOUR_<TEN_SERVICE>_TOKEN_HERE`) TRƯỚC khi add/commit, không commit nguyên văn.
+3. Danh sách các node/workflow hiện đang dùng cách hardcode này (cập nhật khi thêm mới):
+   - `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`), node `Send Zalo Notify` — URL chứa
+     `PASTE_YOUR_ZALO_BOT_TOKEN_HERE`.
+   - `Zalo API - Webhook Test` (`eFH2UIbQirfXSH1b`), node `Call Zalo setWebhook` + `Call Zalo getMe`
+     — cùng placeholder trên.
+4. Vì giá trị thật CHỈ tồn tại trong chính n8n instance (không có ở đâu khác), file JSON trong git
+   không cần khớp 100% với bản đang chạy — mục đích của git ở đây là lưu CẤU TRÚC workflow (node,
+   connection, logic), không phải bản backup runtime đầy đủ. Backup runtime thật đã có cơ chế riêng
+   (`/backup_n8n`, mã hoá credential) — không dùng git repo cho việc đó.
