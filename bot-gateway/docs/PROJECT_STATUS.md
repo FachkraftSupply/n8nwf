@@ -18,7 +18,32 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🔴 SỬA (09/09/2026, phiên tiếp 7) — LẶP LẠI lỗi RULES.md #16 lần thứ 3, làm gãy bước cuối Upload OneDrive
+## 🔴 SỬA (09/09/2026, phiên tiếp 8) — Lỗi THẬT SỰ khác: quên thêm cột vào `pending_uploads`
+
+User báo tiếp tục bị "xóa tin cũ nhanh hơn hiện tin mới", đề xuất thử thêm node Wait 10s. Tra lại
+execution thật (1474, 1480 — SAU khi publish fix "phiên tiếp 7") lộ ra **đây KHÔNG PHẢI race
+condition/timing** — là lỗi Postgres THẬT: `column "student_name" of relation "pending_uploads"
+does not exist`. Ở "phiên tiếp 6" (thêm tin nhắn forward chi tiết hơn), tôi có thêm cột
+`student_name`/`task_url` vào `clickup.upload_notify_queue` (qua node `Ensure Notify Queue
+Columns`) nhưng **QUÊN làm y hệt cho bảng `clickup.pending_uploads`** — trong khi cả 2 node
+`Upsert Pending Upload (Pick)` và `(Custom Prompt)` đều ghi vào ĐÚNG 2 cột đó của bảng này. Kết quả:
+`Delete Old Message (Reader)` xóa tin cũ THÀNH CÔNG → bước Upsert ngay sau đó LỖI THẬT (không phải
+0-row) → toàn luồng dừng → không tin nhắn mới nào được gửi. Wait 10s sẽ KHÔNG sửa được lỗi này (đây
+là lỗi cứng, không phải chậm).
+
+**Đã sửa**: thêm node `Ensure Pending Upload Columns` (ALTER TABLE `pending_uploads` ADD COLUMN IF
+NOT EXISTS `student_name`/`task_url`) chèn giữa `Switch` (3 output od_start/od_pick/od_custom_prompt)
+→ `OD Task Lookup` — vị trí này AN TOÀN vì `OD Task Lookup` không phụ thuộc `$json` của node liền
+trước (chỉ dùng `$('Phân tích lệnh').first().json.taskId`), nên chèn node DDL vào giữa không làm
+mất dữ liệu task row cho các bước sau. Đã set `alwaysOutputData`/`onError` NGAY TRONG CÙNG BATCH
+(đúng RULES.md #18 mới thêm) và verify bằng `get_workflow_details` trước khi publish. Đã publish.
+
+**Bài học thêm cho RULES.md #18**: mỗi khi thêm cột mới cho 1 tính năng, phải rà lại XEM CÓ BAO
+NHIÊU BẢNG cùng cần cột đó — phiên trước chỉ nhớ sửa 1/2 bảng (`upload_notify_queue`), quên bảng
+kia (`pending_uploads`) dù cả 2 đều dùng chung tên cột `student_name`/`task_url`. Nên grep toàn bộ
+workflow tìm tên cột mới trước khi coi là "đã xong" việc thêm cột.
+
+## 🔴 (09/09/2026, phiên tiếp 7) — LẶP LẠI lỗi RULES.md #16 lần thứ 3, làm gãy bước cuối Upload OneDrive
 
 User báo: sau khi làm tin nhắn forward chi tiết hơn (mục "phiên tiếp 6"), luồng Upload OneDrive bị
 "xóa hết tin cũ nhưng chưa chuyển sang tin nhắn mới". Nguyên nhân: node MỚI thêm vào lúc đó
