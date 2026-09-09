@@ -33,7 +33,7 @@
 | **GW Weekly Error Report** (`ZJvP7L2aVPpeCGGW`, MỚI) | 🟡 Đã build, CHƯA test thật | Thứ 2 8h sáng, DM admin — xem checklist |
 | **Help Bot GPT** | ⏳ Code xong, CHƯA gắn Gateway | Chờ Workflow ID thật (placeholder `REPLACE_HELP_BOT_ID`) |
 | **Crawl Bot** | ⏳ Chưa bắt đầu | Placeholder `REPLACE_CRAWL_BOT_ID` |
-| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong, CHƯA test thật | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` dạng bấm nút (Admin System = mọi nhóm; ClickUp Reader = filtered theo user). **⚠️ Cần tắt Privacy Mode qua @BotFather** — xem checklist |
+| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (kể cả bấm nút + mở cho user thường), CHƯA test thật lượt nào | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` dạng bấm nút 3 bước, có ở CẢ 2 bot (Admin System = mọi nhóm; ClickUp Reader = filtered theo user). **⚠️ Cần tắt Privacy Mode qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
 
 ## ✅ Đã xác nhận SỬA XONG — Phương án A cho DKPV/PVTC (quyết định 09/09/2026)
 
@@ -60,17 +60,10 @@ Kiểm tra trực tiếp Postgres xác nhận **đã được triển khai đún
 1. **Bot Xử Lý Ảnh — vẫn còn "nền trắng"/"chèn logo" CHƯA CÓ SPEC RÕ** (khác với tính năng AI
    xoá nền/upscale ở mục 0, đã có spec rõ và build xong). Cần user cung cấp: tên lệnh, logo lấy từ
    đâu (file cố định hay user gửi kèm), có kết hợp với `/xoanen` không, vị trí/kích thước logo.
-2. **Nhóm chat capture + tóm tắt AI** — phạm vi vừa được làm rõ lại (09/09/2026), RỘNG HƠN ý tưởng
-   ban đầu. Đã có sẵn 2 bảng SQL cũ (`gateway.group_chat_log`, `gateway.daily_chat_summary`) nhưng
-   CHƯA có workflow nào ghi/đọc chúng. Yêu cầu mới nhất gồm:
-   - (a) Ghi log MỌI tin nhắn trong các nhóm Telegram bot có mặt (SQL + workflow) — **KHÔNG** tự
-     động đẩy tóm tắt hàng ngày cho user (phần "tự động push" bị hoãn lại, chỉ làm phần lưu trữ).
-   - (b) Lệnh xem lại tóm tắt lịch sử trò chuyện theo khoảng ngày (1/3/5/7 ngày) — chỉ trả về nội
-     dung liên quan tới user hỏi (hoặc toàn bộ hội thoại liên quan tới họ, hoặc lọc theo 1 nhóm cụ
-     thể do user chọn).
-   - (c) Lệnh tìm kiếm nội dung (full-text) trong lịch sử của 1 nhóm cụ thể.
-   - **Trạng thái: đang trong quá trình xây dựng (bắt đầu 09/09/2026) — xem CHANGELOG cùng ngày để
-     biết chính xác đã làm tới đâu.**
+2. **Nhóm chat capture + tóm tắt AI** — đã build xong toàn bộ 3 phần (ghi log, tóm tắt đêm, lệnh
+   xem lại có bấm nút cho cả admin lẫn user thường) nhưng **CHƯA test qua Telegram thật lượt nào**.
+   Xem mục "🧪 Hướng dẫn test" ngay bên dưới để biết chính xác cách test và các điểm rủi ro cần
+   để ý (đặc biệt bộ lọc theo user, tránh lộ chat nhóm khác).
 3. **`GW Weekly Error Report`** (mới tạo 09/09/2026) — chưa test thật qua Telegram (chạy thử sẽ gửi
    tin nhắn thật cho admin nên chưa tự chạy). Cần user tự bấm "Execute workflow" trong n8n để xem
    trước, hoặc đợi tới Thứ 2 tới.
@@ -78,10 +71,97 @@ Kiểm tra trực tiếp Postgres xác nhận **đã được triển khai đún
 5. **Crawl Bot** — chưa bắt đầu (Phase 3 cũ).
 6. **`restore.sh`** (script khôi phục thảm họa) — chưa test trên 1 n8n instance trống thật sự.
 
+## 🧪 Hướng dẫn test tính năng MỚI (09/09/2026) — Nhóm chat capture + `/lichsu` + `/timkiem`
+
+Tính năng này gồm 3 phần liên kết: (1) ghi log tin nhắn nhóm, (2) tóm tắt AI hàng đêm, (3) lệnh
+xem lại có bấm nút. Cả 3 đã publish nhưng **chưa ai test qua Telegram thật** — Trigger không
+execute được qua MCP nên phần này bắt buộc phải test tay. Làm đúng thứ tự dưới đây.
+
+### Bước 0 — Điều kiện tiên quyết (bắt buộc, làm trước tất cả)
+
+1. Mở @BotFather trên Telegram → `/setprivacy` → chọn bot Gateway (`@Elite_clickup_bot`) →
+   **Disable**. Nếu không làm bước này, bot chỉ nhận được tin nhắn dạng lệnh (`/...`) trong nhóm —
+   KHÔNG nhận được tin nhắn thường, nên `gateway.group_chat_log` sẽ gần như trống.
+2. Đảm bảo bot đã có mặt trong ít nhất 1 nhóm/supergroup thật (không phải chat riêng) để có dữ
+   liệu ghi log.
+
+### Bước 1 — Test ghi log tin nhắn nhóm
+
+1. Nhắn vài tin nhắn thường (không phải lệnh) trong 1 nhóm có bot.
+2. Kiểm tra trong Postgres:
+   ```sql
+   SELECT chat_id, chat_title, user_id, message_text, ts
+   FROM gateway.group_chat_log ORDER BY ts DESC LIMIT 20;
+   ```
+3. Nếu bảng trống → khả năng cao Privacy Mode chưa tắt đúng bot (Bước 0.1), hoặc bot chưa thực sự
+   là admin/thành viên nhóm đó.
+
+### Bước 2 — Test tóm tắt AI hàng đêm (`GW Daily Chat Summary`, id `ElSGQgdHPMtrzwME`)
+
+Workflow này chạy tự động 1h sáng. Để test ngay không cần đợi:
+1. Mở workflow trong n8n UI → bấm "Execute workflow" thủ công (hoặc dùng `test_workflow` qua MCP
+   với `method: "prepared"` nếu instance hỗ trợ MCP server nội bộ).
+2. Kiểm tra bảng:
+   ```sql
+   SELECT chat_id, chat_title, summary_date, message_count, summary_text
+   FROM gateway.daily_chat_summary ORDER BY summary_date DESC;
+   ```
+3. Nếu không có dòng nào cho nhóm đã nhắn tin ở Bước 1 → kiểm tra credential DeepSeek
+   (`lmChatDeepSeek`, id `F7tLItIIVtzpZGqS`) còn hợp lệ không, và `gateway.group_chat_log` có dữ
+   liệu của NGÀY HÔM ĐÓ hay không (query nhóm theo `message_count > 0`).
+
+### Bước 3 — Test `/lichsu` (bản Admin — mọi nhóm)
+
+1. Nhắn `/lichsu` cho **System Bot** (`@elite_n8n_system_bot`, chat riêng với admin).
+2. Kỳ vọng: hiện 4 nút số ngày (1/3/5/7) + nút ❌ Hủy.
+3. Bấm 1 nút ngày → kỳ vọng: hiện danh sách nhóm dạng link (bấm được) + "🌐 Tất cả nhóm" + nút Hủy.
+4. Bấm 1 link nhóm (hoặc "Tất cả nhóm") → kỳ vọng: nhận tóm tắt đúng nhóm/khoảng ngày đã chọn.
+5. Test nút ❌ Hủy ở cả bước 2 và 3 → kỳ vọng: nhận "❌ Đã hủy" (dùng chung reply với `/cancel`).
+6. (Tùy chọn) Test cú pháp gõ tay cũ vẫn hoạt động: `/lichsu 7` (tất cả nhóm) và
+   `/lichsu 7 <chat_id>` (1 nhóm cụ thể, lấy `chat_id` từ bước 3).
+7. Test `/timkiem` không tham số → kỳ vọng: liệt kê nhóm (dạng `<code>` để copy `chat_id`) + nút
+   Hủy. Sau đó gõ `/timkiem <chat_id> <từ khóa>` → kỳ vọng: trả về các tin nhắn gốc chứa từ khóa.
+
+### Bước 4 — Test `/lichsu` + `/timkiem` (bản User thường — CÓ LỌC, quan trọng nhất)
+
+Đây là phần rủi ro cao nhất vì liên quan bảo mật dữ liệu chat.
+
+1. Dùng **2 tài khoản Telegram khác nhau** (User A và User B), cả 2 đều đã được cấp quyền
+   `telebot_main` qua `/user_list`.
+2. User A nhắn vài tin trong Nhóm X (bot có mặt). User B KHÔNG nhắn gì trong Nhóm X, chỉ nhắn
+   trong Nhóm Y.
+3. Đợi qua đêm (hoặc chạy tay `GW Daily Chat Summary` như Bước 2) để có tóm tắt cho cả 2 nhóm.
+4. User A nhắn `/lichsu` cho **Elite Clickupbot** (bot chính) → bấm 1 số ngày → **kỳ vọng: chỉ
+   thấy Nhóm X trong danh sách chọn nhóm, KHÔNG thấy Nhóm Y**.
+5. User B lặp lại tương tự → **kỳ vọng: chỉ thấy Nhóm Y, KHÔNG thấy Nhóm X**.
+6. **Test cố tình vượt rào**: User B tự gõ tay `/timkiem <chat_id_của_Nhóm_X> việc` (dùng đúng
+   `chat_id` thật của Nhóm X mà họ không tham gia) → **kỳ vọng: trả về "Không tìm thấy" (0 dòng)**,
+   KHÔNG được trả nội dung thật của Nhóm X. Đây là test quan trọng nhất — nếu User B nhìn thấy nội
+   dung Nhóm X là có lỗ hổng lộ dữ liệu, cần báo ngay để vá (xem cách lọc trong CHANGELOG
+   09/09/2026 "tiếp 14" — dùng `EXISTS` join `gateway.group_chat_log` theo `user_id`).
+7. Kiểm tra `/help` của Elite Clickupbot có liệt kê đúng `/lichsu` + `/timkiem` cho user.
+
+### Nếu có lỗi khi test
+
+- Không thấy nút nào cả (tin nhắn gửi ra nhưng trơn) → kiểm tra lại đúng bẫy RULES.md #14
+  (inlineKeyboard set bằng 1 expression động cho cả field).
+- Bấm nút không phản hồi gì (không có execution mới trong n8n) → khả năng callback prefix chưa có
+  trong whitelist của `GW-03 Router` (với bot User) hoặc route chưa khớp trong `Phân tích lệnh`/
+  `Switch` (cả 2 bot) — xem RULES.md #13/#15 về batch rollback và `sourceIndex`/`targetIndex`.
+- `/lichsu`/`/timkiem` báo "Lệnh không hợp lệ" ngay từ bot User → kiểm tra `COMMAND_MAP` trong
+  node `⚙️ Config` của `GW Gateway - Telegram` có đủ `lichsu`/`timkiem` không (lỗi này đã xảy ra
+  1 lần trong lúc build, đã fix — xem CHANGELOG).
+
 ## 📇 Index thay đổi/lỗi đã fix gần đây (đọc CHANGELOG.md để biết chi tiết đầy đủ từng mục)
 
 Danh sách tra nhanh — mỗi dòng trỏ tới mục tương ứng trong `CHANGELOG.md` (tìm theo ngày/tiêu đề):
 
+- **09/09/2026 (tiếp 14)**: button hóa `/lichsu` (3 bước: chọn ngày → chọn nhóm → xem tóm tắt,
+  dùng deep-link hyperlink cho danh sách nhóm thay vì inline keyboard động — tránh bẫy RULES.md
+  #14) · mở `/lichsu` + `/timkiem` cho user thường qua `Telebot ClickUp Reader`, có lọc theo
+  `user_id` (chỉ thấy/tìm được nhóm mình từng nhắn tin, kể cả khi cố gõ tay `chat_id` khác) · phát
+  hiện + fix Gateway thiếu `lichsu`/`timkiem` trong `COMMAND_MAP` (lệnh sẽ báo "không hợp lệ" nếu
+  thiếu) · thêm whitelist callback `ulchs_` vào `GW-03 Router`.
 - **09/09/2026**: fix nút `/user_list` bị lệch route do 2 phiên sửa song song · phát hiện tên tham
   số đúng cho `addConnection` là `sourceIndex`/`targetIndex` (RULES.md #13) · thêm `/version` ·
   fix Upload OneDrive không hiện nút (bẫy inlineKeyboard động, RULES.md #14) · thêm auto-delete tin
