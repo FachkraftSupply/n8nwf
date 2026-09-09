@@ -4,6 +4,26 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 12) — AI xoá nền (fallback) + Upscale cho `/xoanen`; dọn lại PROJECT_STATUS.md
+
+- **Xác nhận Phương án A (DKPV/PVTC) đã được 1 phiên trước làm đúng và đang chạy tốt** — kiểm tra
+  trực tiếp Postgres: khoá chính `clickup.task_links` đã là
+  `(student_task_id, order_task_id, link_type, year)`, không còn lỗi duplicate key, 0 dòng trùng.
+  Không cần sửa gì thêm.
+- **Thêm tính năng AI xoá nền (fallback) + Upscale cho `/xoanen`** (`Bot Xử Lý Ảnh`,
+  `6I4MnJiJCiv2JOIr`): sau khi remove.bg chạy (dù thành công hay thất bại), tin nhắn trả về giờ có
+  3 nút: 🤖 Xoá nền bằng AI, 🔍 Upscale cho sắc nét, ❌ Huỷ. Đã tra giá + format API thật từ
+  OpenRouter (`https://openrouter.ai/api/v1/images`, model `google/gemini-2.5-flash-image`,
+  ~$0.0003/ảnh) — không đoán mù, đúng nguyên tắc đã áp dụng cho Mistral OCR trước đây. State tạm
+  cho 2 nút follow-up lưu ở bảng mới `gateway.image_action_queue` (cùng lý do 64-byte callback_data
+  như `clickup.upload_notify_queue`). Gateway thêm whitelist `imgai_`/`imgupscale_`/`imgcancel`.
+  **⚠️ CẦN user tạo credential `httpTemplatedCustomAuth` cho OpenRouter và gán vào 2 node HTTP mới
+  trước khi dùng được — chưa test thật.**
+- **Dọn lại toàn bộ `PROJECT_STATUS.md`**: bỏ hết nội dung tường thuật lỗi thời tích luỹ qua nhiều
+  phiên, chỉ giữ trạng thái hiện tại + 1 index tra nhanh trỏ tới các mục CHANGELOG liên quan. Chuyển
+  phần "ghi nhớ kỹ thuật" trùng lặp sang tham chiếu thẳng `RULES.md` (đã có đủ, tránh 2 nguồn không
+  đồng bộ).
+
 ## 2026-09-09 (tiếp 11) — Fix "Tên: —, Link: —" khi task chưa từng đồng bộ vào Postgres
 
 Test thật ngay sau khi sửa dấu `=` (tiếp 10) lộ ra thêm 1 case: task `z9088279pb` gửi thông báo
