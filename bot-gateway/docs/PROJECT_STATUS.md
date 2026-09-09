@@ -17,12 +17,42 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## 🟡 MỚI (09/09/2026, phiên tiếp) — Mirror thông báo Upload OneDrive sang nhóm Zalo
+
+Đã đọc tài liệu `https://bot.zapps.me/docs` — API Bot Zalo có cấu trúc gần giống hệt Telegram Bot
+API: `POST https://bot-api.zaloplatforms.com/bot<BOT_TOKEN>/sendMessage`, body
+`{chat_id, text, parse_mode: "markdown"|"html"}`, token nằm ngay trong URL (không phải header).
+
+**Đã build xong (workflow `Telebot ClickUp Reader`, `9JJRrh36H2rLwtnu`)**: khi admin bấm nút forward
+thông báo Upload OneDrive vào 1 trong 3 nhóm Telegram (🏛️ Kammer/BAV, 🧾 Hóa đơn, 📄 Giấy tờ khác),
+workflow giờ CŨNG gửi thêm cùng nội dung đó sang 1 nhóm Zalo tương ứng (nếu có cấu hình) — cơ chế
+best-effort, không chặn luồng chính nếu gọi Zalo lỗi.
+- Bảng `gateway.notify_targets` có thêm cột `zalo_chat_id` (tự tạo qua node "Ensure Zalo Notify
+  Column", cũng có ghi lại ở `sql/07_gateway_notify_targets_zalo.sql`).
+- Node mới: `Has Zalo Target?` (IF, chỉ chạy tiếp nếu `zalo_chat_id` có giá trị) → `Send Zalo
+  Notify` (HTTP Request, `onError: continueRegularOutput`).
+- **CHƯA thể test/hoạt động thật vì thiếu 2 thứ, cần user cung cấp:**
+  1. **Zalo Bot Token** — tạo bot qua Zalo Bot Creator (`bot.zapps.me`) rồi lấy token. **KHÔNG dán
+     token vào chat với Claude** — thêm biến môi trường `ZALO_BOT_TOKEN=<token>` vào docker-compose
+     của n8n (cùng chỗ với các biến môi trường khác của container n8n trên VPS) rồi restart
+     container n8n. Node `Send Zalo Notify` đã trỏ sẵn tới `{{ $env.ZALO_BOT_TOKEN }}` — chỉ cần
+     set đúng tên biến này là chạy được ngay, không cần sửa lại workflow.
+  2. **Zalo group chat_id** cho từng category (Kammer/BAV, Hóa đơn, Giấy tờ khác) — sau khi thêm
+     bot vào nhóm Zalo và nhắn thử 1 tin, có thể lấy chat_id qua Zalo Bot Creator dashboard hoặc
+     gọi `getUpdates`. Cho tôi biết chat_id (không phải bí mật, có thể gửi thẳng trong chat) để
+     tôi `UPDATE gateway.notify_targets SET zalo_chat_id = '...' WHERE target_key = '...'` — xem
+     câu lệnh mẫu trong `sql/07_gateway_notify_targets_zalo.sql`. Có thể dùng CHUNG 1 chat_id cho
+     cả 3 category nếu chỉ có 1 nhóm Zalo, hoặc chat_id riêng từng nhóm nếu có nhiều nhóm.
+- Việc còn lại sau khi có đủ 2 thứ trên: điền `zalo_chat_id`, gửi thử 1 lượt forward thật, xác nhận
+  tin nhắn tới đúng nhóm Zalo với format hiển thị đúng (thẻ `<b>` HTML — cần xác nhận Zalo render
+  đúng, tài liệu ghi hỗ trợ `parse_mode: html` nhưng chưa test thật).
+
 ## Trạng thái theo bot / workflow (09/09/2026)
 
 | Bot / Workflow | Trạng thái | Ghi chú |
 |---|---|---|
 | **Gateway** (`GW Gateway - Telegram`, `xmEKeIUnzxm2F7dF`) | ✅ Hoạt động, PROD (`@Elite_clickup_bot`) | Auth, router, callback whitelist (`od_`, `odfwd_`, `odhelp`, `chitiet_`, `sync_`) |
-| **Telebot ClickUp Reader** (`9JJRrh36H2rLwtnu`, chạy qua Gateway, `bot_key: telebot_main`) | ✅ Hoạt động đầy đủ | `/task`, chi tiết task, Upload OneDrive (chọn tên/preset/tùy chỉnh/giữ gốc, forward thông báo vào nhóm, `/cancel`) — TẤT CẢ đã user xác nhận chạy thật |
+| **Telebot ClickUp Reader** (`9JJRrh36H2rLwtnu`, chạy qua Gateway, `bot_key: telebot_main`) | ✅ Hoạt động đầy đủ · 🟡 Mirror Zalo MỚI build, chưa hoạt động | `/task`, chi tiết task, Upload OneDrive (chọn tên/preset/tùy chỉnh/giữ gốc, forward thông báo vào nhóm Telegram, `/cancel`) — TẤT CẢ đã user xác nhận chạy thật. Mirror thông báo forward sang nhóm Zalo — đã build, ĐANG CHỜ `ZALO_BOT_TOKEN` + `zalo_chat_id` từ user (xem mục ngay trên) |
 | **Bot Xử Lý Ảnh** (`6I4MnJiJCiv2JOIr`, qua Gateway, `bot_key: image_bot`) | ✅ `/xoanen`, `/tomtat` hoạt động OK · ⏸️ AI xoá nền/upscale TẠM DEACTIVATE | Tính năng 🤖 AI xoá nền / 🔍 Upscale đã build xong nhưng đang **tạm tắt** (2 node `Call OpenRouter (...)` set `disabled`, 2 nút bấm đã gỡ khỏi tin nhắn kết quả) theo yêu cầu 09/09/2026 — chờ user tạo credential rồi bật lại. Xem mục checklist |
 | **Telebot Admin System** (`eWtu7Qs85Hes0HuP`, bot riêng `@elite_n8n_system_bot`) | ✅ Hoạt động đầy đủ | `/task`, `/sync`, `/sync_status`, `/db_status`, `/backup_n8n`, `/backup_db`, `/version`, `/cancel`, `/user_list` (danh sách + panel quản lý quyền đầy đủ 13 route) |
 | **SQL - ClickUp Full Reconcile** (`G1R0okF0rUziySu9`) | ✅ Hoạt động, đã fix DKPV/PVTC | Xem mục "DKPV/PVTC" bên dưới |
