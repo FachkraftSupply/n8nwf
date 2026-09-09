@@ -4,6 +4,20 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 2) — Forward thông báo upload vào nhóm/topic + fix bug xóa tin nhắn
+
+- **User xác nhận Upload OneDrive đã hoạt động đúng.**
+- **Fix bug UX tự xóa tin nhắn cũ** (thêm hôm trước): sau khi xóa tin nhắn panel cũ, node xóa trả về
+  response riêng của nó (không phải envelope gốc) khiến `$json.extraRoute` bị mất, làm rớt xuống
+  nhánh flow cũ thay vì gửi panel tiếp theo — tin cũ mất nhưng tin mới không tới. Sửa bằng cách thêm
+  node khôi phục lại envelope gốc (`$('Admin Extras Router').first().json`) ngay sau bước xóa.
+- **Thêm forward thông báo upload vào nhóm/topic**: sau khi upload OneDrive thành công, tin nhắn kết
+  quả có 4 nút tĩnh (Kammer/BAV, Hóa đơn, Giấy tờ, ❓ Trợ giúp) gửi bản copy thông báo vào đúng
+  nhóm/topic. Bảng cấu hình mới `gateway.notify_targets` (mở rộng bằng INSERT, không cần sửa code)
+  + bảng tạm `clickup.upload_notify_queue` (state ngắn hạn vì callback_data giới hạn 64 byte). Chi
+  tiết + roadmap dùng chung bảng này cho định tuyến thông báo hệ thống: xem PROJECT_STATUS.md.
+- SQL migration: `sql/04_gateway_notify_targets.sql`.
+
 ## 2026-09-09 (tiếp) — Fix Upload OneDrive (nút không hiện) + tự xóa panel cũ khi điều hướng admin
 
 - **Root cause thật của "Upload OneDrive không phản hồi"**: xác nhận qua execution thật (đúng nghi

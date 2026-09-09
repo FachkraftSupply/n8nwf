@@ -45,7 +45,43 @@ MCP): `/user_list` toàn bộ panel (đặc biệt 3 nút mới gall/bl/dl chưa
 4. Form upload OneDrive: xác nhận có đủ 2 lựa chọn "giữ tên gốc" / "tên tùy chỉnh" (user nhắc lại
    yêu cầu này — có thể đã có sẵn trong bản build trước, cần kiểm tra lại khi debug mục 2).
 
-## 🟢 UPLOAD ONEDRIVE — TÌM RA NGUYÊN NHÂN THẬT + ĐÃ SỬA (09/09/2026, chưa test qua Telegram)
+## 🟢 UPLOAD ONEDRIVE — ĐÃ HOẠT ĐỘNG (09/09/2026, user xác nhận) + mở rộng forward thông báo
+
+**Xác nhận hoạt động**: user đã test và xác nhận Upload OneDrive chạy đúng sau bản fix inlineKeyboard
+tĩnh ở mục bên dưới.
+
+**Tính năng mới thêm cùng ngày — Forward thông báo upload vào nhóm/topic**:
+Sau khi upload thành công, tin nhắn kết quả (`Send Upload Result`) giờ có 4 nút TĨNH:
+- 🏛️ Kammer/BAV, 🧾 Hóa đơn, 📄 Giấy tờ — mỗi nút gửi 1 bản copy thông báo (`📤 <tên file>\n🔗 <link>`)
+  vào đúng nhóm/topic tương ứng (dùng `message_thread_id` — field đúng đã xác nhận qua
+  `get_node_types`, KHÔNG phải field tự đoán).
+- ❓ Trợ giúp — liệt kê mô tả từng nhóm để user biết nút nào ứng với nhóm nào.
+
+**Bảng cấu hình MỚI (mở rộng được, đây là ROADMAP: thêm nhóm/topic mới sau này chỉ cần INSERT 1 dòng,
+KHÔNG cần sửa code/workflow)**:
+```sql
+gateway.notify_targets (id, target_key UNIQUE, label, chat_id, topic_id, description, category, active)
+```
+Seed hiện tại (`category='onedrive_forward'`, nhóm `-1002954420822`):
+`od_kammer_bav`(id 1, topic 2), `od_hoadon`(id 2, topic 6), `od_giayto`(id 3, topic 7).
+Bảng phụ `clickup.upload_notify_queue` (id, chat_id, task_id, final_name, web_url) lưu tạm thông tin
+1 lượt upload để callback nút forward (`odfwd_<queueId>_<targetId>`) tra lại được — vì callback_data
+Telegram giới hạn 64 byte, không nhét vừa tên file + link đầy đủ.
+
+**⚠️ Việc CHƯA làm (roadmap tiếp theo cho tính năng notify_targets này)**:
+- Định tuyến 3 loại thông báo (cập nhật ClickUp / hệ thống-lịch / lỗi) vào nhóm KHÁC
+  (`-1003647848349`, topic 2/6/4) — user yêu cầu từ phiên trước, NÊN dùng chung bảng
+  `gateway.notify_targets` (thêm `category='system_notify'` với 3-4 target_key mới: `sys_clickup`,
+  `sys_schedule`, `sys_error`, có thể thêm `sys_catchall` cho tin chưa phân loại) thay vì hardcode
+  riêng — giữ đúng tinh thần "1 bảng cấu hình chung, mở rộng bằng INSERT". Việc cần làm: tìm ra CHÍNH
+  XÁC những node nào trong Gateway/Live Update/Error Handler hiện đang gửi 3 loại tin này cho admin,
+  đổi target theo `category='system_notify'` tương ứng.
+- Nếu sau này có thêm loại thông báo cần forward theo lựa chọn user (không phải cố định theo loại
+  tin) — có thể tái dùng CHÍNH XÁC pattern `Send Upload Result`/`OD Forward: *`/`Build Forward
+  Message` đã build ở đây (build nút từ `gateway.notify_targets` theo `category`, queue state ngắn
+  hạn trong 1 bảng `*_queue` riêng nếu payload dài hơn 64 byte).
+
+## 🟢 UPLOAD ONEDRIVE — TÌM RA NGUYÊN NHÂN THẬT + ĐÃ SỬA (09/09/2026, chưa test qua Telegram) — LỊCH SỬ, xem mục bên trên
 
 Đúng như nghi phạm số 1 đã ghi ở phiên trước: `inlineKeyboard`/`replyMarkup` được set bằng
 **expression động** (`={{ $json.telegramInlineKeyboard }}`) thay vì OBJECT TĨNH — xác nhận qua
