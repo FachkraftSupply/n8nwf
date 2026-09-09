@@ -4,6 +4,18 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 18) — Bỏ hẳn `/crawl`, biến `/sum` thành tóm tắt tuần này
+
+- **`/crawl`**: bỏ hẳn, không dùng nữa (đã bỏ khỏi `COMMAND_MAP` ở "tiếp 17", không thêm lại).
+- **`/sum`**: chuyển thành lệnh tóm tắt nhanh — trả về tóm tắt AI của TẤT CẢ các nhóm user tham
+  gia, tính từ đầu tuần (thứ 2, `date_trunc('week', CURRENT_DATE)`) tới hiện tại, không cần bấm
+  nút chọn ngày/nhóm như `/lichsu` (một lệnh, một lần gõ, ra kết quả ngay). Vẫn lọc theo
+  `user_id` (dùng lại đúng bộ lọc chống lộ chat nhóm khác của `/lichsu`/`/timkiem` bản user).
+  Route ở `Telebot ClickUp Reader`: `Switch` thêm rule `sum` (index 16, fallback dời sang 17,
+  đã verify lại `connections` sau khi patch theo đúng quy trình RULES.md #13/#15). Thêm lại
+  `sum:'telebot_main'` vào `COMMAND_MAP` của Gateway (khác `/lichsu`/`/timkiem`, `/sum` chỉ có ở
+  bản user, không có ở Admin System). Update `Nội dung lệnh help` liệt kê `/sum`.
+
 ## 2026-09-09 (tiếp 17) — Đóng 2 mục checklist: nền trắng/logo (huỷ), Crawl Bot (gộp vào chat capture)
 
 - **"Nền trắng"/"chèn logo"** (Bot Xử Lý Ảnh) — user xác nhận không cần thiết ở thời điểm này.

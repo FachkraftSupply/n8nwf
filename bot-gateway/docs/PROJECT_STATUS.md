@@ -32,8 +32,8 @@
 | **GW Error Handler** (`34ccboHpyoY2r691`) | ✅ Hoạt động | Báo lỗi vào nhóm topic 4 + ghi `gateway.error_logs` |
 | **GW Weekly Error Report** (`ZJvP7L2aVPpeCGGW`, MỚI) | 🟡 Đã build, CHƯA test thật | Thứ 2 8h sáng, DM admin — xem checklist |
 | **Help Bot GPT** | ⏳ Code xong, CHƯA gắn Gateway | Chờ Workflow ID thật (placeholder `REPLACE_HELP_BOT_ID`) |
-| ~~Crawl Bot~~ | ❌ Đã đóng (09/09/2026) | Ý tưởng ban đầu = "Nhóm chat capture" (đã có, xem dòng bên dưới) — không xây riêng nữa, đã bỏ `sum`/`crawl` khỏi `COMMAND_MAP` |
-| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (kể cả bấm nút + mở cho user thường), CHƯA test thật lượt nào | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` dạng bấm nút 3 bước, có ở CẢ 2 bot (Admin System = mọi nhóm; ClickUp Reader = filtered theo user). **⚠️ Cần tắt Privacy Mode qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
+| ~~Crawl Bot~~ | ❌ Đã đóng hẳn (09/09/2026) | Ý tưởng ban đầu = "Nhóm chat capture" (đã có, xem dòng bên dưới) — không xây riêng nữa. `/crawl` bỏ hẳn; `/sum` giữ lại nhưng đổi ý nghĩa (xem dòng bên dưới) |
+| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (bấm nút + mở cho user thường + `/sum` tóm tắt tuần), CHƯA test thật lượt nào | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` dạng bấm nút 3 bước (Admin System = mọi nhóm; ClickUp Reader = filtered theo user) + `/sum` (chỉ ClickUp Reader — tóm tắt nhanh tất cả nhóm của user từ đầu tuần, không cần bấm nút). **⚠️ Cần tắt Privacy Mode qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
 
 ## ✅ Đã xác nhận SỬA XONG — Phương án A cho DKPV/PVTC (quyết định 09/09/2026)
 
