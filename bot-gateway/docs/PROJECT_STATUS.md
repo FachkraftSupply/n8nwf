@@ -58,6 +58,78 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## 🚧 ĐANG BUILD DỞ (09/09/2026, phiên tiếp 14) — Xóa file OneDrive vừa upload + thu hồi tin forward
+
+**QUAN TRỌNG NẾU ĐỌC LẠI FILE NÀY Ở PHIÊN MỚI**: tính năng này ĐANG XÂY DỞ, chia làm 4 stage, mỗi
+stage publish riêng để không mất tiến độ nếu hết token giữa chừng. Đọc đúng mục "Stage nào đã xong"
+bên dưới trước khi tiếp tục — ĐỪNG build lại từ đầu.
+
+**Yêu cầu user (nguyên văn ý)**: 2 nút mới —
+1. Trên tin nhắn kết quả upload (`Send Upload Result`, chat riêng, TRƯỚC khi forward): nút
+   "🗑️ Xóa file vừa upload" → xóa file OneDrive.
+2. Trên tin nhắn "bản lưu riêng" (`Send Forward Copy To User`, SAU khi đã forward): nút
+   "🗑️ Xóa & thu hồi" → xóa file OneDrive + xóa tin đã forward trong nhóm Telegram + (Zalo không có
+   API xóa/thu hồi theo tài liệu chính thức → gửi tin mới báo "đã xóa" vào đúng nhóm Zalo thay vì
+   thử gọi API không có thật).
+
+**Thiết kế** (đã trình bày cho user, user đã OK "bắt đầu build cho tôi nhé"):
+- Callback mới: `od_del_<queueId>` (xóa trước forward), `od_delfwd_<queueId>` (xóa sau forward) —
+  CỐ Ý bắt đầu bằng `od_` để tự khớp whitelist Gateway có sẵn (`resolveBotKeyForCallback` đã check
+  `startsWith('od_')`) → KHÔNG cần sửa `GW Gateway - Telegram` (`xmEKeIUnzxm2F7dF`).
+- 6 cột mới trên `clickup.upload_notify_queue`: `drive_id`, `item_id` (lưu lúc upload, vì lúc xóa là
+  1 execution KHÁC hẳn, không còn truy cập node cũ), `fwd_chat_id`, `fwd_message_id` (lưu lúc forward
+  thành công, để sau xóa đúng tin trong nhóm), `zalo_chat_id_used` (để biết gửi tin báo xóa vào đúng
+  nhóm Zalo nào), `deleted_at` (chặn bấm xóa 2 lần + chặn forward 1 file đã xóa).
+- Guard quan trọng: `Build Forward Message` sẽ được sửa để từ chối forward nếu `deleted_at` đã có
+  giá trị (báo "File đã bị xóa, không thể forward").
+- Xóa OneDrive/Telegram/Zalo đều dùng `onError: continueRegularOutput` — thiết kế "best-effort":
+  1 bước lỗi (vd file đã bị xóa tay trước đó trên OneDrive) không chặn các bước dọn dẹp còn lại.
+
+### Stage đã xong (KHÔNG làm lại):
+- ✅ **Stage 1/4** (publish `activeVersionId: c51dd030-5884-4593-bc88-1f81e78cce1d`): ALTER 6 cột
+  mới vào `clickup.upload_notify_queue` (node `Ensure Notify Queue Columns`, đã giữ nguyên
+  `alwaysOutputData`/`onError` cũ). `Queue Upload Notify` INSERT thêm `drive_id`/`item_id` lấy từ
+  `$('Upload To OneDrive').item.json.parentReference.driveId` / `.id`. `Send Upload Result` thêm
+  hàng nút thứ 5 "🗑️ Xóa file vừa upload" → `od_del_{{ $json.id }}`. **Callback này CHƯA có handler
+  — bấm vào lúc này sẽ rơi vào "Lệnh không hợp lệ" (bình thường, do stage 3-4 chưa build) — KHÔNG
+  phải bug, đừng test nút này cho tới khi thấy dòng "Stage 4/4 XONG" ở dưới.**
+
+### Stage CHƯA làm (làm tiếp theo đúng thứ tự):
+- ⬜ **Stage 2/4**: `Build Forward Message` thêm `queueId: queue.id` vào kết quả trả về (cần cho nút
+  ở bước 3 và cho node lưu `fwd_chat_id`/`fwd_message_id`) + thêm guard `deleted_at`. Chèn 2 node mới
+  `OD Fwd: Extract Send Result` (Code, đọc `message_id`/`chat.id` từ response của `Send Forward
+  Message`, có fallback đọc cả `result.message_id` phòng trường hợp n8n trả khác shape — CHƯA xác
+  nhận được shape thật vì `test_workflow` pin node Telegram, phải chờ test thật) → `OD Fwd: Save
+  Message Info` (Postgres UPDATE `fwd_chat_id`/`fwd_message_id`/`zalo_chat_id_used`, có
+  `alwaysOutputData`+`onError` để không chặn `Confirm Forward Sent` phía sau) — chèn GIỮA `Send
+  Forward Message` và `Confirm Forward Sent` (đang nối thẳng, phải cắt nối cũ, nối lại qua 2 node
+  mới). `Send Forward Copy To User` thêm nút "🗑️ Xóa & thu hồi" → `od_delfwd_{{ $json.queueId }}`
+  (dùng `replyMarkup: "inlineKeyboard"` TĨNH, đúng Rule #21 — KHÔNG dùng expression động).
+- ⬜ **Stage 3/4**: `Phân tích lệnh` (Code node router) thêm parse `od_del_(\d+)` → route `od_del`,
+  `od_delfwd_(\d+)` → route `od_delfwd`. `Switch` (node router chính) thêm 2 output mới `od_del`/
+  `od_delfwd` — LƯU Ý: `Switch` dùng `fallbackOutput: 'extra'` luôn là output CUỐI CÙNG theo vị trí,
+  thêm 2 rule mới sẽ ĐẨY index của fallback (hiện là 17) lên 19 → phải xóa nối cũ
+  (`Switch` output 17 → `Reply Unknown Command`) và nối lại đúng output 19, VÀ nối output 17/18 vào
+  2 chuỗi node mới của Stage 4. Cả 2 node này đều là node ĐÃ TỒN TẠI → dùng `removeNode`+`addNode`
+  cùng `id` (Rule #16), copy nguyên code/rules cũ + thêm phần mới, KHÔNG dùng `updateNodeParameters`.
+- ⬜ **Stage 4/4**: build 2 chuỗi node xử lý thật:
+  - `od_del` (7 node): Get Queue (SELECT `drive_id,item_id,fwd_message_id,deleted_at,final_name`) →
+    Build Result (Code, guard: không tìm thấy / đã forward rồi (phải dùng nút kia) / đã xóa rồi) →
+    IF ok → [true] Graph API `DELETE /drives/{driveId}/items/{itemId}` (onError continue) → Postgres
+    `SET deleted_at=now()` (alwaysOutputData+onError) → Reply "✅ Đã xóa"; [false] Reply lỗi tương ứng.
+  - `od_delfwd` (10 node): Get Queue (thêm `fwd_chat_id`/`zalo_chat_id_used`) → Build Result (guard
+    tương tự, thêm case "chưa forward") → IF ok → [true] Graph API DELETE → Telegram `deleteMessage`
+    (chat=`fwd_chat_id`, message=`fwd_message_id`, onError continue) → IF có `zalo_chat_id_used` →
+    [true] HTTP POST Zalo Bot API báo "File '<final_name>' vừa bị xóa" (dùng đúng token hardcode như
+    `Send Zalo Notify`, KHÔNG gõ token thật — xem Rule #17) / [false] bỏ qua → cả 2 nhánh gộp về 1
+    Postgres `SET deleted_at=now()` → Reply "✅ Đã xóa & thu hồi"; [false ở IF đầu] Reply lỗi.
+  - Test qua `test_workflow`+`prepare_workflow_pin_data`, `get_workflow_details` xác nhận, publish,
+    spawn subagent audit độc lập (đặc biệt kiểm tra: index Switch đúng, `deleted_at` guard hoạt động,
+    KHÔNG có `replyMarkup` động, các HTTP DELETE có `onError` đúng) — rồi mới cập nhật CHANGELOG.md
+    và xoá bỏ toàn bộ mục "ĐANG BUILD DỞ" này, thay bằng mục "✅ BUILD XONG" như các mục dưới.
+  - **Sau khi xong hết, thêm 1 file SQL lịch sử** `bot-gateway/sql/08_upload_notify_queue_delete.sql`
+    ghi lại 6 cột mới (giống style file `04_gateway_notify_targets.sql`).
+
 ## ✅ BUILD MỚI (09/09/2026, phiên tiếp 13) — Gửi bản lưu riêng vào chat cá nhân khi forward tin nhắn
 
 User xác nhận fix "❓ Trợ giúp" (phiên tiếp 12) đã hoạt động ("ok đã hoạt động rồi"). Yêu cầu mới:
