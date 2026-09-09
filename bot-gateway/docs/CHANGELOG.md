@@ -4,6 +4,15 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 8) — Đối chiếu nút forward "Giấy tờ khác" + thêm mô tả vào `/help`
+
+Kiểm tra lại theo báo cáo "thiếu mục gửi nhóm giấy khác": nút thứ 3 (`odfwd_<id>_3` → `od_giayto`,
+topic 7, đúng nhóm/topic user gửi lại) **đã tồn tại và đúng cấu hình** — vấn đề thực sự là `/help`
+(`Telebot ClickUp Reader`) chưa hề mô tả tính năng Upload OneDrive + forward, nên nhìn không rõ có
+những lựa chọn nào. Đã sửa:
+- Đổi nhãn `od_giayto` thành "📄 Giấy tờ khác" (đúng theo từ user dùng, rõ nghĩa hơn "Giấy tờ").
+- Thêm mô tả đầy đủ luồng Upload OneDrive + 3 nút forward + nút Trợ giúp vào `/help`.
+
 ## 2026-09-09 (tiếp 7) — Định tuyến 3 loại thông báo hệ thống vào nhóm + topic riêng
 
 Dùng chung bảng `gateway.notify_targets` đã tạo cho tính năng forward OneDrive (mở rộng bằng
