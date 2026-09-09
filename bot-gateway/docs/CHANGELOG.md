@@ -4,6 +4,17 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 10) — Fix ghi đè Postgres từ ClickUp Live Update (thiếu dấu `=`)
+
+- **User xác nhận toàn bộ nút Upload OneDrive đã hoạt động đầy đủ** (nút chọn tên, nút forward,
+  nút Hủy, menu chọn preset...).
+- Sửa `SQL - ClickUp Live Update (Webhook)` → node "Ghi Đè Postgres": thêm dấu `=` vào đầu câu
+  UPDATE (xem giải thích chi tiết trong CHANGELOG "tiếp 7" và hội thoại — thiếu dấu này khiến n8n
+  không dịch `{{ $json.column }}` thành tên cột thật, gửi nguyên văn xuống Postgres và luôn lỗi cú
+  pháp). Từ nay mỗi khi ai đổi custom field/trạng thái/tên task trực tiếp trên ClickUp, giá trị mới
+  sẽ được ghi đúng ngược lại Postgres theo thời gian thực thay vì chỉ được cập nhật vào lần
+  `/sync`/Full Reconcile tiếp theo.
+
 ## 2026-09-09 (tiếp 9) — Nút Hủy cho menu forward + workflow báo cáo lỗi hàng tuần mới
 
 - Thêm nút ❌ Hủy vào menu forward (bên cạnh ❓ Trợ giúp) trên tin nhắn kết quả upload OneDrive.
