@@ -4,6 +4,30 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 7) — Định tuyến 3 loại thông báo hệ thống vào nhóm + topic riêng
+
+Dùng chung bảng `gateway.notify_targets` đã tạo cho tính năng forward OneDrive (mở rộng bằng
+INSERT, không sửa code) — thêm 4 dòng `category='system_notify'` cho nhóm `-1003647848349`:
+`sys_clickup`(topic 2), `sys_schedule`(topic 6), `sys_error`(topic 4), `sys_catchall`(topic 1, DÙNG
+CHO SAU — chưa có nguồn nào nối vào, giữ chỗ cho thông báo chưa phân loại trong tương lai).
+
+- **`GW Error Handler`** (`34ccboHpyoY2r691`): "Báo admin Telegram" đổi từ nhắn riêng admin
+  (`975005174`) sang gửi vào nhóm, topic 4 (lỗi hệ thống).
+- **`SQL - ClickUp Live Update (Webhook)`** (`uqTqjtHYieotPZuc`): node "Notify" (thông báo cập nhật
+  task) đổi sang nhóm, topic 2. **Phát hiện thêm (ngoài phạm vi hôm nay, đã tạo task riêng)**: node
+  "Ghi Đè Postgres" trong workflow này thiếu dấu `=` ở đầu query — n8n không evaluate `{{ }}` bên
+  trong, khả năng cao câu UPDATE ghi đè cột custom field/status/tên vào Postgres đang LUÔN LỖI. Chưa
+  sửa (không thuộc yêu cầu hôm nay), đã note lại để làm riêng.
+- **`SQL - Backup System (n8n + Postgres)`** (`iVtOA9LEtjpLDkln`): 4 node "Notify Backup ... Xong" —
+  CHỈ đổi sang nhóm/topic 6 khi chạy TỰ ĐỘNG theo lịch (Schedule Chủ nhật 2h sáng) hoặc Manual Trigger
+  test trong n8n (không có `notifyChatId` truyền vào); khi chạy THỦ CÔNG qua lệnh `/backup_n8n`/
+  `/backup_db` (Admin System truyền `notifyChatId` rõ ràng) vẫn trả lời trực tiếp cho admin để có
+  phản hồi tức thì. **Phát hiện thêm, đã sửa luôn (ảnh hưởng trực tiếp tới việc thông báo có gửi được
+  hay không)**: cả 4 node này đang dùng nhầm credential "Telegram Dev Bot" (bot cũ, có thể không còn
+  hoạt động) thay vì "Telegram System Bot" — đã đổi đúng.
+- **`SQL - ClickUp Sync Scheduler`** (`loCm8Tg8Sqfj7ygy`): không có node Telegram nào tự gửi thông
+  báo (chỉ gọi sang Full Reconcile) — không có gì cần sửa cho workflow này.
+
 ## 2026-09-09 (tiếp 6) — Chuẩn hóa tên file Upload OneDrive: tối đa 5 từ, không emoji/số/ký tự đặc biệt
 
 - Thêm hàm `sanitizeFilenamePart()` (bỏ emoji, bỏ số, bỏ ký tự đặc biệt — chỉ giữ chữ cái có dấu và
