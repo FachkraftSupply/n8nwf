@@ -267,3 +267,28 @@ Mẫu đúng (viết trong 1 batch operations):
   { "type": "setNodeSettings", "nodeName": "Ensure X", "settings": { "alwaysOutputData": true, "onError": "continueRegularOutput" } }
 ]
 ```
+
+## 19. 🔴 Thêm 1 cột dữ liệu mới "đi nhờ" qua NHIỀU workflow — PHẢI liệt kê ĐỦ mọi điểm ĐỌC lẫn GHI, không dựa vào trí nhớ
+
+Xảy ra thật 09/09/2026 khi thêm `student_name`/`task_url` cho tin nhắn forward Upload OneDrive: nhớ
+sửa đủ 2 điểm GHI (`Upsert Pending Upload (Pick)` và `(Custom Prompt)` trong `Telebot ClickUp
+Reader`) nhưng **quên mất 1 điểm ĐỌC** — `GW-04 Check Pending Upload` trong `GW Gateway - Telegram`
+vẫn SELECT các cột CŨ từ `clickup.pending_uploads`, nên giá trị mới luôn `undefined` khi tới bước
+build tin nhắn (hiện "Không rõ"). Không có lỗi/warning nào báo — vì SELECT thiếu cột không phải lỗi,
+chỉ đơn giản trả về `undefined` cho field không có trong câu SELECT.
+
+Tương tự, cùng đợt việc còn quên ALTER 1 trong 2 bảng dùng chung tên cột (`pending_uploads` vs
+`upload_notify_queue`) — xem RULES.md #18, lỗi khác nhưng CÙNG GỐC: quên rà hết các nơi liên quan
+khi mở rộng 1 cấu trúc dữ liệu đang "đi nhờ" qua nhiều workflow/bảng.
+
+**Quy tắc bắt buộc**: trước khi coi việc "thêm 1 cột dữ liệu mới cho tính năng X" là XONG, phải:
+1. `grep`/liệt kê TOÀN BỘ workflow + bảng có liên quan tới tính năng đó (không chỉ workflow đang
+   sửa) — tính năng nào đi qua ranh giới Gateway ↔ sub-workflow gần như CHẮC CHẮN có ít nhất 1 điểm
+   Gateway cần cập nhật theo (xem kiến trúc ở `ARCHITECTURE.md` mục 4b).
+2. Với MỖI bảng bị ảnh hưởng, liệt kê cả 2 loại điểm: nơi GHI (INSERT/UPDATE) và nơi ĐỌC (SELECT) —
+   dễ nhớ ghi, dễ quên đọc, vì đọc thường nằm ở 1 workflow KHÁC (Gateway) so với nơi đang sửa chính
+   (sub-workflow nghiệp vụ).
+3. Sau khi sửa xong, test bằng dữ liệu thật đi hết đường (không chỉ test riêng lẻ từng workflow) —
+   hoặc dùng `test_workflow`/`prepare_workflow_pin_data` để mô phỏng input thật xuyên node logic
+   (Code/IF/Switch chạy thật, Postgres/HTTP/Telegram bị pin nên an toàn không gửi tin thật) khi
+   không thể test qua Telegram thật ngay lúc đó.

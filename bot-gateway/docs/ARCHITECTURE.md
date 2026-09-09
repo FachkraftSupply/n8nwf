@@ -84,6 +84,36 @@ File `01_gateway_schema.sql` — chạy trên CẢ Postgres Docker VÀ Supabase.
 | `gateway.interaction_logs` | audit log, index theo request_id / user / time |
 | `gateway.config` | admin_chat_id, available_bots — không hardcode trong workflow |
 
+### 4b. Upload OneDrive + forward thông báo + mirror Zalo (thêm 08–09/09/2026)
+
+Kiến trúc 2 workflow phối hợp, không phải 1 workflow độc lập — dễ nhầm khi debug nếu không nhớ ranh giới:
+
+- **`GW Gateway - Telegram`** (`xmEKeIUnzxm2F7dF`) chỉ làm 1 việc cho tính năng này: tra bảng
+  `clickup.pending_uploads` theo `chat_id` ngay sau bước auth (`GW-04 Check Pending Upload`) — nếu
+  có 1 dòng đang dở, ÉP route file/tin nhắn tiếp theo về `telebot_main` bất kể `COMMAND_MAP`/
+  `DEFAULT_BOT` gì. Đây là lý do khi thêm cột dữ liệu mới cho tính năng, phải luôn kiểm tra CẢ điểm
+  đọc này bên Gateway, không chỉ 2 điểm ghi bên workflow dưới (xem RULES.md #19 — bài học 09/09
+  quên đúng điểm này khiến "Học sinh: Không rõ").
+- **`Telebot ClickUp Reader`** (`9JJRrh36H2rLwtnu`) chứa TOÀN BỘ logic nghiệp vụ: chọn tên file →
+  chờ upload → resolve OneDrive share link qua Microsoft Graph → upload → forward vào nhóm Telegram
+  → mirror sang Zalo.
+
+3 bảng liên quan (đều tự tạo qua node "Ensure ... Columns/Table" trong chính workflow dùng nó —
+không cần chạy SQL tay, nhưng vẫn có file `.sql` lưu lại lịch sử schema trong repo):
+
+| Bảng | Vai trò | Cột quan trọng |
+|---|---|---|
+| `clickup.pending_uploads` | State 1 lượt upload đang dở (PK `chat_id`, 1 user chỉ 1 lượt tại 1 thời điểm) | `task_id`, `filename`, `mode` (`awaiting_choice`/`awaiting_custom_name`/`awaiting_file`), `onedrive_link`, `student_name`, `task_url` |
+| `clickup.upload_notify_queue` | State ngắn hạn để nút forward tra lại được (callback_data Telegram giới hạn 64 byte, không nhét vừa tên file+link) | `chat_id`, `task_id`, `final_name`, `web_url`, `uploader_name`, `student_name`, `task_url` |
+| `gateway.notify_targets` | Cấu hình nhóm/topic nhận forward, mở rộng bằng INSERT không cần sửa code | `chat_id`, `topic_id` (Telegram), `zalo_chat_id` (Zalo — NULL = không mirror), `category` |
+
+**Zalo Bot API** (`https://bot-api.zaloplatforms.com/bot<TOKEN>/<method>`) có cấu trúc gần giống hệt
+Telegram Bot API (`chat_id`/`text`/`parse_mode`) nhưng 2 khác biệt quan trọng: (1) token nằm NGAY
+TRONG URL path, không có credential type nào của n8n inject được vào đúng chỗ này nên phải hardcode
+trực tiếp trong tham số node (xem RULES.md #17 về redact trước khi commit); (2) `setWebhook` BẮT
+BUỘC kèm `secret_token` trong body (Telegram để tùy chọn) — thiếu sẽ báo lỗi rõ ràng
+`"secret_token must not be empty"`.
+
 ## 5. Giao thức approve (callback_data)
 
 Telegram giới hạn callback_data 64 byte nên format tối giản:

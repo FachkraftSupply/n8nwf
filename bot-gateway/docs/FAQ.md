@@ -101,6 +101,37 @@ sau đó cũng bị ảnh hưởng dây chuyền.
 **Cách sửa:** Set `"alwaysOutputData": true` cho node đó — ép nó luôn chạy và trả về ít nhất 1 item
 (rỗng/placeholder) thay vì bị bỏ qua.
 
+### "Thêm 1 node mới vào workflow qua n8n MCP, publish xong nhưng cả chuỗi phía sau chết lặng lẽ (không lỗi, không cảnh báo)"
+**Nguyên nhân:** thao tác `addNode` của n8n MCP KHÔNG áp dụng field `alwaysOutputData`/`onError` dù
+truyền vào — bị âm thầm bỏ qua (đã gặp 3 lần thật trong dự án, 1 lần làm sập TOÀN BỘ bot). Nếu node
+mới đó là DDL (`CREATE/ALTER TABLE` không `RETURNING`) hoặc gọi API ngoài có thể lỗi, nó sẽ trả 0
+item và node tiếp theo bị skip (đúng lỗi ở mục trên), lan xuống hết cả chuỗi.
+**Cách sửa:** LUÔN gọi thêm `setNodeSettings` cho node đó NGAY TRONG CÙNG 1 lần `update_workflow`
+(không tách 2 lần gọi riêng — rất dễ quên bước 2). Chi tiết + mẫu code: xem RULES.md #18.
+
+### "Sửa `credentials` hoặc 1 tham số của node ĐANG TỒN TẠI qua `updateNodeParameters`/`setNodeParameter`, response báo thành công nhưng đọc lại thấy KHÔNG đổi gì"
+**Nguyên nhân:** chưa rõ nguyên nhân gốc, chỉ biết cách né — 2 thao tác này thỉnh thoảng "báo thành
+công" nhưng giá trị bị lồng sai vị trí trong JSON hoặc không được ghi lại thật sự, không có
+warning/error nào để nhận biết. Đã gặp với cả `credentials` lẫn tham số thường (`jsonBody`).
+**Cách sửa:** đừng thử gọi lại y hệt lần 2 (dễ dính lại) — dùng `removeNode` rồi `addNode` lại với
+CÙNG `id`, copy nguyên các field khác chỉ đổi đúng phần cần sửa (kèm `addConnection` nối lại vì
+`removeNode` xoá luôn connection). Luôn `get_workflow_details` xác nhận trước khi `publish_workflow`.
+Chi tiết: RULES.md #16.
+
+### "Tin nhắn/dữ liệu ở bước cuối cùng của 1 luồng nhiều bước hiện thiếu/sai (vd 'Không rõ') dù đã sửa code tạo ra nó"
+**Nguyên nhân:** dữ liệu đó phải "đi nhờ" qua nhiều bảng/workflow (vd Gateway ↔ sub-workflow) — rất
+dễ chỉ nhớ sửa chỗ GHI (INSERT/UPDATE) mà quên chỗ ĐỌC (SELECT) ở 1 workflow KHÁC, hoặc quên ALTER
+1 trong nhiều bảng dùng chung tên cột.
+**Cách sửa:** `grep` tên cột/field đó xuyên suốt TẤT CẢ workflow liên quan trước khi coi là xong,
+không dựa vào trí nhớ danh sách các chỗ cần sửa. Chi tiết: RULES.md #19.
+
+### "Muốn test 1 thay đổi trước khi để user tự thử qua Telegram thật, nhưng trigger là Telegram Trigger/executeWorkflowTrigger (không execute trực tiếp qua MCP được)"
+**Cách làm:** dùng `prepare_workflow_pin_data` (lấy schema gợi ý cho từng node cần pin) rồi
+`test_workflow` với `pinData` tự điền giá trị thật/thực tế cho node Trigger + mọi node có credential
+(Postgres/Telegram/HTTP Request đều tự động bị "pin" — AN TOÀN, không gửi tin nhắn thật/ghi DB thật)
+— các node Code/IF/Switch vẫn chạy logic thật với input đã pin, đủ để xác nhận code build đúng nội
+dung mà không cần đợi user test qua Telegram.
+
 ---
 
 ## 🔧 Nhóm lỗi: Format tham số ClickUp node
