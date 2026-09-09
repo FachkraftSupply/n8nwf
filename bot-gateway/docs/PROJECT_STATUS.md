@@ -17,7 +17,47 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## ✅ HOÀN TẤT (09/09/2026, phiên tiếp 5) — Mirror OneDrive forward sang Zalo: TEST THẬT OK, hoạt động
+## 🟡 MỚI (09/09/2026, phiên tiếp 6) — Tin nhắn forward chi tiết hơn (người upload, học sinh, giờ, link)
+
+User xác nhận đã tự test full luồng Upload OneDrive → forward, thành công cả Telegram lẫn Zalo (mục
+"phiên tiếp 5" bên dưới). Sau đó yêu cầu nâng cấp nội dung tin nhắn forward — đã build xong, CHƯA
+test thật (cần user thử lại 1 lượt upload+forward mới để thấy format mới, vì phiên trước đã test
+xong với format cũ).
+
+**Format mới** (giống nhau cho Telegram + Zalo, chỉ khác cách hiển thị tên học sinh):
+```
+📢 Thông báo cập nhật hồ sơ
+
+👤 Người upload: <tên hiển thị Telegram của người thao tác>
+📁 Tên file: <tên file đã đặt lúc upload>
+🎓 Học sinh: <tên học sinh — HYPERLINK>
+🕒 Thời gian: <giờ upload, định dạng vi-VN, timezone Asia/Ho_Chi_Minh>
+🔗 Link: <link OneDrive>
+
+#UploadOneDrive #CapNhatHoSo
+```
+- **Hyperlink tên học sinh KHÁC NHAU theo nền tảng** (đúng yêu cầu user): bản Telegram trỏ tới
+  deep-link `chitiet_<taskId>` (mở lại chi tiết task ngay trong bot); bản Zalo trỏ tới **link
+  ClickUp** (`task.url`) — vì hyperlink chỉ áp dụng cho HTML gửi qua node Telegram, Zalo dùng link
+  khác theo đúng yêu cầu "nếu Zalo hỗ trợ hyperlink thì cho link ClickUp".
+- ⚠️ **CHƯA XÁC NHẬN Zalo có thực sự RENDER `<a href>` thành link bấm được hay không** — tài liệu
+  Zalo chỉ nói `parse_mode: html` được hỗ trợ, không có ví dụ cụ thể về thẻ `<a>`. Cần user tự nhìn
+  tin nhắn Zalo thật sau khi test để xác nhận: nếu tên học sinh hiện ra ĐÃ GẠCH CHÂN/BẤM ĐƯỢC → OK;
+  nếu hiện nguyên văn thẻ HTML (`<a href="...">...</a>`) hoặc bot báo lỗi gửi → cần đổi sang gửi
+  plain text kèm link riêng 1 dòng thay vì hyperlink cho bản Zalo.
+- **Dữ liệu mới phải "đi nhờ" xuyên suốt** từ lúc mở chi tiết task tới lúc forward (đúng RULES.md
+  #11): thêm cột `student_name`, `task_url` vào `clickup.pending_uploads`; thêm cột `uploader_name`,
+  `student_name`, `task_url` vào `clickup.upload_notify_queue` (tự tạo qua node mới `Ensure Notify
+  Queue Columns`, chèn giữa `Clear Pending Upload` → `Queue Upload Notify`). `uploader_name` lấy từ
+  `display_name` trong envelope Gateway (đã có sẵn, giờ mới expose ra trong node `Phân tích lệnh`).
+- Đã verify TOÀN BỘ node param bằng `get_workflow_details` trước khi publish (đúng RULES.md #16),
+  không lặp lại lỗi "báo thành công nhưng không áp dụng" của phiên trước.
+- **Việc cần user làm**: test lại 1 lượt Upload OneDrive → forward mới, xác nhận: (1) tin nhắn có
+  đủ 5 trường đúng dữ liệu thật (tên mình, tên học sinh đúng task, giờ đúng, link đúng); (2) bấm thử
+  tên học sinh trên Telegram có mở lại đúng chi tiết task không; (3) xem tin Zalo có hyperlink bấm
+  được không hay chỉ là chữ thường/lỗi thẻ HTML.
+
+## ✅ (09/09/2026, phiên tiếp 5) — Mirror OneDrive forward sang Zalo: TEST THẬT OK, hoạt động
 
 Đã test thật qua `execute_workflow` (chạy thật, không phải giả lập) trên `Zalo API - Webhook Test`:
 1. **Webhook production đã đăng ký thành công** — `Call Zalo setWebhook` trả về
