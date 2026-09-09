@@ -4,6 +4,19 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 11) — Fix "Tên: —, Link: —" khi task chưa từng đồng bộ vào Postgres
+
+Test thật ngay sau khi sửa dấu `=` (tiếp 10) lộ ra thêm 1 case: task `z9088279pb` gửi thông báo
+"CẬP NHẬT Task" nhưng Tên và Link đều hiện "—". Nguyên nhân: task này **chưa từng được đồng bộ vào
+`clickup.tasks`** (task mới tạo trên ClickUp, chưa qua lần `/sync`/Full Reconcile nào) — câu UPDATE
+không khớp dòng nào (0 rows), node Postgres trả về item rỗng thay vì dữ liệu task thật.
+
+Sửa `Build Thông Báo`:
+- **Link ClickUp giờ LUÔN hiển thị đúng** dù task chưa có trong Postgres — vì URL ClickUp là
+  deterministic (`https://app.clickup.com/t/<taskId>`), không cần tra DB mới dựng được.
+- Tên hiện ghi rõ "(task chưa đồng bộ vào Postgres - sẽ có ở lần /sync tiếp theo)" thay vì "—" gây
+  hiểu lầm là lỗi.
+
 ## 2026-09-09 (tiếp 10) — Fix ghi đè Postgres từ ClickUp Live Update (thiếu dấu `=`)
 
 - **User xác nhận toàn bộ nút Upload OneDrive đã hoạt động đầy đủ** (nút chọn tên, nút forward,
