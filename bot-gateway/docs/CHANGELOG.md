@@ -4,6 +4,23 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 16) — Tạm deactivate tính năng AI xoá nền/upscale (chờ credential)
+
+- Theo yêu cầu user: tạm gác tính năng 🤖 AI xoá nền / 🔍 Upscale (đang chặn bởi việc thiếu
+  credential OpenRouter HTTP — xem mục "tiếp 15" bên dưới) để publish được workflow sạch, không
+  còn nút bấm dẫn tới lỗi.
+- Đã: (1) `setNodeDisabled` cho 2 node `Call OpenRouter (AI Bỏ Xoá Nền)` và
+  `Call OpenRouter (Upscale)`; (2) gỡ 2 nút "🤖 Xoá nền bằng AI" / "🔍 Upscale cho sắc nét" khỏi
+  CẢ 2 tin nhắn từng hiện chúng (`Gửi Ảnh Đã Xóa Nền` và `Báo Lỗi Remove.bg`) — chỉ còn lại nút
+  ❌ Hủy. Người dùng `/xoanen` giờ không còn thấy 2 nút dẫn tới tính năng chưa hoạt động.
+  (3) Tiện thể dọn nốt: lúc `setNodeDisabled` cho node Upscale, credential sai `Spaceocr` (bug đã
+  ghi ở mục "tiếp 15") lại xuất hiện lại trong draft — dọn sạch lần nữa bằng removeNode+addNode.
+- **Để bật lại sau**: xoá `disabled: true` khỏi 2 node trên, thêm lại 2 nút vào 2 tin nhắn (xem
+  git history của workflow hoặc mục "tiếp 15"/"tiếp 14" để lấy lại đúng cấu hình cũ), và hoàn
+  thành bước tạo credential OpenRouter HTTP (Custom Auth, template
+  `{"headers":{"Authorization":"Bearer {{api_key}}"}}`) rồi gán vào 2 node.
+- Đã publish lại workflow `Bot Xử Lý Ảnh` ở trạng thái sạch (không lỗi, không nút chết).
+
 ## 2026-09-09 (tiếp 15) — Fix bug credential sai ở node Upscale AI (Bot Xử Lý Ảnh)
 
 - Phát hiện **bug thật**: node `Call OpenRouter (Upscale)` đang gán NHẦM credential `Spaceocr`

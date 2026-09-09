@@ -23,7 +23,7 @@
 |---|---|---|
 | **Gateway** (`GW Gateway - Telegram`, `xmEKeIUnzxm2F7dF`) | ✅ Hoạt động, PROD (`@Elite_clickup_bot`) | Auth, router, callback whitelist (`od_`, `odfwd_`, `odhelp`, `chitiet_`, `sync_`) |
 | **Telebot ClickUp Reader** (`9JJRrh36H2rLwtnu`, chạy qua Gateway, `bot_key: telebot_main`) | ✅ Hoạt động đầy đủ | `/task`, chi tiết task, Upload OneDrive (chọn tên/preset/tùy chỉnh/giữ gốc, forward thông báo vào nhóm, `/cancel`) — TẤT CẢ đã user xác nhận chạy thật |
-| **Bot Xử Lý Ảnh** (`6I4MnJiJCiv2JOIr`, qua Gateway, `bot_key: image_bot`) | 🟡 Đã build thêm, CHƯA test thật | `/xoanen`, `/tomtat` hoạt động OK. MỚI (09/09/2026): sau `/xoanen` (kể cả khi remove.bg lỗi) hiện 3 nút — 🤖 Xoá nền bằng AI (fallback, model `google/gemini-2.5-flash-image` qua OpenRouter), 🔍 Upscale, ❌ Huỷ. **⚠️ CẦN TẠO credential mới trước khi dùng được** — xem mục checklist |
+| **Bot Xử Lý Ảnh** (`6I4MnJiJCiv2JOIr`, qua Gateway, `bot_key: image_bot`) | ✅ `/xoanen`, `/tomtat` hoạt động OK · ⏸️ AI xoá nền/upscale TẠM DEACTIVATE | Tính năng 🤖 AI xoá nền / 🔍 Upscale đã build xong nhưng đang **tạm tắt** (2 node `Call OpenRouter (...)` set `disabled`, 2 nút bấm đã gỡ khỏi tin nhắn kết quả) theo yêu cầu 09/09/2026 — chờ user tạo credential rồi bật lại. Xem mục checklist |
 | **Telebot Admin System** (`eWtu7Qs85Hes0HuP`, bot riêng `@elite_n8n_system_bot`) | ✅ Hoạt động đầy đủ | `/task`, `/sync`, `/sync_status`, `/db_status`, `/backup_n8n`, `/backup_db`, `/version`, `/cancel`, `/user_list` (danh sách + panel quản lý quyền đầy đủ 13 route) |
 | **SQL - ClickUp Full Reconcile** (`G1R0okF0rUziySu9`) | ✅ Hoạt động, đã fix DKPV/PVTC | Xem mục "DKPV/PVTC" bên dưới |
 | **SQL - ClickUp Sync Scheduler** (`loCm8Tg8Sqfj7ygy`) | ✅ Hoạt động | Điều phối đa-List theo `clickup.sync_targets`, chạy mỗi 5 ngày |
@@ -47,16 +47,27 @@ Kiểm tra trực tiếp Postgres xác nhận **đã được triển khai đún
 
 ## 🔴 Việc còn tồn đọng thật sự (đã lọc bỏ mục đã xong/lỗi thời)
 
-0. **⚠️ CẦN TẠO CREDENTIAL MỚI để dùng tính năng AI xoá nền/upscale (Bot Xử Lý Ảnh)** — đã build
-   xong node gọi OpenRouter Image API (`https://openrouter.ai/api/v1/images`, model
-   `google/gemini-2.5-flash-image`, ~$0.0003/ảnh input + ~$0.00003/ảnh output — giá tra trực tiếp
-   từ API OpenRouter, không đoán) nhưng 2 node `Call OpenRouter (AI Bỏ Xoá Nền)` và
-   `Call OpenRouter (Upscale)` trong workflow `Bot Xử Lý Ảnh` (`6I4MnJiJCiv2JOIr`) CHƯA có
-   credential (Claude không tự tạo credential chứa API key được). **User cần**: tạo 1 credential
-   loại "Simplified Custom Auth" (`httpTemplatedCustomAuth`) tên gợi ý "OpenRouter HTTP", Auth
-   Template `{"headers":{"Authorization":"Bearer {{api_key}}"}}`, dán OpenRouter API key vào ô
-   secret — rồi gán credential đó vào ĐÚNG 2 node trên trong n8n UI. **CHƯA test thật** lượt nào
-   (cần credential trước, và trigger callback không execute được qua MCP).
+0. **⏸️ Tính năng AI xoá nền/upscale (Bot Xử Lý Ảnh) — TẠM DEACTIVATE 09/09/2026, chờ user rảnh
+   quay lại.** Đã build xong node gọi OpenRouter Image API (`https://openrouter.ai/api/v1/images`,
+   model `google/gemini-2.5-flash-image`, ~$0.0003/ảnh input + ~$0.00003/ảnh output — giá tra trực
+   tiếp từ API OpenRouter, không đoán), nhưng 2 node `Call OpenRouter (AI Bỏ Xoá Nền)` và
+   `Call OpenRouter (Upscale)` trong workflow `Bot Xử Lý Ảnh` (`6I4MnJiJCiv2JOIr`) đang bị
+   `disabled: true` và 2 nút bấm dẫn tới chúng đã bị gỡ khỏi tin nhắn kết quả `/xoanen` (cả 2
+   trường hợp thành công và remove.bg lỗi) — để tránh user bấm phải nút dẫn tới lỗi. **Lý do tạm
+   dừng**: node HTTP Request gọi endpoint này CẦN 1 credential (Claude không tự tạo credential
+   chứa API key được), và đã thử phương án dùng credential OpenRouter có sẵn (đang gán cho node
+   model LangChain) qua `predefinedCredentialType` để đỡ phải tạo credential mới — **n8n từ chối
+   thẳng**, vì credential loại `openRouterApi` chỉ đăng ký cho node LangChain, không dùng chung
+   được với HTTP Request thường (xem CHANGELOG "tiếp 15"). Cũng đã xác nhận rõ **không thể** thay
+   bằng cặp node `chainLlm` + `lmChatOpenRouter` (đầu ra của cặp node đó luôn là text, không có
+   khả năng trả về binary ảnh — đã tra schema thật của n8n để xác nhận, không phải suy đoán).
+   **Để làm tiếp khi rảnh**: (a) tạo 1 credential loại "Simplified Custom Auth"
+   (`httpTemplatedCustomAuth`) tên gợi ý "OpenRouter HTTP", Auth Template
+   `{"headers":{"Authorization":"Bearer {{api_key}}"}}`, dán OpenRouter API key vào ô secret;
+   (b) gán credential đó vào ĐÚNG 2 node trên trong n8n UI; (c) bỏ `disabled: true` ở 2 node đó;
+   (d) thêm lại 2 nút "🤖 Xoá nền bằng AI" / "🔍 Upscale cho sắc nét" vào 2 tin nhắn
+   `Gửi Ảnh Đã Xóa Nền` và `Báo Lỗi Remove.bg` (cấu trúc nút cũ xem CHANGELOG "tiếp 14" hoặc git
+   history workflow). **CHƯA test thật** lượt nào (trigger callback không execute được qua MCP).
 1. **Bot Xử Lý Ảnh — vẫn còn "nền trắng"/"chèn logo" CHƯA CÓ SPEC RÕ** (khác với tính năng AI
    xoá nền/upscale ở mục 0, đã có spec rõ và build xong). Cần user cung cấp: tên lệnh, logo lấy từ
    đâu (file cố định hay user gửi kèm), có kết hợp với `/xoanen` không, vị trí/kích thước logo.
