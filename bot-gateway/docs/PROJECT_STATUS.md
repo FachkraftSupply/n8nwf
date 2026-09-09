@@ -33,7 +33,7 @@
 | **GW Weekly Error Report** (`ZJvP7L2aVPpeCGGW`, MỚI) | 🟡 Đã build, CHƯA test thật | Thứ 2 8h sáng, DM admin — xem checklist |
 | **Help Bot GPT** | ⏳ Code xong, CHƯA gắn Gateway | Chờ Workflow ID thật (placeholder `REPLACE_HELP_BOT_ID`) |
 | **Crawl Bot** | ⏳ Chưa bắt đầu | Placeholder `REPLACE_CRAWL_BOT_ID` |
-| **Nhóm chat capture + tóm tắt AI** | ⏳ Chỉ có 2 bảng SQL, CHƯA có workflow | Xem checklist — đang thiết kế lại phạm vi rộng hơn (mục 4-5, 09/09/2026) |
+| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong, CHƯA test thật | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` (Admin System). **⚠️ Cần tắt Privacy Mode qua @BotFather** — xem checklist |
 
 ## ✅ Đã xác nhận SỬA XONG — Phương án A cho DKPV/PVTC (quyết định 09/09/2026)
 

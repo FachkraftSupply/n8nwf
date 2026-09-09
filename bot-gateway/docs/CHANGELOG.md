@@ -4,6 +4,34 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 13) — Ghi log tin nhắn nhóm + tóm tắt AI hàng đêm + `/lichsu` + `/timkiem`
+
+Kiến trúc: tóm tắt AI tính **1 lần/ngày/nhóm** (không tính lại mỗi lần hỏi) để tiết kiệm chi phí —
+lệnh xem lại chỉ đọc từ bảng đã tóm tắt sẵn; riêng tìm kiếm luôn quét tin nhắn GỐC để không mất
+chi tiết. Đặt cả 2 lệnh ở `Telebot Admin System` (chỉ admin) vì đây là dữ liệu riêng tư của người
+khác trong nhóm.
+
+- **`GW Gateway - Telegram`**: thêm nhánh song song ghi MỌI tin nhắn trong nhóm/supergroup vào
+  `gateway.group_chat_log` (không qua bước xác thực/phân quyền — ghi log thụ động). Mở rộng bảng
+  thêm `message_thread_id`, `reply_to_message_id`, index full-text (`pg_trgm`) phục vụ tìm kiếm.
+  **⚠️ Điều kiện tiên quyết CHƯA xác nhận**: bot Telegram cần TẮT Privacy Mode qua @BotFather
+  (`/setprivacy` → Disable) mới nhận được tin nhắn thường trong nhóm (mặc định chỉ nhận lệnh `/...`).
+- **Workflow mới `GW Daily Chat Summary`** (`ElSGQgdHPMtrzwME`): Schedule 1h sáng mỗi ngày — gộp tin
+  nhắn hôm qua theo nhóm (SQL `string_agg`, không cần code node), tóm tắt bằng DeepSeek (đúng model
+  đã chọn từ trước), upsert vào `gateway.daily_chat_summary`.
+- **`Telebot Admin System`**: thêm `/lichsu` (không tham số → liệt kê nhóm có dữ liệu;
+  `/lichsu <1|3|5|7>` → tóm tắt tất cả nhóm; `/lichsu <1|3|5|7> <chat_id>` → 1 nhóm cụ thể) và
+  `/timkiem <chat_id> <từ khóa>` (tìm full-text trên tin nhắn gốc, tối đa 15 kết quả). Cập nhật
+  `/help`.
+- **Bug tự phát hiện + tự sửa ngay trong lúc build**: khi thêm 2 rule mới (`lichsu`, `timkiem`) vào
+  `Switch` (đã có 14 rule từ trước), quên rewiring fallback — connection fallback CŨ vẫn dính vào
+  output 14 (giờ là `lichsu`) cùng lúc với node xử lý `lichsu` thật, còn fallback THẬT (output 16)
+  chưa được nối gì. Phát hiện qua bước đối chiếu `connections` bắt buộc sau khi sửa Switch (đúng quy
+  trình RULES.md #13) — nếu bỏ qua bước này sẽ gây lỗi kép: `/lichsu` vừa chạy đúng vừa nhận thêm
+  "❓ Lệnh không hợp lệ", còn lệnh sai thật thì im lặng không phản hồi.
+- **CHƯA test thật** toàn bộ tính năng này qua Telegram (cần user tắt Privacy Mode trước, và không
+  execute được Trigger qua MCP).
+
 ## 2026-09-09 (tiếp 12) — AI xoá nền (fallback) + Upscale cho `/xoanen`; dọn lại PROJECT_STATUS.md
 
 - **Xác nhận Phương án A (DKPV/PVTC) đã được 1 phiên trước làm đúng và đang chạy tốt** — kiểm tra
