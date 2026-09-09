@@ -32,7 +32,7 @@
 | **GW Error Handler** (`34ccboHpyoY2r691`) | ✅ Hoạt động | Báo lỗi vào nhóm topic 4 + ghi `gateway.error_logs` |
 | **GW Weekly Error Report** (`ZJvP7L2aVPpeCGGW`, MỚI) | 🟡 Đã build, CHƯA test thật | Thứ 2 8h sáng, DM admin — xem checklist |
 | **Help Bot GPT** | ⏳ Code xong, CHƯA gắn Gateway | Chờ Workflow ID thật (placeholder `REPLACE_HELP_BOT_ID`) |
-| **Crawl Bot** | ⏳ Chưa bắt đầu | Placeholder `REPLACE_CRAWL_BOT_ID` |
+| ~~Crawl Bot~~ | ❌ Đã đóng (09/09/2026) | Ý tưởng ban đầu = "Nhóm chat capture" (đã có, xem dòng bên dưới) — không xây riêng nữa, đã bỏ `sum`/`crawl` khỏi `COMMAND_MAP` |
 | **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (kể cả bấm nút + mở cho user thường), CHƯA test thật lượt nào | Ghi log (Gateway) + tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + `/lichsu`/`/timkiem` dạng bấm nút 3 bước, có ở CẢ 2 bot (Admin System = mọi nhóm; ClickUp Reader = filtered theo user). **⚠️ Cần tắt Privacy Mode qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
 
 ## ✅ Đã xác nhận SỬA XONG — Phương án A cho DKPV/PVTC (quyết định 09/09/2026)
@@ -68,19 +68,31 @@ Kiểm tra trực tiếp Postgres xác nhận **đã được triển khai đún
    (d) thêm lại 2 nút "🤖 Xoá nền bằng AI" / "🔍 Upscale cho sắc nét" vào 2 tin nhắn
    `Gửi Ảnh Đã Xóa Nền` và `Báo Lỗi Remove.bg` (cấu trúc nút cũ xem CHANGELOG "tiếp 14" hoặc git
    history workflow). **CHƯA test thật** lượt nào (trigger callback không execute được qua MCP).
-1. **Bot Xử Lý Ảnh — vẫn còn "nền trắng"/"chèn logo" CHƯA CÓ SPEC RÕ** (khác với tính năng AI
-   xoá nền/upscale ở mục 0, đã có spec rõ và build xong). Cần user cung cấp: tên lệnh, logo lấy từ
-   đâu (file cố định hay user gửi kèm), có kết hợp với `/xoanen` không, vị trí/kích thước logo.
-2. **Nhóm chat capture + tóm tắt AI** — đã build xong toàn bộ 3 phần (ghi log, tóm tắt đêm, lệnh
+1. **Nhóm chat capture + tóm tắt AI** — đã build xong toàn bộ 3 phần (ghi log, tóm tắt đêm, lệnh
    xem lại có bấm nút cho cả admin lẫn user thường) nhưng **CHƯA test qua Telegram thật lượt nào**.
    Xem mục "🧪 Hướng dẫn test" ngay bên dưới để biết chính xác cách test và các điểm rủi ro cần
    để ý (đặc biệt bộ lọc theo user, tránh lộ chat nhóm khác).
-3. **`GW Weekly Error Report`** (mới tạo 09/09/2026) — chưa test thật qua Telegram (chạy thử sẽ gửi
+2. **`GW Weekly Error Report`** (mới tạo 09/09/2026) — chưa test thật qua Telegram (chạy thử sẽ gửi
    tin nhắn thật cho admin nên chưa tự chạy). Cần user tự bấm "Execute workflow" trong n8n để xem
    trước, hoặc đợi tới Thứ 2 tới.
-4. **Help Bot GPT** — code đã viết, chưa gắn vào Gateway vì chưa có Workflow ID thật.
-5. **Crawl Bot** — chưa bắt đầu (Phase 3 cũ).
-6. **`restore.sh`** (script khôi phục thảm họa) — chưa test trên 1 n8n instance trống thật sự.
+3. **Help Bot GPT** — code đã viết, chưa gắn vào Gateway vì chưa có Workflow ID thật.
+4. **`restore.sh`** (script khôi phục thảm họa) — chưa test trên 1 n8n instance trống thật sự.
+
+> **Đã đóng hẳn 09/09/2026** (không còn theo dõi):
+> - "Nền trắng"/"chèn logo" cho Bot Xử Lý Ảnh — user xác nhận không cần thiết ở thời điểm này,
+>   chưa từng build gì nên không cần dọn workflow.
+> - **Crawl Bot** — user xác nhận ý tưởng ban đầu của nó (bot lắng nghe tin nhắn nhóm/topic + lưu
+>   Postgres) **chính là** tính năng "Nhóm chat capture" ở mục 1 — không phải 2 việc khác nhau.
+>   Việc capture đã chạy ngay trong `GW Gateway - Telegram` (nhánh `Là Tin Nhắn Nhóm?` → `Ghi Log
+>   Tin Nhắn Nhóm`, áp dụng cho MỌI nhóm bot có mặt, không cần sub-workflow riêng) — nên không cần
+>   xây gì thêm. Đã dọn: bỏ `sum`/`crawl` khỏi `COMMAND_MAP` và bỏ `crawl_bot` khỏi
+>   `AVAILABLE_BOTS` (2 lệnh này trước đó route vào node `→ Sub: Crawl Bot` đang bị disabled →
+>   im lặng không phản hồi gì, một bug nhỏ chưa ai báo — giờ sẽ trả lời "❓ Lệnh không hợp lệ" tử
+>   tế thay vì im lặng). Node `→ Sub: Crawl Bot` giữ nguyên (đã disabled từ trước, vô hại, không
+>   xoá để tránh động vào `Switch (Route bot?)` không cần thiết.
+
+> Đã bỏ hẳn (không còn theo dõi): ý tưởng "nền trắng"/"chèn logo" cho Bot Xử Lý Ảnh — user xác
+> nhận 09/09/2026 là không cần thiết ở thời điểm này, chưa từng build gì nên không cần dọn workflow.
 
 ## 🧪 Hướng dẫn test tính năng MỚI (09/09/2026) — Nhóm chat capture + `/lichsu` + `/timkiem`
 

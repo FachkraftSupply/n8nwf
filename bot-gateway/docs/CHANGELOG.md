@@ -4,6 +4,25 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 17) — Đóng 2 mục checklist: nền trắng/logo (huỷ), Crawl Bot (gộp vào chat capture)
+
+- **"Nền trắng"/"chèn logo"** (Bot Xử Lý Ảnh) — user xác nhận không cần thiết ở thời điểm này.
+  Chưa từng build gì nên không cần dọn workflow, chỉ gỡ khỏi checklist.
+- **Crawl Bot** — user làm rõ: ý tưởng ban đầu của nó ("bot lắng nghe tin nhắn nhóm/topic + lưu
+  Postgres") **chính là** tính năng "Nhóm chat capture" đã build ở mục "tiếp 13" — không phải 2
+  việc khác nhau. Việc capture đã chạy sẵn trong `GW Gateway - Telegram` (nhánh `Là Tin Nhắn
+  Nhóm?` → `Ghi Log Tin Nhắn Nhóm`, cho MỌI nhóm bot có mặt, không cần sub-workflow riêng như dự
+  tính ban đầu) — nên quyết định không xây `Crawl Bot` riêng nữa.
+- Dọn theo quyết định trên: bỏ `sum`/`crawl` khỏi `COMMAND_MAP` và bỏ `crawl_bot` khỏi
+  `AVAILABLE_BOTS` trong node `⚙️ Config` của Gateway. **Phát hiện tiện thể 1 bug nhỏ**: 2 lệnh
+  `/sum`/`/crawl` trước đó route vào node `→ Sub: Crawl Bot` (đã `disabled: true` từ trước, chưa
+  từng gán Workflow ID thật) khiến bot **im lặng không phản hồi gì** khi ai gõ lệnh này — chưa ai
+  báo lỗi này. Sau khi bỏ khỏi `COMMAND_MAP`, 2 lệnh này giờ rơi vào route `unknown` → trả lời
+  "❓ Lệnh không hợp lệ" tử tế. Cập nhật luôn text node `Hướng dẫn lệnh` (bỏ nhắc `/sum`, thêm
+  `/lichsu`/`/timkiem`). Node `→ Sub: Crawl Bot` giữ nguyên (đã disabled, vô hại) để tránh động
+  vào `Switch (Route bot?)` không cần thiết.
+- Đã publish lại `GW Gateway - Telegram`.
+
 ## 2026-09-09 (tiếp 16) — Tạm deactivate tính năng AI xoá nền/upscale (chờ credential)
 
 - Theo yêu cầu user: tạm gác tính năng 🤖 AI xoá nền / 🔍 Upscale (đang chặn bởi việc thiếu
