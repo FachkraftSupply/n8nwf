@@ -4,6 +4,19 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 20) — Đổi bot gửi thông báo backup sang "Elite Crawl Bot"
+
+- User tạo sẵn 1 bot Telegram mới (credential `Elite Crawl Bot`, id `V8w3wIjyeVaz9Um9`) — token
+  còn thừa từ ý tưởng Crawl Bot cũ (đã bỏ, xem "tiếp 17"/"tiếp 18") — quyết định dùng làm bot
+  gửi thông báo backup thay cho `Telegram System Bot` dùng chung trước đây.
+- Đổi credential ở cả 4 node `Notify Backup ... Xong` (N8N/DB/Credential/Config) trong
+  `SQL - Backup System` sang `Elite Crawl Bot`. Giữ nguyên toàn bộ logic gửi (DM admin khi chạy
+  tay qua `/backup_n8n`/`/backup_db`, nhóm hệ thống topic 6 khi tự động chạy Chủ nhật 2h sáng).
+  **Lưu ý kỹ thuật**: `updateNodeParameters` với `credentials` rỗng+`parameters:{}` KHÔNG áp dụng
+  được (giống bug đã gặp lúc sửa node OpenRouter) — phải dùng `removeNode` + `addNode` (giữ
+  nguyên `parameters`/`webhookId`/`position`, chỉ đổi `credentials`) mới chắc chắn áp dụng, rồi
+  verify lại bằng `get_workflow_details` trước khi publish.
+
 ## 2026-09-09 (tiếp 19) — Thêm `/error_logs` + `/error_log_now` (Telebot Admin System)
 
 - Mục tiêu: cho admin xem/tổng hợp lỗi hệ thống ON-DEMAND thay vì chỉ chờ báo cáo tự động Thứ 2

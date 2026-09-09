@@ -165,3 +165,19 @@ số lượng operation gửi lên, NÊN gọi lại `get_workflow_details` đ�
 (cả node params lẫn connections) đã thực sự có mặt — không chỉ tin vào response thành công của lần
 gọi SAU (vì nó chỉ xác nhận các operation trong CHÍNH lần gọi đó, không xác nhận lại các operation đã
 "tưởng như" thành công ở lần gọi trước đó bị rollback).
+
+## 16. ⚠️ Đổi CREDENTIAL của 1 node đang tồn tại qua `updateNodeParameters` KHÔNG đáng tin — dùng `removeNode` + `addNode`
+Gọi `updateNodeParameters` với `parameters: {}` (hoặc rỗng) kèm field `credentials` để chỉ đổi
+credential của 1 node — response báo `appliedOperations` thành công, KHÔNG có warning, nhưng khi
+`get_workflow_details` lại thì credential **vẫn là credential CŨ**, hoàn toàn không đổi. Gặp bug
+này 2 lần (09/09/2026): lúc gán credential OpenRouter cho 2 node `Call OpenRouter (...)` (workflow
+Bot Xử Lý Ảnh), và lúc đổi credential Telegram cho 4 node `Notify Backup ... Xong` (workflow
+SQL - Backup System) từ `Telegram System Bot` sang `Elite Crawl Bot`. `setNodeCredential` cũng
+không dùng được cho node `httpRequest` với credential type không thuộc danh sách generic auth
+chuẩn (báo lỗi rõ ràng, ít nhất báo lỗi thay vì âm thầm không đổi).
+
+**Cách ĐÚNG, đã xác nhận hoạt động**: `removeNode` node đó rồi `addNode` lại với **cùng `id`**,
+copy nguyên `parameters`/`webhookId`/`position` như cũ, chỉ thay `credentials`, trong CÙNG 1 batch
+`update_workflow` (kèm `addConnection` để nối lại các connection đã mất do `removeNode` xoá theo).
+Luôn `get_workflow_details` lại để xác nhận `credentials` đã đổi thật trước khi `publish_workflow`
+— đừng tin response `appliedOperations` của `updateNodeParameters` cho việc đổi credential.
