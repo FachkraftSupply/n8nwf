@@ -119,23 +119,37 @@ bên dưới trước khi tiếp tục — ĐỪNG build lại từ đầu.
   (index 0-16 đúng target cũ, 17/18 null, 19→Reply Unknown Command) đều ĐÚNG — kết luận đây là
   validator false-positive tại thời điểm response (có thể do check chạy giữa lúc áp connection),
   KHÔNG phải lỗi thật. Vẫn nên audit lại 1 lần nữa cho chắc khi Stage 4 xong.
-- ⬜ **Stage 4/4**: build 2 chuỗi node xử lý thật:
-  - `od_del` (7 node): Get Queue (SELECT `drive_id,item_id,fwd_message_id,deleted_at,final_name`) →
-    Build Result (Code, guard: không tìm thấy / đã forward rồi (phải dùng nút kia) / đã xóa rồi) →
-    IF ok → [true] Graph API `DELETE /drives/{driveId}/items/{itemId}` (onError continue) → Postgres
-    `SET deleted_at=now()` (alwaysOutputData+onError) → Reply "✅ Đã xóa"; [false] Reply lỗi tương ứng.
-  - `od_delfwd` (10 node): Get Queue (thêm `fwd_chat_id`/`zalo_chat_id_used`) → Build Result (guard
-    tương tự, thêm case "chưa forward") → IF ok → [true] Graph API DELETE → Telegram `deleteMessage`
-    (chat=`fwd_chat_id`, message=`fwd_message_id`, onError continue) → IF có `zalo_chat_id_used` →
-    [true] HTTP POST Zalo Bot API báo "File '<final_name>' vừa bị xóa" (dùng đúng token hardcode như
-    `Send Zalo Notify`, KHÔNG gõ token thật — xem Rule #17) / [false] bỏ qua → cả 2 nhánh gộp về 1
-    Postgres `SET deleted_at=now()` → Reply "✅ Đã xóa & thu hồi"; [false ở IF đầu] Reply lỗi.
-  - Test qua `test_workflow`+`prepare_workflow_pin_data`, `get_workflow_details` xác nhận, publish,
-    spawn subagent audit độc lập (đặc biệt kiểm tra: index Switch đúng, `deleted_at` guard hoạt động,
-    KHÔNG có `replyMarkup` động, các HTTP DELETE có `onError` đúng) — rồi mới cập nhật CHANGELOG.md
-    và xoá bỏ toàn bộ mục "ĐANG BUILD DỞ" này, thay bằng mục "✅ BUILD XONG" như các mục dưới.
-  - **Sau khi xong hết, thêm 1 file SQL lịch sử** `bot-gateway/sql/08_upload_notify_queue_delete.sql`
-    ghi lại 6 cột mới (giống style file `04_gateway_notify_targets.sql`).
+- ✅ **Stage 4/4 XONG** (publish `activeVersionId: 183a916e-3b81-4668-953d-c2f4a5d0902e`, TOÀN BỘ
+  4 stage đã publish): Build xong cả 2 chuỗi `od_del` (7 node) và `od_delfwd` (10 node) đúng thiết kế
+  đã mô tả, nối đúng vào Switch output 17/18. Credential Graph API + Postgres đã verify đúng qua
+  `get_workflow_details` (lần đầu addNode HTTP DELETE bị thiếu `credentials`, đã tự phát hiện qua
+  `note` trong response và fix ngay bằng removeNode+addNode kèm credential). URL Zalo dùng đúng
+  placeholder `PASTE_YOUR_ZALO_BOT_TOKEN_HERE` (Rule #17) — **user cần tự vào n8n UI node
+  `OD Delfwd: Announce Zalo Deleted` dán token Zalo thật vào (giống token đang dùng ở node
+  `Send Zalo Notify` cùng workflow) thì tính năng báo-xóa-Zalo mới hoạt động**, nếu không thì
+  nhánh Zalo sẽ lỗi (nhưng nhờ `onError: continueRegularOutput` nên KHÔNG chặn phần xóa
+  OneDrive/Telegram, chỉ riêng phần báo Zalo không gửi được).
+  Đã spawn 1 subagent audit độc lập (đọc lại toàn bộ workflow JSON thật, đối chiếu RULES.md/FAQ.md,
+  verify riêng vấn đề `SWITCH_FALLBACK_OUTPUT_DISABLED` có phải false-positive thật không) — **CHỜ
+  KẾT QUẢ audit trước khi coi tính năng là "XONG" hoàn toàn** (nếu đọc lại status này mà chưa thấy
+  dòng "✅ Audit PASS" ở dưới, nghĩa là audit chưa xong hoặc phiên trước bị ngắt giữa chừng — nhớ
+  check lại kết quả audit, đừng giả định là PASS).
+  **2 rủi ro CHƯA kiểm chứng được bằng test giả lập (RULES.md #21 mở rộng)**, chỉ xác nhận được qua
+  Telegram thật:
+  1. `OD Fwd: Extract Send Result` giả định response của node Telegram `Send Forward Message` có
+     `message_id`/`chat.id` ở top-level (có fallback đọc `.result.message_id` phòng khác shape) — nếu
+     forward xong mà bấm "Xóa & thu hồi" báo lỗi/không xóa được tin nhóm, khả năng cao do giả định
+     sai shape này, cần sửa lại `OD Fwd: Extract Send Result`.
+  2. Chưa test thật flow xóa (cả trước và sau forward) qua Telegram — `test_workflow` không gọi API
+     thật (Postgres/Telegram/HTTP đều bị pin) nên không xác nhận được OneDrive/Telegram/Zalo có thực
+     sự bị xóa/gửi đúng hay không, chỉ xác nhận logic routing.
+  **Việc cần user làm để hoàn tất**: (1) dán token Zalo thật vào node `OD Delfwd: Announce Zalo
+  Deleted`, (2) test thật: upload 1 file thử → bấm "🗑️ Xóa file vừa upload" (chưa forward) → xác nhận
+  file biến mất khỏi OneDrive; upload 1 file khác → forward vào 1 nhóm → bấm "🗑️ Xóa & thu hồi" ở tin
+  nhắn lưu riêng → xác nhận file OneDrive bị xóa + tin nhóm Telegram biến mất + (nếu nhóm đó có mirror
+  Zalo) tin báo xóa xuất hiện trong nhóm Zalo.
+  **TODO còn lại (không khẩn cấp)**: thêm file SQL lịch sử `bot-gateway/sql/08_upload_notify_queue_delete.sql`
+  ghi lại 6 cột mới, giống style `04_gateway_notify_targets.sql`.
 
 ## ✅ BUILD MỚI (09/09/2026, phiên tiếp 13) — Gửi bản lưu riêng vào chat cá nhân khi forward tin nhắn
 
