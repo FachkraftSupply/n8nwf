@@ -4,6 +4,26 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 9) — Nút Hủy cho menu forward + workflow báo cáo lỗi hàng tuần mới
+
+- Thêm nút ❌ Hủy vào menu forward (bên cạnh ❓ Trợ giúp) trên tin nhắn kết quả upload OneDrive.
+- Xác nhận lại nút "🧾 Hóa đơn" (topic 6) đã đúng từ trước — không cần sửa.
+- **Tính năng mới: lưu log lỗi + báo cáo hàng tuần để chạy Claude Code sửa.**
+  - Bảng mới `gateway.error_logs` (`sql/06_gateway_error_logs.sql`) — workflow, node, message,
+    execution_id/url, `status` ('open' mặc định, đánh dấu 'fixed'/'ignored' thủ công sau khi xử lý).
+  - `GW Error Handler`: thêm node `Log Error To DB` (chạy song song với thông báo Telegram hiện có)
+    ghi mọi lỗi từ MỌI workflow (workflow nào cũng nên gán `errorWorkflow` trỏ về đây) vào bảng trên.
+  - **Workflow mới `GW Weekly Error Report`** (`ZJvP7L2aVPpeCGGW`) — Schedule Trigger mỗi Thứ 2,
+    8h sáng → query `gateway.error_logs` (status='open', 7 ngày gần nhất) → tổng hợp theo workflow
+    (số lượng lỗi, tối đa 3 lỗi/ workflow kèm link execution) → gửi riêng cho admin (không phải nhóm,
+    vì đây là việc cần admin tự hành động: chạy Claude Code rà soát và sửa).
+  - Xây bằng `create_workflow_from_code` (SDK) — như dự đoán, credential bị auto-gán SAI (Supabase
+    Postgres, `@csfsintbot`) — đã sửa lại đúng (Postgres Docker, Telegram System Bot) ngay sau khi
+    tạo, đúng như ghi chú kinh nghiệm cũ trong RULES.md.
+  - **CHƯA test thật** (không execute được Schedule Trigger an toàn qua MCP mà không gửi tin nhắn
+    thật cho admin) — cần đợi tới Thứ 2 tới, hoặc admin tự bấm "Execute workflow" thủ công trong n8n
+    UI để xem trước.
+
 ## 2026-09-09 (tiếp 8) — Đối chiếu nút forward "Giấy tờ khác" + thêm mô tả vào `/help`
 
 Kiểm tra lại theo báo cáo "thiếu mục gửi nhóm giấy khác": nút thứ 3 (`odfwd_<id>_3` → `od_giayto`,

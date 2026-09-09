@@ -76,7 +76,8 @@ workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
 
 | Workflow | Vai trò | Bot dùng để thông báo | Cập nhật |
 |---|---|---|---|
-| `GW Error Handler` (`34ccboHpyoY2r691`) | Bắt lỗi từ MỌI workflow khác (gán qua `errorWorkflow` setting), báo admin ngay khi có lỗi | @elite_n8n_system_bot | 2026-09-03 |
+| `GW Error Handler` (`34ccboHpyoY2r691`) | Bắt lỗi từ MỌI workflow khác (gán qua `errorWorkflow` setting), báo ngay + ghi vào `gateway.error_logs` để tổng hợp hàng tuần | Nhóm hệ thống, topic lỗi | 2026-09-03, gửi nhóm+lưu DB 09/09/2026 |
+| **`GW Weekly Error Report`** (`ZJvP7L2aVPpeCGGW`, MỚI) | Mỗi Thứ 2 8h sáng, tổng hợp lỗi 7 ngày qua từ `gateway.error_logs` theo workflow, gửi riêng cho admin để chạy Claude Code rà soát/sửa | @elite_n8n_system_bot (nhắn riêng admin) | 2026-09-09 — CHƯA TEST |
 | `SQL - ClickUp Live Update (Webhook)` (`uqTqjtHYieotPZuc`) | Nghe sự kiện ClickUp (task update/comment) real-time, ghi đè Postgres tương ứng, báo admin tin "🔄 CẬP NHẬT Task" | @elite_n8n_system_bot | 2026-09-05 |
 | `SQL - ClickUp Full Reconcile` | "Engine" đồng bộ 1 List ClickUp ↔ Postgres đầy đủ (dùng bởi `/sync` và Scheduler) | — (không tự gửi Telegram, được gọi bởi workflow khác) | 2026-09-06 (khuya) |
 | `SQL - ClickUp Sync Scheduler` | Điều phối tự động đồng bộ NHIỀU List theo lịch, đọc `clickup.sync_targets` | — | 2026-09-06 (khuya, tách riêng khỏi Full Reconcile) |
