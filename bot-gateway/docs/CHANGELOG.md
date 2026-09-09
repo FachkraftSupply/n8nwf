@@ -4,6 +4,30 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 19) — Thêm `/error_logs` + `/error_log_now` (Telebot Admin System)
+
+- Mục tiêu: cho admin xem/tổng hợp lỗi hệ thống ON-DEMAND thay vì chỉ chờ báo cáo tự động Thứ 2
+  8h sáng (`GW Weekly Error Report`) — đồng thời mỗi lần xem đều kèm sẵn 1 **prompt paste thẳng
+  vào Claude Code** để bắt đầu sửa lỗi ngay, không cần dò lại toàn bộ dự án.
+- **`/error_logs`**: SELECT read-only `gateway.error_logs` 7 ngày qua (mọi status) → thống kê số
+  lỗi theo từng workflow → kèm chi tiết tối đa 12 lỗi gần nhất (workflow/node/message/execution_url)
+  + prompt Claude Code. KHÔNG đổi dữ liệu gì trong DB.
+- **`/error_log_now`**: `UPDATE gateway.error_logs SET status='reported' WHERE status='open' AND
+  occurred_at >= now() - interval '7 days' RETURNING ...` — đây là hành động "force tổng hợp vào
+  DB": các lỗi đang mở được đánh dấu đã tổng hợp (khác `/error_logs` là không đổi gì). Trả về đúng
+  format thống kê + prompt như trên, dùng dữ liệu từ chính `RETURNING`.
+- **Nội dung prompt Claude Code** (nhúng thẳng trong tin nhắn Telegram, dạng `<pre>` để copy
+  nguyên khối) gồm: đường dẫn repo GitHub, thứ tự đọc tài liệu bắt buộc (RULES.md →
+  PROJECT_STATUS.md → ARCHITECTURE.md), lưu ý n8n MCP server của dự án này KHÁC package n8n-mcp
+  cộng đồng (tên tool khác), URL n8n instance, danh sách lỗi cụ thể kèm `execution_url`, và yêu
+  cầu rõ ràng (sửa → publish → cập nhật CHANGELOG/PROJECT_STATUS → commit + push).
+- Route mới trong `Telebot Admin System`: `Switch` node lên 21 rule (`error_logs` idx 19,
+  `error_log_now` idx 20, fallback dời sang 21) — dùng chung `Check Admin (Errors)` (IF) →
+  `Switch (Error Actions)` (2 route) → 2 chain riêng, tận dụng lại đúng pattern `Check Admin` +
+  `Switch (Sync Actions)` đã có sẵn trong workflow này (tránh phát minh lại). Đã verify
+  `connections` đầy đủ 0-21 trước khi publish (RULES.md #13/#15).
+- Update `Nội dung lệnh help` liệt kê 2 lệnh mới.
+
 ## 2026-09-09 (tiếp 18) — Bỏ hẳn `/crawl`, biến `/sum` thành tóm tắt tuần này
 
 - **`/crawl`**: bỏ hẳn, không dùng nữa (đã bỏ khỏi `COMMAND_MAP` ở "tiếp 17", không thêm lại).

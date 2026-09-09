@@ -74,7 +74,12 @@ Kiểm tra trực tiếp Postgres xác nhận **đã được triển khai đún
    để ý (đặc biệt bộ lọc theo user, tránh lộ chat nhóm khác).
 2. **`GW Weekly Error Report`** (mới tạo 09/09/2026) — chưa test thật qua Telegram (chạy thử sẽ gửi
    tin nhắn thật cho admin nên chưa tự chạy). Cần user tự bấm "Execute workflow" trong n8n để xem
-   trước, hoặc đợi tới Thứ 2 tới.
+   trước, hoặc đợi tới Thứ 2 tới. **Bổ sung 09/09/2026**: giờ có thể test tương đương ngay lập tức
+   qua `/error_logs` (xem, không đổi DB) hoặc `/error_log_now` (xem + đánh dấu `status='reported'`)
+   ở Admin System — không cần đợi Thứ 2 hay vào n8n UI nữa. Cả 2 lệnh đều kèm sẵn 1 prompt copy
+   thẳng vào Claude Code để bắt đầu sửa lỗi ngay (có context repo + docs cần đọc trước, không cần
+   dò lại toàn bộ dự án). **CHƯA test qua Telegram thật lượt nào** (cùng lý do: Trigger không
+   execute được qua MCP).
 3. **Help Bot GPT** — code đã viết, chưa gắn vào Gateway vì chưa có Workflow ID thật.
 4. **`restore.sh`** (script khôi phục thảm họa) — chưa test trên 1 n8n instance trống thật sự.
 
