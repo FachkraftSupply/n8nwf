@@ -33,7 +33,7 @@
 | **GW Weekly Error Report** (`ZJvP7L2aVPpeCGGW`, MỚI) | 🟡 Đã build, CHƯA test thật | Thứ 2 8h sáng, DM admin — xem checklist |
 | **Help Bot GPT** | ⏳ Code xong, CHƯA gắn Gateway | Chờ Workflow ID thật (placeholder `REPLACE_HELP_BOT_ID`) |
 | ~~Crawl Bot (khái niệm lệnh `/crawl`)~~ | ❌ Lệnh đã bỏ hẳn (09/09/2026) | `/crawl` không còn tồn tại. Nhưng Ý TƯỞNG "bot lắng nghe + ghi Postgres" đã tách thành workflow riêng `GW Crawl Bot - Group Capture` (dùng credential `Elite Crawl Bot`) — xem dòng "Nhóm chat capture" bên dưới |
-| **Nhóm chat capture + tóm tắt AI** | 🟡 Đã build xong (bot riêng + bấm nút + user thường + `/sum` + retention), CHƯA test thật lượt nào | Ghi log giờ do workflow RIÊNG `GW Crawl Bot - Group Capture` (`SNNrXneenXVnLHh6`, bot `Elite Crawl Bot`) đảm nhiệm — nhánh ghi log cũ trong Gateway (bot Elite Clickupbot) đã bị `disabled` để tránh ghi trùng 2 lần/tin nhắn. Tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + retention tự động (raw message giữ 14 ngày, bảng tóm tắt giữ 365 ngày). `/lichsu`/`/timkiem` dạng bấm nút 3 bước (Admin System = mọi nhóm; ClickUp Reader = filtered theo user) + `/sum` (chỉ ClickUp Reader). **⚠️ Cần tắt Privacy Mode cho bot `Elite Crawl Bot` (KHÔNG PHẢI Elite Clickupbot) qua @BotFather trước khi test** — xem mục "🧪 Hướng dẫn test" bên dưới |
+| **Nhóm chat capture + tóm tắt AI** | 🟡 Điều kiện tiên quyết ĐÃ XONG (Privacy Mode tắt + bot đã vào nhóm) — CHƯA test qua Telegram thật | Ghi log giờ do workflow RIÊNG `GW Crawl Bot - Group Capture` (`SNNrXneenXVnLHh6`, bot `Elite Crawl Bot`) đảm nhiệm — nhánh ghi log cũ trong Gateway (bot Elite Clickupbot) đã bị `disabled` để tránh ghi trùng 2 lần/tin nhắn. Tóm tắt hàng đêm (`GW Daily Chat Summary`, DeepSeek) + retention tự động (raw message giữ 14 ngày, bảng tóm tắt giữ 365 ngày). `/lichsu`/`/timkiem` dạng bấm nút 3 bước (Admin System = mọi nhóm; ClickUp Reader = filtered theo user) + `/sum` (chỉ ClickUp Reader). **Phiên sau: chạy tiếp Bước 1-4 trong mục "🧪 Hướng dẫn test" bên dưới** (test ghi log thật → tóm tắt đêm → `/lichsu` admin → `/lichsu`/`/timkiem`/`/sum` user có lọc) |
 
 ## ✅ Đã xác nhận SỬA XONG — Phương án A cho DKPV/PVTC (quyết định 09/09/2026)
 
@@ -105,15 +105,15 @@ Tính năng này gồm 3 phần liên kết: (1) ghi log tin nhắn nhóm, (2) t
 xem lại có bấm nút. Cả 3 đã publish nhưng **chưa ai test qua Telegram thật** — Trigger không
 execute được qua MCP nên phần này bắt buộc phải test tay. Làm đúng thứ tự dưới đây.
 
-### Bước 0 — Điều kiện tiên quyết (bắt buộc, làm trước tất cả)
+### Bước 0 — Điều kiện tiên quyết (bắt buộc, làm trước tất cả) — ✅ ĐÃ XONG (09/09/2026)
 
-1. Mở @BotFather trên Telegram → `/setprivacy` → chọn bot **`Elite Crawl Bot`** (KHÔNG PHẢI
-   Elite Clickupbot — từ 09/09/2026 việc ghi log đã tách sang bot riêng này, xem CHANGELOG
-   "tiếp 21") → **Disable**. Nếu không làm bước này, bot chỉ nhận được tin nhắn dạng lệnh (`/...`)
-   trong nhóm — KHÔNG nhận được tin nhắn thường, nên `gateway.group_chat_log` sẽ gần như trống.
-2. Đảm bảo `Elite Crawl Bot` đã được thêm vào (add member) tất cả nhóm/supergroup cần ghi log
-   (không phải Elite Clickupbot — 2 bot khác nhau, Elite Clickupbot vẫn ở trong nhóm để dùng lệnh
-   nhưng KHÔNG còn ghi log nữa).
+1. ✅ Đã tắt Privacy Mode qua @BotFather cho bot **`Elite Crawl Bot`** (KHÔNG PHẢI Elite Clickupbot
+   — từ 09/09/2026 việc ghi log đã tách sang bot riêng này, xem CHANGELOG "tiếp 21").
+2. ✅ Đã thêm `Elite Crawl Bot` vào các nhóm/supergroup cần ghi log.
+
+**Việc còn lại cho phiên sau (chưa làm)**: Bước 1-4 bên dưới (test ghi log thật, test tóm tắt AI
+đêm, test `/lichsu` bản Admin, test `/lichsu`+`/timkiem`+`/sum` bản User có lọc theo user) — vẫn
+CHƯA test qua Telegram thật lượt nào, chỉ mới xong phần điều kiện tiên quyết.
 
 ### Bước 1 — Test ghi log tin nhắn nhóm
 
