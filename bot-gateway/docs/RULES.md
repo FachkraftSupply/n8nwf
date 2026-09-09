@@ -310,3 +310,35 @@ Tóm tắt (bản đầy đủ + lý do ở PROJECT_STATUS.md, luôn đọc ở 
    tool `Agent` spawn 1 subagent ĐỘC LẬP audit lại so với RULES.md/FAQ.md sau khi publish, trước khi
    báo "xong" cho user — không tự chấm điểm chính mình bằng đúng các bước vừa làm.
 9. Cập nhật `PROJECT_STATUS.md` + `CHANGELOG.md` ngay, dù chưa có xác nhận test thật qua Telegram.
+
+## 21. 🔴 `test_workflow` KHÔNG phát hiện được lỗi `replyMarkup`/`inlineKeyboard` động — chỉ xác nhận đúng LOGIC, không xác nhận đúng HIỂN THỊ
+
+Xảy ra thật 09/09/2026 (bắt được nhờ bước 9 ở mục #20 — subagent audit độc lập, không phải tự test):
+sửa node `Send Help Text` dùng `replyMarkup: "={{ $json.hasKeyboard ? 'inlineKeyboard' : 'none' }}"`
++ `inlineKeyboard: "={{ $json.keyboard }}"` — tưởng an toàn vì nhìn thấy node `Send OD Menu` dùng
+pattern tương tự (tưởng nhầm là "đã proven"). Chạy `test_workflow` báo `success`, dữ liệu vào node
+đúng 100% — nhưng đây KHÔNG PHẢI bằng chứng đủ: `test_workflow` PIN (giả lập) mọi node có credential,
+bao gồm node Telegram, nên nó KHÔNG THỰC SỰ gọi Telegram API — không thể biết `reply_markup` có
+render đúng hay không, chỉ biết code phía TRƯỚC node đó tạo đúng dữ liệu.
+
+Sự thật (tra ra khi audit): node `Send OD Menu` (nhìn giống, tưởng đã proven) **KHÔNG PHẢI** pattern
+đang chạy thật cho menu chọn tên file — pattern THẬT là `Build OD Menu` → `Has OD Menu Keyboard?`
+(IF) → 2 nhánh TĨNH: `Send OD Menu (Keyboard)` (`replyMarkup` là CHUỖI CỐ ĐỊNH `"inlineKeyboard"`,
+không phải expression) hoặc `Send OD Menu` (không set `replyMarkup`, dùng cho trường hợp không có
+nút). Đây đúng là cách đã fix xong từ trước (xem CHANGELOG "Root cause thật của Upload OneDrive
+không phản hồi") — nhưng dễ NHẦM node `Send OD Menu` (tên gần giống, không có nút) với node có nút
+thật `Send OD Menu (Keyboard)` nếu không đọc kỹ TOÀN BỘ chuỗi node, chỉ đọc 1 node theo tên.
+
+**Quy tắc bắt buộc**: KHÔNG BAO GIỜ set `replyMarkup` bằng expression động
+(`={{ ... ? 'inlineKeyboard' : 'none' }}`) — dù cho là "đã thấy pattern này ở node khác nên chắc an
+toàn". LUÔN dùng pattern IF + 2 NHÁNH TĨNH: 1 node Telegram với `replyMarkup: "inlineKeyboard"` (chuỗi
+CỐ ĐỊNH, không phải expression) + `inlineKeyboard` là object TĨNH (chỉ các giá trị BÊN TRONG từng nút
+— text/callback_data — mới được dùng expression), và 1 node khác (hoặc cùng node, khác nhánh) không
+set `replyMarkup` cho trường hợp không có nút. Trước khi tái sử dụng 1 "pattern tưởng đã proven" từ
+node khác trong cùng workflow — đọc ĐÚNG node đó qua `get_workflow_details`, không suy luận từ tên
+node giống nhau; nếu 2 node tên gần giống nhau (`Send OD Menu` vs `Send OD Menu (Keyboard)`), luôn
+xác nhận ĐANG NHÌN ĐÚNG node có nút thật, không phải node fallback không nút.
+
+**Hệ quả cho bước test (mục #20 bước 7)**: `test_workflow` vẫn NÊN chạy (xác nhận logic/dữ liệu),
+nhưng KHÔNG được coi là đủ để xác nhận nút Telegram hiển thị đúng — phải kết hợp với việc tự đọc
+cấu trúc node (không dùng expression cho `replyMarkup`) HOẶC đợi user xác nhận qua Telegram thật.

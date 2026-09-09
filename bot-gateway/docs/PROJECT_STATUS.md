@@ -58,6 +58,41 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ QUY TRÌNH MỚI ĐÃ CHỨNG MINH HOẠT ĐỘNG (09/09/2026, phiên tiếp 11) — Subagent audit bắt đúng 1 bug thật mà tự test bỏ sót
+
+Lần ĐẦU TIÊN áp dụng bước 9 của quy trình mới (spawn subagent độc lập audit sau khi publish) — và nó
+bắt được đúng 1 bug thật trong chính fix "Trợ giúp" vừa làm ở "phiên tiếp 10":
+
+**Bug bị bắt**: node `Send Help Text` dùng `replyMarkup`/`inlineKeyboard` bằng EXPRESSION ĐỘNG
+(`={{ $json.hasKeyboard ? 'inlineKeyboard' : 'none' }}`) — ĐÚNG bẫy đã từng gặp và tưởng đã hiểu rõ
+(RULES.md #14), nhưng lần này lặp lại vì tôi lầm tưởng node `Send OD Menu` (nhìn thấy dùng pattern
+tương tự) là "đã proven hoạt động" — thực ra pattern THẬT SỰ đã fix và đang chạy ổn định là
+`Has OD Menu Keyboard?` (IF) → 2 nhánh TĨNH (`Send OD Menu (Keyboard)` có `replyMarkup` là chuỗi CỐ
+ĐỊNH `"inlineKeyboard"`, KHÔNG phải expression) — tôi đã đọc nhầm/không kiểm tra kỹ node liên quan
+trước khi tái sử dụng "pattern tưởng đã đúng".
+
+**⚠️ Bài học quan trọng nhất**: `test_workflow` (bước 7 trong quy trình) **KHÔNG PHÁT HIỆN ĐƯỢC lỗi
+này** dù đã chạy và báo "success" — vì node Telegram bị "pin" (giả lập) nên không thực sự gọi API
+Telegram để biết reply_markup có render đúng hay không; `test_workflow` chỉ xác nhận DỮ LIỆU đưa vào
+node đúng, không xác nhận Telegram có HIỂN THỊ đúng nút hay không. Chỉ có (a) đọc kỹ cấu trúc node so
+với 1 pattern ĐÃ CHỨNG MINH hoạt động thật trong CHÍNH workflow đó, hoặc (b) subagent audit đọc lại
+JSON thật đối chiếu FAQ.md, mới bắt được loại lỗi này.
+
+**Đã sửa đúng theo pattern đã proven** (`Has OD Menu Keyboard?`/`Send OD Menu (Keyboard)`): thêm IF
+`Has OD Help Keyboard?` → 2 nhánh tĩnh (`Send Help Text (Keyboard)` với `replyMarkup: "inlineKeyboard"`
+cố định + `inlineKeyboard` là object tĩnh, các nút Kammer/BAV=1/Hóa đơn=2/Giấy tờ khác=3 hardcode y
+hệt `Send Upload Result`) / (`Send Help Text` không có `replyMarkup` cho trường hợp không có
+`queueId`). Verify + test lại bằng `test_workflow` (giờ true branch được gọi đúng, dữ liệu `queueId`
+đi đúng) rồi mới publish. Cũng phát hiện thêm lỗi phụ: `addNode` tự gán NHẦM credential
+(`@csfsintbot` thay vì `Elite Clickupbot`) cho node Telegram mới — đã sửa bằng `setNodeCredential`.
+
+**Cập nhật RULES.md/FAQ.md cần làm tiếp** (chưa làm ở dòng này, cần làm ngay sau): ghi rõ giới hạn
+của `test_workflow` — không phát hiện được lỗi render UI (inline keyboard) vì Telegram node bị pin,
+chỉ xác nhận đúng LOGIC/DỮ LIỆU, không xác nhận đúng HIỂN THỊ. Trước khi dùng pattern
+`replyMarkup`/`inlineKeyboard` động, LUÔN tìm 1 node THẬT trong CHÍNH workflow đã publish + có
+execution thật gần đây dùng ĐÚNG pattern đó và xem `reply_to_message` phía callback tiếp theo có
+`reply_markup.inline_keyboard` thật hay không — không suy luận từ tên node giống nhau.
+
 ## ✅ SỬA (09/09/2026, phiên tiếp 10) — Nút "❓ Trợ giúp" giờ có nút forward, đã test trước khi publish
 
 User báo: bấm "❓ Trợ giúp" trên tin upload OneDrive → hiện hướng dẫn nhưng KHÔNG có nút nào để bấm
