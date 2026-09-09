@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 3) — Fix nút forward không phản hồi + auto-delete cho Reader + `/cancel`
+
+- **Root cause nút forward (Kammer/BAV, Hóa đơn, Giấy tờ, Trợ giúp) hoàn toàn không phản hồi**: xác
+  nhận qua execution — callback `odfwd_<id>_<id>`/`odhelp` KHÔNG lọt qua được whitelist route của
+  Gateway (`GW-03 Router`), vì điều kiện cũ chỉ check `data.startsWith('od_')` — "odfwd_..." không
+  bắt đầu bằng "od_" (ký tự thứ 3 là "f" không phải "_")! 0 execution nào được ghi nhận ở
+  `Telebot ClickUp Reader` sau khi bấm nút — bug ở tầng Gateway, không phải ở workflow đích. Đã thêm
+  `odfwd_`/`odhelp` vào whitelist.
+- **Mở rộng tự xóa tin nhắn cũ sang `Telebot ClickUp Reader`**: mọi callback (chi tiết task qua nút,
+  toàn bộ luồng Upload OneDrive, forward, trợ giúp) giờ tự xóa tin nhắn chứa nút vừa bấm trước khi xử
+  lý tiếp — cùng pattern đã dùng ở `Telebot Admin System`.
+- **Thêm `/cancel`** (+ nút ❌ Hủy trong menu chọn tên file OneDrive): xóa dòng
+  `clickup.pending_uploads` đang dở cho chat đó, báo user có thể bắt đầu lại. Thêm `cancel` vào
+  `COMMAND_MAP` (Gateway) để route đúng `telebot_main`.
+- **CHƯA test qua Telegram** cả 3 việc trên trong phiên này.
+
 ## 2026-09-09 (tiếp 2) — Forward thông báo upload vào nhóm/topic + fix bug xóa tin nhắn
 
 - **User xác nhận Upload OneDrive đã hoạt động đúng.**
