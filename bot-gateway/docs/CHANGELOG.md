@@ -4,6 +4,17 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 4) — `/cancel` cho Telebot Admin System + đúc kết nợ kỹ thuật (ARCHITECTURE.md §9)
+
+- **Thêm `/cancel` cho `Telebot Admin System`** (bot riêng `@elite_n8n_system_bot`) — hiện chưa có
+  state đa lượt thật ở bot này nên chỉ trả lời "không có gì để huỷ", giữ nhất quán UX với
+  `Telebot ClickUp Reader` (đã có `/cancel` thật từ bản trước). `Bot Xử Lý Ảnh` và các sub-bot tương
+  lai dùng chung vật lý bot Telegram với ClickUp Reader qua Gateway nên KHÔNG cần `/cancel` riêng.
+- **Thêm `gateway.changelog` v9** ghi lại các việc trên + fix nút forward hôm nay.
+- **Thêm mục 9 vào `ARCHITECTURE.md`** — đúc kết nợ kỹ thuật thực tế phát sinh qua nhiều phiên vá
+  lỗi (bẫy inlineKeyboard động, sai tên field addConnection, whitelist callback hardcode, rủi ro 2
+  phiên sửa song song...) kèm hướng refactor đề xuất cho từng mục — đọc trước khi làm refactor lớn.
+
 ## 2026-09-09 (tiếp 3) — Fix nút forward không phản hồi + auto-delete cho Reader + `/cancel`
 
 - **Root cause nút forward (Kammer/BAV, Hóa đơn, Giấy tờ, Trợ giúp) hoàn toàn không phản hồi**: xác
