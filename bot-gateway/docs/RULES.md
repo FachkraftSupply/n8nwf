@@ -126,3 +126,42 @@ và `targetIndex` là optional (mặc định 0 nếu không truyền, ĐÚNG ch
 LUÔN dùng đúng tên `sourceIndex` (không phải `sourceOutput`) — và sau khi nối xong 1 batch lớn, gọi
 lại `get_workflow_details` (hoặc test 1 route thật) để xác nhận từng output THỰC SỰ trỏ đúng node,
 không tin tưởng riêng response `appliedOperations` (nó không phát hiện được lỗi loại này).
+
+## 14. ⚠️ Auto-xóa tin nhắn cũ (UX) BẮT BUỘC kiểm tra `reply_to_message_id` phía sau — nếu không, tin nhắn mới sẽ gửi LỖI hoàn toàn
+Khi thêm cơ chế "xóa tin nhắn panel cũ trước khi gửi panel mới" (xoá bằng `callback.message_id`),
+BẤT KỲ node Telegram nào phía sau trong CÙNG luồng đó mà còn đặt `additionalFields.reply_to_message_id`
+trỏ tới CHÍNH message_id vừa xoá sẽ nhận lỗi thật từ Telegram API: `400 - Bad Request: message to
+be replied not found`. Hậu quả nhìn từ phía user: tin nhắn cũ biến mất, tin nhắn mới KHÔNG BAO GIỜ
+xuất hiện (node lỗi, dừng luôn workflow tại đó) — trông giống "xoá tin nhưng chưa gửi tin mới", đã
+xảy ra thật với luồng Upload OneDrive (`Send OD Menu`, `Send OD Menu (Keyboard)`, `Reply Ask File
+(Pick)`, `Reply Ask Custom Name` trong `Telebot ClickUp Reader`, 09/09/2026).
+
+**Quy tắc bắt buộc**: mỗi khi thêm auto-delete-tin-cũ vào 1 luồng callback nào, PHẢI rà lại TOÀN BỘ
+node Telegram gửi tin phía sau trong luồng callback đó — nếu `reply_to_message_id` của node đó trỏ
+tới CÙNG message_id vừa bị xoá (thường là `$json.messageId`, `$('Phân tích lệnh').first().json.messageId`,
+hoặc tương đương), phải bỏ tham chiếu đó (đặt `reply_to_message_id: "={{ undefined }}"` — n8n sẽ bỏ
+qua field khi expression trả về `undefined`, không gửi field này lên Telegram API — hoặc xoá hẳn field
+đó khỏi `additionalFields` nếu build node mới từ đầu). Non-callback (tin nhắn gõ tay) KHÔNG xoá tin
+cũ nên không bị ảnh hưởng — chỉ áp dụng rà soát này cho các route có `isCallback === true`.
+
+**Lưu ý kỹ thuật khi sửa qua n8n MCP**: `update_workflow` với `updateNodeParameters` chỉ MERGE (không
+thay thế toàn bộ) đối tượng `additionalFields` — nếu bạn muốn "xoá" 1 field, việc chỉ truyền lại
+`additionalFields` KHÔNG CÓ field đó sẽ KHÔNG xoá được field cũ (field cũ vẫn còn nguyên do merge sâu).
+Phải truyền lại field đó với giá trị MỚI tường minh (vd `"={{ undefined }}"`) để thực sự ghi đè.
+
+## 15. ⚠️ `update_workflow` nhiều operation lỗi giữa chừng → CẢ BATCH rollback, không chỉ operation lỗi
+Khi 1 lệnh `update_workflow` gồm nhiều operation và 1 operation ở giữa/cuối bị lỗi (vd sai
+`sourceIndex`, sai tên node), TOÀN BỘ operation trong batch đó — kể cả những operation đứng TRƯỚC
+operation lỗi và đã "đáng lẽ" thành công — đều bị rollback, không được lưu. Đã gây bug thật 2 lần
+trong cùng 1 ngày (09/09/2026): cập nhật node `Send Upload Result` (thêm nút forward) và node
+`Admin Extras Router` (fix route `/user_list`) đều nằm chung batch với 1 operation lỗi phía sau, chỉ
+phần lỗi được sửa lại sau đó — phần cập nhật node kia bị bỏ quên, gây ra 2 lỗi "biến mất" tưởng như
+không liên quan (nút không hiện, route sai) nhưng cùng 1 nguyên nhân gốc.
+
+**Quy tắc bắt buộc**: khi 1 batch `update_workflow` báo lỗi ở operation thứ N, coi TẤT CẢ operation
+0..N-1 trong batch đó là CHƯA ĐƯỢC ÁP DỤNG — phải gửi lại toàn bộ batch (đã sửa operation lỗi), không
+chỉ gửi lại phần từ operation lỗi trở đi. Sau khi batch cuối cùng báo `appliedOperations` khớp đúng
+số lượng operation gửi lên, NÊN gọi lại `get_workflow_details` để xác nhận TẤT CẢ thay đổi mong muốn
+(cả node params lẫn connections) đã thực sự có mặt — không chỉ tin vào response thành công của lần
+gọi SAU (vì nó chỉ xác nhận các operation trong CHÍNH lần gọi đó, không xác nhận lại các operation đã
+"tưởng như" thành công ở lần gọi trước đó bị rollback).

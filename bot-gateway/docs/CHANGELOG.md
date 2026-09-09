@@ -4,6 +4,29 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 5) — Fix nút forward mất tích (batch rollback cũ), thêm nút ❌ Hủy cho menu admin
+
+- **Nút forward sau upload (Kammer/BAV/Hóa đơn/Giấy tờ/Trợ giúp) không hiện**: cùng loại lỗi đã gặp
+  trước đó trong phiên này — cập nhật `Send Upload Result` (thêm inlineKeyboard 4 nút) từng nằm
+  chung 1 batch `update_workflow` với 1 operation sau đó bị lỗi (sai `sourceIndex`), khiến CẢ BATCH
+  rollback — chỉ phần nối dây được làm lại sau đó, còn phần cập nhật node `Send Upload Result` thì
+  quên làm lại. Xác nhận qua execution thật: tin nhắn gửi thành công nhưng hoàn toàn không có nút.
+  Đã áp dụng lại đúng cấu hình 4 nút, publish.
+  **Bài học lặp lại 2 lần trong 1 ngày**: khi 1 `update_workflow` nhiều operation báo lỗi giữa chừng,
+  KHÔNG CHỈ redo phần operation bị lỗi — phải kiểm tra lại TOÀN BỘ operation trong batch đó (kể cả
+  những operation đứng TRƯỚC operation lỗi) vì cả batch bị rollback cùng nhau.
+- **Thêm nút ❌ Hủy vào menu "Thêm quyền"/"Xóa quyền"** (`Telebot Admin System`) — bấm vào gọi thẳng
+  route `admin_cancel` (mới, output thứ 14 của `Switch (Admin Extras)`) → node `Reply Cancelled
+  (Admin)` có sẵn từ `/cancel`. Đã đối chiếu `connections` sau khi thêm, xác nhận không còn node nào
+  bị đứt kết nối trong cả 2 workflow (dùng đúng quy trình kiểm tra của skill `n8n-mcp-skills` mới
+  kích hoạt).
+- **Bắt đầu dùng bộ skill `n8n-mcp-skills`** (`using-n8n-mcp-skills` làm entry point) cho mọi việc
+  xây dựng/kiểm tra workflow từ nay — lưu ý: bộ skill viết cho server n8n-mcp cộng đồng (tên tool
+  `n8n_update_partial_workflow`, `get_node`...), khác với server đang dùng trong dự án này (tên tool
+  `update_workflow`, `get_node_types`...) — áp dụng đúng NGUYÊN TẮC (tra schema trước khi cấu hình,
+  luôn `get_workflow_details` đối chiếu `connections` sau khi sửa, hạn chế Code/Set node không cần
+  thiết) bằng bộ tool thực tế, không gọi nhầm tên tool của skill.
+
 ## 2026-09-09 (tiếp 4) — `/cancel` cho Telebot Admin System + đúc kết nợ kỹ thuật (ARCHITECTURE.md §9)
 
 - **Thêm `/cancel` cho `Telebot Admin System`** (bot riêng `@elite_n8n_system_bot`) — hiện chưa có
