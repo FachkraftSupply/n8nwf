@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 15) — Fix bug credential sai ở node Upscale AI (Bot Xử Lý Ảnh)
+
+- Phát hiện **bug thật**: node `Call OpenRouter (Upscale)` đang gán NHẦM credential `Spaceocr`
+  (của OCR.space, dùng cho `/tomtat`) thay vì credential đúng cho OpenRouter — copy-paste sai lúc
+  build. Đây là lý do chính khiến nút "🔍 Upscale cho sắc nét" không hoạt động.
+- Đã thử phương án user đề xuất: dùng credential OpenRouter **có sẵn** (`OpenRouter account`,
+  đang dùng cho model DeepSeek/Mistral) qua `authentication: predefinedCredentialType` cho cả 2
+  node `Call OpenRouter (...)` để khỏi phải tạo credential mới. **Kết quả: n8n từ chối** —
+  credential type `openRouterApi` chỉ được đăng ký cho các node LangChain (`lmChatOpenRouter`),
+  KHÔNG hỗ trợ dùng chung với node HTTP Request thường (`setNodeCredential` báo lỗi "node type
+  'httpRequest' does not accept credential 'openRouterApi'"). Đây là giới hạn của chính n8n, không
+  phải công cụ MCP.
+- Đã revert cả 2 node về đúng cấu hình gốc (`genericCredentialType` + `httpTemplatedCustomAuth`),
+  xoá credential sai khỏi node Upscale. **Vẫn cần user tạo credential mới** như đã ghi ở
+  PROJECT_STATUS.md mục 0 — không có cách nào tránh việc này.
+
 ## 2026-09-09 (tiếp 14) — Button hóa `/lichsu` + mở `/lichsu`/`/timkiem` cho user thường
 
 - **`Telebot Admin System`**: `/lichsu` giờ có luồng bấm nút 3 bước thay vì gõ tay: bấm số ngày
