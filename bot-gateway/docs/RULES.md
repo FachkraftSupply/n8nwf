@@ -3,12 +3,26 @@
 > File này gộp lại TOÀN BỘ quy tắc đã rút ra qua nhiều phiên làm việc. ĐỌC FILE NÀY TRƯỚC khi sửa
 > bất kỳ workflow nào. Vi phạm các quy tắc này đã gây lỗi lặp lại nhiều lần trong dự án.
 
-## 1. ⚠️ Gateway COMMAND_MAP (có điều kiện)
+## 1. ⚠️ Gateway COMMAND_MAP + whitelist callback_data (có điều kiện)
 Mỗi khi thêm/sửa 1 lệnh mới trong sub-workflow: kiểm tra sub-workflow đó có **Trigger riêng** hay không.
 - Nếu gọi qua Gateway (Execute Workflow Trigger, ví dụ `Telebot_ClickUp_Reader.json`): BẮT BUỘC cập nhật
   `COMMAND_MAP` trong node `⚙️ Config` của `GW_Gateway_Telegram.json`.
 - Nếu có Trigger riêng (ví dụ `Telebot_Admin_System.json` — Telegram Trigger trực tiếp trên System Bot):
   KHÔNG cần đụng Gateway.
+
+**Mở rộng 09/09/2026 — ÁP DỤNG CHO CẢ CALLBACK_DATA, không chỉ lệnh gõ tay `/...`**: callback từ nút
+bấm (không phải `/lệnh`) được nhận diện qua hàm `resolveBotKeyForCallback` trong `GW-03 Router`
+(check `startsWith`/`===` theo từng prefix), KHÔNG dùng `COMMAND_MAP`. Mỗi khi:
+- Thêm 1 prefix callback_data MỚI (vd `odfwd_`, `imgai_`) → thêm điều kiện mới vào
+  `resolveBotKeyForCallback`.
+- **ĐỔI FORMAT của 1 callback_data ĐÃ CÓ SẴN** (vd từ chuỗi tĩnh `"odhelp"` sang có tham số
+  `"odhelp_<id>"`) → BẮT BUỘC rà lại điều kiện tương ứng trong `resolveBotKeyForCallback`, vì điều
+  kiện cũ (vd `data === 'odhelp'`) rất có thể không còn khớp giá trị mới. Loại lỗi này DỄ QUÊN HƠN
+  thêm mới — thêm mới thì bắt buộc phải nghĩ tới whitelist, còn đổi format 1 cái cũ dễ tưởng lầm "đã
+  có trong whitelist rồi, không cần sửa gì". Đã xảy ra thật 2 lần (09/09/2026): lần 1 với `odfwd_`
+  (prefix mới, quên thêm hẳn), lần 2 với `odhelp_<id>` (đổi format cái cũ, quên rà lại điều kiện
+  exact-match). Hậu quả cả 2 lần: callback rơi vào `DEFAULT_BOT` (`help_bot`, sub-workflow ĐANG
+  DISABLE vì chưa có Workflow ID thật) → im lặng không phản hồi gì, đúng dạng lỗi "bấm nút bị stuck".
 
 ## 2. ⚠️ KHÔNG BAO GIỜ dùng `$json` trần cho dữ liệu quan trọng
 `$json` trong 1 node CHỈ lấy từ output của node NỐI TRỰC TIẾP — không đảm bảo field cần (chatId,

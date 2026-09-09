@@ -58,6 +58,32 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## 🔴 SỬA (09/09/2026, phiên tiếp 12) — Bug THẬT SỰ ở Gateway: quên cập nhật whitelist callback
+
+User test qua Telegram thật, xác nhận: bấm "❓ Trợ giúp" → **stuck, không có phản hồi gì**. Tra
+execution thật (Gateway `1528`/`1529`) lộ ra: `GW-03 Router` tính `route: "help_bot"` thay vì
+`"telebot_main"` — callback rơi vào `→ Sub: Help Bot`, một sub-workflow **ĐANG BỊ DISABLE** (chưa có
+Workflow ID thật), nên im lặng không phản hồi gì — không phải lỗi ClickUp Reader (workflow đó thậm
+chí KHÔNG CÓ execution mới nào sau khi user bấm, xác nhận callback chưa từng tới được đó).
+
+**Nguyên nhân**: hàm `resolveBotKeyForCallback` trong `GW-03 Router` (`xmEKeIUnzxm2F7dF`) check
+`data === 'odhelp'` (SO KHỚP TUYỆT ĐỐI) — nhưng nút đã đổi callback_data thành `odhelp_<queueId>`
+(mang theo id) ở "phiên tiếp 10". Chuỗi mới không khớp `=== 'odhelp'` VÀ cũng không khớp
+`startsWith('od_')` (ký tự thứ 3 là 'h' không phải '_') → rơi xuống `DEFAULT_BOT` = `help_bot`.
+**Đây là bug ĐÚNG LOẠI mà chính comment trong code đã tự cảnh báo** ("đã gây bug im lặng 1 lần
+trước đó" — về `odfwd_`/`odhelp` không khớp `od_`) — tôi lặp lại loại lỗi này lần 2 vì đổi FORMAT
+của 1 callback_data đã có (từ tĩnh sang có tham số) mà quên rà lại whitelist Gateway, dù chính tay
+tôi đã thêm dòng comment cảnh báo này trước đó trong cùng phiên.
+
+**Đã sửa**: đổi `data === 'odhelp'` → `data.startsWith('odhelp')` (khớp cả 2 dạng cũ/mới). Verify +
+publish. **Việc cần user làm**: test lại nút "❓ Trợ giúp" 1 lần nữa qua Telegram thật.
+
+**Bài học bổ sung cho RULES.md #1** (đã làm ngay dưới đây): quy tắc "đổi COMMAND_MAP khi thêm lệnh
+mới" cần mở rộng thành "đổi/thêm CALLBACK_DATA FORMAT (không chỉ lệnh gõ tay) cũng phải rà lại
+whitelist callback ở Gateway `GW-03 Router`" — đặc biệt khi ĐỔI FORMAT của 1 callback_data ĐÃ CÓ
+SẴN (không phải thêm mới), vì dễ quên hơn thêm mới (thêm mới thì phải nghĩ tới whitelist, đổi format
+1 cái cũ thì dễ quên vì "tưởng đã có trong whitelist rồi").
+
 ## ✅ QUY TRÌNH MỚI ĐÃ CHỨNG MINH HOẠT ĐỘNG (09/09/2026, phiên tiếp 11) — Subagent audit bắt đúng 1 bug thật mà tự test bỏ sót
 
 Lần ĐẦU TIÊN áp dụng bước 9 của quy trình mới (spawn subagent độc lập audit sau khi publish) — và nó
