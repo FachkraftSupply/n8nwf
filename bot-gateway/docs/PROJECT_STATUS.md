@@ -4,9 +4,10 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 >
-> **Trước khi sửa bất kỳ workflow nào**: đọc `docs/RULES.md` — đặc biệt mục 12-15 (publish sau khi
-> update, tên tham số đúng cho addConnection, batch rollback, bẫy inlineKeyboard động). Đây là 4
-> nguyên nhân gây bug im lặng đã gặp NHIỀU LẦN, không phải lý thuyết suông.
+> **Trước khi sửa bất kỳ workflow nào**: đọc `docs/RULES.md` — đặc biệt mục 12-16 và **mục 18 (MỚI,
+> đã lặp lại 3 LẦN)**: `addNode` thêm node mới vào chuỗi đang sống mà THIẾU `setNodeSettings`
+> (`alwaysOutputData`/`onError`) TRONG CÙNG BATCH sẽ làm gãy toàn bộ chuỗi phía sau, không báo lỗi
+> gì. Đây là nguyên nhân gây bug im lặng đã gặp NHIỀU LẦN NHẤT, không phải lý thuyết suông.
 >
 > Tài liệu khác: `docs/ARCHITECTURE.md` (thiết kế hệ thống + mục 9 nợ kỹ thuật/refactor),
 > `docs/GUIDE_SQL_CLICKUP_SYNC.md` (vận hành sync), `docs/GO_LIVE_CHECKLIST.md`,
@@ -17,7 +18,31 @@
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
-## 🟡 MỚI (09/09/2026, phiên tiếp 6) — Tin nhắn forward chi tiết hơn (người upload, học sinh, giờ, link)
+## 🔴 SỬA (09/09/2026, phiên tiếp 7) — LẶP LẠI lỗi RULES.md #16 lần thứ 3, làm gãy bước cuối Upload OneDrive
+
+User báo: sau khi làm tin nhắn forward chi tiết hơn (mục "phiên tiếp 6"), luồng Upload OneDrive bị
+"xóa hết tin cũ nhưng chưa chuyển sang tin nhắn mới". Nguyên nhân: node MỚI thêm vào lúc đó
+(`Ensure Notify Queue Columns`, chèn giữa `Clear Pending Upload` → `Queue Upload Notify`) được tạo
+qua `addNode` **THIẾU `alwaysOutputData`/`onError`** — ĐÚNG lỗi đã ghi trong RULES.md #16 (addNode
+âm thầm bỏ qua 2 field này), lần thứ 3 trong dự án dính lỗi này (2 lần trước: Gateway pending-check
+gây sập toàn bộ bot 08/09; và OD Task Lookup/Resolve/Upload HTTP nodes cùng ngày). Node ALTER TABLE
+không có `RETURNING` → trả về 0 dòng → không có `alwaysOutputData` → toàn bộ chuỗi sau đó (bao gồm
+`Queue Upload Notify` và tin nhắn "✅ Đã upload..." kèm nút forward) **không chạy** — trong khi các
+bước xóa tin nhắn cũ trước đó (điều hướng menu chọn tên) vẫn chạy bình thường → đúng triệu chứng
+"xóa hết tin cũ, không thấy tin mới" user mô tả.
+
+**Đã sửa bằng `setNodeSettings`** (không phải sửa lại `addNode`), verify lại bằng
+`get_workflow_details` xác nhận `alwaysOutputData:true`/`onError:"continueRegularOutput"` đã có
+thật trước khi publish. Đã publish.
+
+**⚠️ Cần 1 quy trình CHẮC CHẮN hơn để không lặp lại lần thứ 4** — đề xuất thêm vào RULES.md #16:
+BẤT KỲ lúc nào dùng `addNode` để thêm 1 node Postgres/HTTP loại "ensure"/"DDL"/gọi API ngoài (không
+có `RETURNING` hoặc phụ thuộc external service có thể lỗi) VÀO GIỮA 1 chuỗi đang chạy sống — PHẢI
+LUÔN kèm `setNodeSettings` (`alwaysOutputData:true` cho DDL, `onError:"continueRegularOutput"` cho
+gọi API ngoài) làm operation NGAY SAU trong CÙNG 1 batch `update_workflow`, không tách làm 2 lần gọi
+riêng (dễ quên lần thêm mới, đã quên tới lần thứ 3). Xem RULES.md #16 đã cập nhật.
+
+## 🟡 (09/09/2026, phiên tiếp 6) — Tin nhắn forward chi tiết hơn (người upload, học sinh, giờ, link)
 
 User xác nhận đã tự test full luồng Upload OneDrive → forward, thành công cả Telegram lẫn Zalo (mục
 "phiên tiếp 5" bên dưới). Sau đó yêu cầu nâng cấp nội dung tin nhắn forward — đã build xong, CHƯA

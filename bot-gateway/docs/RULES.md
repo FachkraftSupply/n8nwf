@@ -236,3 +236,34 @@ này **public**. Quy tắc:
    không cần khớp 100% với bản đang chạy — mục đích của git ở đây là lưu CẤU TRÚC workflow (node,
    connection, logic), không phải bản backup runtime đầy đủ. Backup runtime thật đã có cơ chế riêng
    (`/backup_n8n`, mã hoá credential) — không dùng git repo cho việc đó.
+
+## 18. 🔴 `addNode` thêm node MỚI vào 1 chuỗi đang chạy sống — BẮT BUỘC kèm `setNodeSettings` TRONG CÙNG BATCH nếu node đó có thể trả 0 dòng/lỗi
+
+**Đã lặp lại lỗi này 3 LẦN trong dự án** (08/09 — Gateway pending-check làm sập TOÀN BỘ bot cho mọi
+user; 08/09 cùng ngày — OD Task Lookup/Resolve/Upload HTTP; 09/09 — `Ensure Notify Queue Columns`
+làm gãy bước cuối Upload OneDrive, "xóa hết tin cũ nhưng không thấy tin mới"). Nguyên nhân LUÔN
+GIỐNG NHAU: thao tác `addNode` của n8n MCP **KHÔNG nhận** `alwaysOutputData`/`onError` như field cấp
+1 của object `node` — dù không báo lỗi/warning gì, 2 field này bị ÂM THẦM BỎ QUA. Hậu quả: node DDL
+(`CREATE TABLE`/`ALTER TABLE`, không có `RETURNING`) hoặc gọi API ngoài có thể lỗi, khi trả về 0 kết
+quả sẽ làm **toàn bộ chuỗi phía sau ngừng chạy** mà không có execution nào ghi nhận lỗi — vì bản
+thân node đó vẫn "success", chỉ là 0 item.
+
+**Quy tắc bắt buộc, không có ngoại lệ**: mỗi khi `addNode` thêm 1 node kiểu sau vào ĐÚNG con đường mà
+1 luồng đang sống đi qua (không phải nhánh test/manual riêng biệt):
+- Postgres DDL (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) không có
+  `RETURNING` → luôn cần `alwaysOutputData: true`.
+- HTTP Request gọi API bên ngoài (Zalo, Microsoft Graph, OpenRouter...) mà lỗi tạm thời không nên
+  làm gãy cả chuỗi → cân nhắc `onError: "continueRegularOutput"`.
+
+PHẢI thêm `setNodeSettings` cho node đó làm operation NGAY TIẾP THEO, **TRONG CÙNG 1 lần gọi
+`update_workflow`** (không tách thành 2 lần gọi riêng — thực tế cho thấy tách ra rất dễ QUÊN làm
+bước 2, đã quên 3/3 lần). Sau đó BẮT BUỘC `get_workflow_details` xác nhận `alwaysOutputData`/
+`onError` đã có mặt thật ở node đó trước khi `publish_workflow` — không tin `appliedOperations`.
+
+Mẫu đúng (viết trong 1 batch operations):
+```json
+[
+  { "type": "addNode", "node": { "id": "...", "name": "Ensure X", "type": "n8n-nodes-base.postgres", ... } },
+  { "type": "setNodeSettings", "nodeName": "Ensure X", "settings": { "alwaysOutputData": true, "onError": "continueRegularOutput" } }
+]
+```
