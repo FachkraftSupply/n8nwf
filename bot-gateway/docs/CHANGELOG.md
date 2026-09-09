@@ -4,6 +4,29 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-09 (tiếp 22) — Gửi bản lưu riêng vào chat cá nhân khi forward tin nhắn upload OneDrive
+
+Sau khi fix "❓ Trợ giúp" (tiếp 20-21 bên PROJECT_STATUS đánh số "phiên tiếp 11/12") được user xác
+nhận hoạt động, user yêu cầu: mỗi lần bot forward tin nhắn thông báo upload OneDrive vào 1 nhóm
+Telegram, cũng gửi cùng nội dung vào chat riêng của chính user upload để họ lưu hồ sơ cá nhân.
+
+- **`Telebot ClickUp Reader`** (`9JJRrh36H2rLwtnu`): thêm node `Send Forward Copy To User`
+  (Telegram), nối từ output TRUE của `Forward OK?` chạy song song với `Send Forward Message` /
+  `Has Zalo Target?` (fan-out 3 nhánh, không xoá connection cũ nào). Dùng `chatId:
+  ={{ $json.adminChatId }}` (chat id gốc của người upload, đã có sẵn trong output của
+  `Build Forward Message`) + `text` = tiền tố "📋 (Bản lưu riêng cho bạn)" nối với `{{ $json.text }}`
+  (đã escape HTML sẵn từ `Build Forward Message`, không escape lại).
+- Không cần sửa Gateway (`xmEKeIUnzxm2F7dF`): không tạo/đổi callback_data nào — tính năng này chỉ
+  là 1 side-effect tự động của nhánh IF có sẵn.
+- Audit độc lập qua subagent: PASS toàn bộ 6 mục kiểm tra (wiring, replyMarkup, Gateway whitelist,
+  credential, escaping, các quy tắc khác). 1 gợi ý hardening: thêm `onError: continueRegularOutput`
+  cho node mới để lỗi gửi tin riêng (VD user chặn bot) không ảnh hưởng nhánh forward nhóm/Zalo — đã
+  áp dụng.
+- Publish 2 lần: `d704b252-e314-4f0b-b03a-ce2dccc09a43` (thêm node) →
+  `48441cac-286f-41f9-ba4f-7c40d5b02ff0` (thêm hardening).
+- **Trạng thái: ĐÃ BUILD + AUDIT PASS + PUBLISH, CHƯA TEST THẬT qua Telegram** — chờ user upload +
+  forward thử 1 lần.
+
 ## 2026-09-09 (tiếp 21) — Tách bot ghi log nhóm ra riêng (Elite Crawl Bot) + retention 14/365 ngày
 
 Sửa lại đúng theo yêu cầu user làm rõ lại (bản trước "tiếp 20" hiểu NHẦM — credential

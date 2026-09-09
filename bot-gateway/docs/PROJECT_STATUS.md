@@ -58,6 +58,38 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ BUILD MỚI (09/09/2026, phiên tiếp 13) — Gửi bản lưu riêng vào chat cá nhân khi forward tin nhắn
+
+User xác nhận fix "❓ Trợ giúp" (phiên tiếp 12) đã hoạt động ("ok đã hoạt động rồi"). Yêu cầu mới:
+mỗi khi bot forward tin nhắn thông báo upload OneDrive vào 1 nhóm Telegram (qua nút Kammer/BAV,
+Hóa đơn, Giấy tờ khác), cũng gửi CÙNG NỘI DUNG đó vào chat riêng (private) của chính user đã upload,
+để họ lưu lại làm hồ sơ cá nhân.
+
+**Đã build** trong `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`):
+- Node mới `Send Forward Copy To User` (Telegram, id `send-forward-copy-to-user`), `chatId: ={{
+  $json.adminChatId }}`, `text` = tiền tố "📋 (Bản lưu riêng cho bạn)" + nguyên văn `{{ $json.text }}`
+  (đã được `Build Forward Message` escape HTML sẵn, không escape lại 2 lần), dùng credential
+  `Elite Clickupbot` (giống hệt node `Send Forward Message` — không bị auto-assign nhầm bot).
+- Nối thêm 1 connection từ output TRUE (index 0) của node IF `Forward OK?` sang node mới — chạy
+  SONG SONG với 2 connection có sẵn (`Send Forward Message`, `Has Zalo Target?`), không đụng/xoá
+  connection nào cũ.
+- Không cần sửa Gateway (`xmEKeIUnzxm2F7dF`): tính năng này không tạo/đổi callback_data nào, chỉ là
+  1 side-effect tự động của nhánh IF đã tồn tại sẵn — nên KHÔNG dính bug loại "quên cập nhật
+  whitelist" như phiên tiếp 12.
+- Sau audit độc lập (subagent, PASS toàn bộ 6 mục kiểm tra + 1 gợi ý hardening), đã thêm
+  `onError: continueRegularOutput` cho node mới — nếu gửi tin nhắn riêng lỗi (VD: user đã chặn bot)
+  thì không ảnh hưởng tới việc forward vào nhóm/Zalo (đã publish, `activeVersionId`
+  `48441cac-286f-41f9-ba4f-7c40d5b02ff0`).
+
+**Trạng thái**: ĐÃ BUILD + ĐÃ AUDIT (PASS) + ĐÃ PUBLISH, **CHƯA TEST THẬT** qua Telegram — cần user
+thử upload + forward 1 lần để xác nhận tin nhắn riêng xuất hiện đúng trong chat cá nhân.
+
+**Đề xuất chưa build (chờ user quyết định)**: tính năng "xoá file OneDrive vừa upload" (phòng trường
+hợp chọn nhầm file) — đã tư vấn hướng triển khai (lưu `drive_id`+`item_id` vào
+`clickup.upload_notify_queue`, UI xác nhận 2 bước kiểu "Xoá hoàn toàn user", gọi Graph API
+`DELETE /drives/{driveId}/items/{itemId}`, nhớ thêm prefix callback mới VD `oddel_` vào whitelist
+Gateway theo đúng bài học phiên tiếp 12), độ khó ước tính Thấp-Trung bình. Chưa build, chờ user chốt.
+
 ## 🔴 SỬA (09/09/2026, phiên tiếp 12) — Bug THẬT SỰ ở Gateway: quên cập nhật whitelist callback
 
 User test qua Telegram thật, xác nhận: bấm "❓ Trợ giúp" → **stuck, không có phản hồi gì**. Tra
