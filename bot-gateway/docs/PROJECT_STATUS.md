@@ -43,7 +43,29 @@ cần người thật can thiệp.
 - **KHÔNG cần sửa Gateway** (`GW Gateway - Telegram`) — cả `/tao_group` (bot System, own trigger) lẫn
   detect `@@` (bot Crawl, own trigger) đều KHÔNG đi qua Gateway/COMMAND_MAP, xác nhận qua research.
 
-### Stage đã xong: CHƯA CÓ — bắt đầu build ngay sau khi ghi status này.
+### Stage đã xong:
+- ✅ **`GW Mention Resolver`** — workflow MỚI, id `ESbedUROf4udAkY6`, đã publish
+  (`activeVersionId: ee49bc44-62b0-4408-9347-f44bbeb0a797`). 7 node: `From Crawl Bot`
+  (`executeWorkflowTrigger`, input `{chatId, messageId, messageThreadId, tokens}`) → `Ensure Mention
+  Tables` (DDL 2 bảng) → `Parse Mention Tokens` (tách `all` vs tên nhóm) → `Resolve Mention Users`
+  (1 câu SQL UNION ALL: nhánh `@@all` lấy từ `group_chat_log` — vì user chỉ nhắn trong group có thể
+  KHÔNG có trong `bot_users`; nhánh tên nhóm cụ thể lấy từ `bot_users` JOIN `mention_group_members` —
+  vì thành viên nhóm do admin chọn qua `/user_list`, chắc chắn đã có trong `bot_users`) →
+  `Build Mention Text` (escape HTML, `@username` hoặc fallback `tg://user?id=`, giới hạn 50
+  mention/tin) → IF `Has Users To Mention?` → gửi bằng credential **Elite Crawl Bot** (bot này đã có
+  mặt sẵn trong nhóm, Privacy Mode tắt sẵn — xác nhận qua research, không cần bot/quyền mới).
+  Đã build xong node `setNodeParameter` cho trigger bị lỗi lồng sai vị trí đúng như RULES.md #16 cảnh
+  báo trước — tự phát hiện qua `get_workflow_details`, sửa bằng `removeNode`+`addNode`.
+  **Đã test bằng `test_workflow`+pin data 2 kịch bản**: (1) `@@all` với 2 user giả (có/không có
+  username) → text mention đúng cả 2 dạng; (2) tên nhóm không tồn tại + 0 kết quả → đúng như thiết
+  kế, KHÔNG gửi gì (nhánh false của IF), im lặng bỏ qua.
+  **Rủi ro CHƯA kiểm chứng được** (như RULES.md #21 — `test_workflow` pin hết node Postgres/Telegram
+  nên KHÔNG chạy câu SQL thật): câu SQL `Resolve Mention Users` (UNION ALL + DISTINCT ON + `ANY($2::
+  text[])`) chưa được chạy thật lần nào — cú pháp đã rà kỹ bằng tay, tự tin đúng, nhưng CẦN xác nhận
+  bằng 1 lần `@@all` thật qua Telegram sau khi nối xong Crawl Bot (bước tiếp theo) trước khi coi là
+  an toàn 100%.
+
+### Stage CHƯA làm (làm tiếp theo đúng thứ tự):
 
 ### Thứ tự build dự kiến (cập nhật ngay sau mỗi stage):
 1. Tạo file SQL lịch sử schema + build DDL "Ensure" node.
