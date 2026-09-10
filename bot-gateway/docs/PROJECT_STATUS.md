@@ -4,6 +4,28 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔖 Bàn giao cuối phiên (10/09/2026, phiên tiếp 19) — dừng ở đây, mai làm tiếp
+
+Tất cả thay đổi trong ngày đã publish + commit/push GitHub đầy đủ, không có việc dở dang giữa chừng.
+**Việc cần user test khi rảnh** (xem chi tiết ở mục "phiên tiếp 19"/"18" ngay bên dưới):
+1. `/lichsu` (bot Admin) — xác nhận tin tóm tắt vẫn có link + nút chọn ngày khác; `/error_log_now` —
+   xác nhận KHÔNG còn dính nút ngày nữa (vừa fix bug thật, publish rồi nhưng chưa có user xác nhận).
+2. `/timkiem <từ khóa>` (không cần chat_id) cả 2 bot — đã fix + tự verify qua execution log, chưa có
+   user xác nhận trực tiếp qua Telegram.
+3. Tính năng xóa file OneDrive/thu hồi forward (phiên tiếp 14) — vẫn đang chờ user dán token Zalo
+   thật vào node `OD Delfwd: Announce Zalo Deleted` + test thật (xem mục phiên tiếp 14 nếu quên chi
+   tiết).
+
+**Chưa có quyết định** (không phải bug, chỉ đang chờ user chốt hướng, KHÔNG tự làm nếu chưa được OK):
+- Refactor `Telebot ClickUp Reader` thành sub-workflow nhỏ hơn.
+- 3 ý tưởng roadmap mới: mention `@@group`/`@@all`, quản lý nhóm mention qua `/tao_group`+`/user_list`,
+  AI đọc tin nhắn visa/vé máy bay để tự update ClickUp (xem mục "phiên tiếp 16" để nhớ lại chi tiết).
+- Chuyển bảng `gateway.notify_targets` sang tính năng Data Table của n8n (đã tư vấn pro/cons, chưa
+  quyết).
+
+Phiên sau: đọc mục "🔖 Bàn giao" này trước, rồi đọc tiếp các mục bên dưới theo thứ tự nếu cần chi
+tiết kỹ thuật.
+
 ## ⚙️ QUY TRÌNH BẮT BUỘC khi build/sửa workflow (áp dụng MỌI phiên, không có ngoại lệ)
 
 Đúc kết sau nhiều lần dính lỗi im lặng (xem RULES.md, hiện 19 mục) — quy trình dưới đây tồn tại vì
