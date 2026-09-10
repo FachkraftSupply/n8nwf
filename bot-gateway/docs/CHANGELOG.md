@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 25) — Link tin nhắn gốc cho /lichsu + /timkiem (admin + user), bỏ capture media
+
+- `GW Crawl Bot - Group Capture`: bỏ capture tin nhắn media/file (chỉ giữ text thuần).
+- `GW Daily Chat Summary`: AI trích dẫn `[#message_id]` cho chủ đề, node mới `Linkify Summary` thay
+  thành link `t.me/c/<internal_id>/<message_id>` thật, lưu pre-escaped vào `summary_text`. Prompt rút
+  gọn 8→6 dòng để tiết kiệm token.
+- `Telebot ClickUp Reader` + `Telebot Admin System`: bỏ escape 2 lần cho `summary_text`, `/timkiem`
+  thêm link "🔗 Xem gốc" mỗi kết quả. Đồng bộ cả bản user (lọc theo nhóm tham gia) lẫn admin (không
+  lọc, xem mọi nhóm).
+- Tự phát hiện + sửa 3 lỗi mất connection do `removeNode`+`addNode` (đúng bài học Rule #16).
+- Xác nhận thật qua `execute_workflow`: link render đúng, ghi DB thành công.
+- Tạo doc ClickUp hướng dẫn dùng bot cho user tra cứu:
+  https://app.clickup.com/9018351620/docs/8crj804-4598
+- Ghi nhận roadmap mới (chưa build): mention `@@group`/`@@all`, quản lý nhóm mention qua
+  `/tao_group`/`/user_list`, AI đọc tin nhắn visa/vé máy bay để tự update ClickUp.
+
 ## 2026-09-10 (tiếp 24) — Fix GW Daily Chat Summary không bao giờ ra kết quả (2 bug thật)
 
 Kiểm tra thực tế xác nhận `GW Crawl Bot - Group Capture` đang capture đúng dữ liệu thật vào

@@ -58,6 +58,60 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ BUILD XONG + CHỜ AUDIT (10/09/2026, phiên tiếp 16) — Link tin nhắn gốc trong `/lichsu`/`/timkiem` + bỏ capture media
+
+**Yêu cầu user**: (1) lưu link tới tin nhắn gốc để `/lichsu` hiện link chủ đề bắt đầu, `/timkiem` hiện
+link từng kết quả; (2) không capture ảnh/file media; (3) tối ưu token prompt AI; (4) đồng bộ CẢ bản
+admin (xem mọi nhóm) lẫn bản user (chỉ xem nhóm mình tham gia).
+
+**Quyết định thiết kế**: KHÔNG thêm cột `message_link` mới — `chat_id`+`message_id` (đã có sẵn) đủ để
+tự dựng link bất cứ lúc nào cần (`https://t.me/c/<chat_id bỏ tiền tố -100>/<message_id>`), tránh lưu
+thừa dữ liệu.
+
+**4 workflow đã sửa + publish**:
+1. `GW Crawl Bot - Group Capture` (`SNNrXneenXVnLHh6`): `Build Envelope (Crawl)` bỏ qua HOÀN TOÀN tin
+   nhắn có photo/video/document/audio/voice/sticker/poll/contact/location/venue (kể cả có caption),
+   chỉ giữ `m.text` thuần.
+2. `GW Daily Chat Summary` (`ElSGQgdHPMtrzwME`): transcript gửi AI thêm `#message_id` đầu mỗi dòng.
+   Prompt rút gọn (tối đa 6 dòng, trước 8), yêu cầu AI ghi `[#id]` sau mỗi chủ đề thay vì tự bịa link
+   (tiết kiệm token, tránh AI viết sai URL). Node mới `Linkify Summary` (chèn giữa AI và `Upsert Daily
+   Summary`): escape HTML text AI trả về rồi thay `[#id]` → `<a href="link thật">🔗</a>`, lưu thẳng
+   vào `summary_text` (đã an toàn HTML sẵn, không escape 2 lần).
+3. `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`, bản USER — lọc theo nhóm user có tham gia):
+   `Lichsu(U)`/`Sum(U): Build Summary Text` bỏ `escapeHtml()` (vì đã escape sẵn ở bước 2). `Timkiem(U):
+   Search` thêm `message_id` vào SELECT, `Build Results` in kèm link "🔗 Xem gốc" mỗi kết quả.
+4. `Telebot Admin System` (`eWtu7Qs85Hes0HuP`, bản ADMIN — KHÔNG lọc, xem mọi nhóm): y hệt thay đổi
+   #3 cho `Lichsu:`/`Timkiem:` tương ứng.
+
+**3 lỗi kết nối tự phát hiện + tự sửa trong lúc build** (đúng bài học Rule #16 — `removeNode`+
+`addNode` xóa hết connection cũ, dễ quên nối lại 1 chiều): `Timkiem(U): Build Results` mất input do
+`removeNode` lần 2 xóa mất connection vừa thêm cùng batch; `Sum(U): Build Summary Text` và
+`Timkiem: Build Results` (bản admin) mất hẳn output — phát hiện qua `get_workflow_details` đọc lại
+thấy `connections` rỗng, suy luận đúng node dùng chung (`Lichsu(U): Send`/`Lichsu: Send` — cùng shape
+`{chatId,text,parse_mode}`, giống pattern `Timkiem(U): Send List` đã dùng chung cho 2 nhánh) và nối
+lại, verify lại lần nữa trước khi publish.
+
+**Đã xác nhận THẬT**: chạy `execute_workflow` thật `GW Daily Chat Summary` — AI trích `[#id]` đúng,
+`Linkify Summary` render ra link thật dạng `<a href="https://t.me/c/2768213220/50082">🔗</a>`, ghi
+DB thành công.
+
+**Đã spawn subagent audit độc lập** (đọc lại JSON thật cả 4 workflow, đối chiếu RULES.md/FAQ.md, verify
+riêng 3 chỗ tự sửa connection ở trên) — **CHỜ KẾT QUẢ**, chưa coi là xong hoàn toàn.
+
+**Việc cần user làm**: thử `/lichsu` và `/timkiem <chat_id> <từ khóa>` qua Telegram thật (cả bot
+chính lẫn bot admin nếu có quyền) để xác nhận link bấm vào nhảy đúng tới tin nhắn.
+
+**Phụ**: đã tạo doc ClickUp "📖 Hướng dẫn dùng Bot Telegram"
+(https://app.clickup.com/9018351620/docs/8crj804-4598) liệt kê đầy đủ lệnh cho user tra cứu. Phát
+hiện `/help` text trong bot (node `Nội dung lệnh help`) CHƯA nhắc 2 nút xóa file (build ở phiên tiếp
+14) — đã tạo task nền riêng để sửa, không lẫn vào phiên này.
+
+**Roadmap mới user đề xuất (CHƯA BUILD, chỉ ghi lại)**: (a) tính năng `@@<nhóm>`/`@@all` mention
+thành viên trong ClickUp bot; (b) `/tao_group` (admin tạo nhóm mention) + `/user_list` mở rộng thêm
+chức năng thêm/xóa user khỏi nhóm mention qua callback, kèm nút Hủy/Dừng; (c) AI đọc tin nhắn user gửi
+(vd ảnh visa, vé máy bay) để tự động update status/custom field tương ứng trong ClickUp. Cần thiết kế
+kỹ trước khi build — độ phức tạp cao hơn hẳn các tính năng trước.
+
 ## ✅ SỬA XONG + XÁC NHẬN THẬT (10/09/2026, phiên tiếp 15) — Fix `GW Daily Chat Summary` không bao giờ chạy ra kết quả
 
 User yêu cầu kiểm tra xem `GW Crawl Bot - Group Capture` đã capture được dữ liệu thật chưa, rồi tiếp
