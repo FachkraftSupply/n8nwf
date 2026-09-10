@@ -58,6 +58,26 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ SỬA XONG (10/09/2026, phiên tiếp 19) — Bug thật: nút ngày dính nhầm tin không liên quan (Admin)
+
+User báo 2 việc: "admin /lichsu không có link" + "nhầm lẫn /error_log_now khi bấm nút ngày". Tra
+execution log: **link `/lichsu` thật ra VẪN CÓ** (xác nhận `text_link` entity đúng URL trong tin tóm
+tắt) — user nhiều khả năng nhìn nhầm sang tin "danh sách nhóm" hoặc tin `/error_log_now` (các tin đó
+đúng là không có link vì không phải nội dung tóm tắt).
+
+**Bug thật tìm được**: node `Lichsu: Send` (Admin System) dùng CHUNG cho 5 nguồn khác nhau (group
+list, summary text, `/error_logs`, `/error_log_now`, `/timkiem`) nhưng gắn CỨNG bộ nút "1/3/5/7 ngày
++ Hủy" cho MỌI tin gửi qua nó — kể cả tin hoàn toàn không liên quan. Bấm nút ngày dính trên tin
+`/error_log_now` vẫn kích hoạt route `lichsu_day` → đúng hiện tượng "nhầm lẫn" user báo.
+
+**Đã sửa**: tách `Lichsu: Send` (bỏ nút, dùng cho Errors×2 + Timkiem) và node mới `Lichsu: Send With
+Day Picker` (giữ nút, chỉ dùng cho Group List/Summary Text) — đúng pattern Rule #21. Publish, verify
+qua `get_workflow_details` xác nhận đúng 5 nguồn phân đúng 2 nhánh.
+
+**Việc cần user làm**: test lại `/lichsu` (bấm nút ngày) và `/error_log_now` — xác nhận tin
+error_log_now KHÔNG còn nút ngày đính kèm, và tin tóm tắt `/lichsu` vẫn có link + vẫn có nút chọn
+lại ngày khác.
+
 ## ✅ SỬA XONG (10/09/2026, phiên tiếp 18) — Sửa logic `/timkiem` + đồng bộ help text đầy đủ
 
 User báo `/timkiem việt thương` không ra kết quả (do gõ sai cú pháp cũ, xem execution `1812` — chạy

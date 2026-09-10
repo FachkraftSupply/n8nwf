@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 29) — Fix bug thật: nút 1/3/5/7 ngày dính nhầm vào tin không liên quan (Admin)
+
+User báo "/lichsu bên admin không có link" + "nhầm lẫn với /error_log_now khi bấm nút ngày". Tra
+execution log xác nhận: link `/lichsu` THẬT SỰ VẪN CÓ (thấy rõ `text_link` entity trỏ đúng
+`t.me/c/...` trong tin tóm tắt) — nhưng phát hiện bug thật khác: node `Lichsu: Send` (bot Admin) là
+1 node TERMINAL DÙNG CHUNG cho 5 nguồn khác nhau (`Lichsu: Build Group List`, `Lichsu: Build Summary
+Text`, `Errors: Build Report (Logs)`, `Errors: Build Report (Now)`, `Timkiem: Build Results`) nhưng
+lại gắn CỨNG bộ nút "1/3/5/7 ngày + ❌ Hủy" cho MỌI tin nhắn gửi qua nó — kể cả tin `/error_logs`,
+`/error_log_now`, `/timkiem` hoàn toàn không liên quan. Khi user bấm 1 nút ngày dính trên tin
+`/error_log_now`, bot vẫn hiểu là chọn ngày cho `/lichsu` → đúng bug "nhầm lẫn" user báo.
+
+**Đã sửa**: tách thành 2 node theo đúng pattern Rule #21 (static branch, không dùng expression cho
+`replyMarkup`) — `Lichsu: Send` (bỏ hẳn `replyMarkup`, dùng cho Errors×2 + Timkiem) và node MỚI
+`Lichsu: Send With Day Picker` (giữ nguyên bộ nút, CHỈ dùng cho `Build Group List`/`Build Summary
+Text`). Verify qua `get_workflow_details` xác nhận đúng 5 nguồn được phân đúng 2 nhánh, publish.
+
 ## 2026-09-10 (tiếp 28) — Help text: phân biệt /sum vs /lichsu
 
 Thêm 1 dòng giải thích ngắn vào `/help` (chỉ bot user — `/sum` không tồn tại ở Admin System):
