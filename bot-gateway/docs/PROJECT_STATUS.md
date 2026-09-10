@@ -4,10 +4,12 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
-## 🚧 ĐANG BUILD DỞ (10/09/2026, phiên tiếp 20) — Tính năng Mention Group (`@@nhóm`/`@@all`)
+## ✅ BUILD XONG, CHỜ AUDIT + TEST THẬT (10/09/2026, phiên tiếp 20) — Tính năng Mention Group (`@@nhóm`/`@@all`)
 
-**QUAN TRỌNG NẾU ĐỌC LẠI Ở PHIÊN MỚI**: đang xây dở, chia stage như mọi lần lớn trước — đọc "Stage
-đã xong" trước khi tiếp tục, ĐỪNG build lại từ đầu.
+**Đã build + publish TOÀN BỘ 5 stage** (schema, `GW Mention Resolver`, hook Crawl Bot, `/tao_group`,
+mở rộng `/user_list`) — tự làm tới giới hạn tối đa có thể mà không cần người thật, đúng yêu cầu user.
+CHƯA đóng hẳn: đang chờ kết quả audit subagent + user test thật qua Telegram (xem "Điểm dừng cần
+NGƯỜI THẬT" ở cuối mục này).
 
 **Yêu cầu user**: admin tạo "nhóm mention" (danh sách user đặt tên) qua `/tao_group`; gán/gỡ user vào
 nhóm qua mở rộng `/user_list` có sẵn; user thường gõ `@@<tên nhóm>` trong 1 nhóm Telegram → bot
@@ -73,19 +75,44 @@ chạy thật lần nào — cú pháp đã rà kỹ bằng tay, tự tin đúng
 trong nhóm Telegram có Elite Crawl Bot để xác nhận** — đây là điểm dừng cần người thật. Sẽ build tiếp
 2 stage còn lại (không cần test thật ngay) trước khi báo điểm dừng này cho user.
 
-### Stage CHƯA làm (làm tiếp theo đúng thứ tự):
+- ✅ **`/tao_group` (Telebot Admin System)** — publish `activeVersionId: d2081f91-30c7-46c0-af04-3eb1dc639beb`.
+  `Admin Extras Router` thêm route `create_group` (parse `/tao_group <tên>`), `mention_menu`
+  (`mmenu:<uid>`), `mention_toggle` (`mgt:<uid>:<groupId>`) — giữ nguyên TOÀN BỘ 18 route cũ.
+  `Switch (Admin Extras)` từ 14 output (không có fallback) → 17 output, verify lại đủ 14 kết nối cũ
+  + 3 kết nối mới (14→`Ensure Mention Tables (Admin)`, 15→`Mention Menu Query`,
+  16→`Toggle Mention Membership`) qua `get_workflow_details`. Chuỗi mới: DDL → `Slug Group Name`
+  (slugify tên → group_key, chặn tên rỗng) → IF hợp lệ → INSERT `ON CONFLICT DO NOTHING RETURNING`
+  (báo "đã tồn tại" nếu trùng) → reply.
+- ✅ **Mở rộng `/user_list` (Telebot Admin System)** — cùng đợt publish trên. `Send Detail Panel`
+  thêm nút thứ 4 "🏷️ Nhóm mention" (giữ nguyên 6 nút cũ). Panel mới `Mention Menu Query` →
+  `Build Mention Menu` → `Send Mention Menu`: liệt kê TẤT CẢ mention_groups dạng nút toggle
+  (✅ đã có / ➕ chưa có), bấm 1 nút = `Toggle Mention Membership` (1 câu SQL CTE delete-if-exists-
+  else-insert, đúng Rule #11) rồi quay lại `Mention Menu Query` refresh tại chỗ — TÁI SỬ DỤNG
+  nguyên request "toggle rồi refresh" đã dùng cho quyền bot, tham chiếu `uid` tường minh qua
+  `$('Admin Extras Router').first().json.extraUid` (không dùng `$json.uid` vì 1 trong 2 nguồn vào
+  là `Toggle Mention Membership` không có field `uid`).
+- ✅ **Đã cập nhật `/help` (Admin)** thêm `/tao_group` + giải thích `@@nhóm`/`@@all`.
+- ✅ **Đã spawn subagent audit độc lập** cho toàn bộ 3 workflow — chờ kết quả.
 
-### Thứ tự build dự kiến (cập nhật ngay sau mỗi stage):
-1. Tạo file SQL lịch sử schema + build DDL "Ensure" node.
-2. Build `GW Mention Resolver` (workflow mới, độc lập, test qua `execute_workflow` thật với dữ liệu
-   nhóm/tin nhắn có sẵn từ trước — có thể test khá trọn vẹn vì không cần tương tác admin).
-3. Hook `@@` detection vào `GW Crawl Bot - Group Capture` (removeNode+addNode node có sẵn, cẩn thận
-   Rule #16 vì đây là node đang chạy sống, không được làm gãy phần ghi log hiện tại).
-4. `/tao_group` trong `Telebot Admin System` (thêm route + node mới, sửa `Admin Extras Router`).
-5. Mở rộng `/user_list` (nút mới trên `Send Detail Panel` + panel toggle mới + route mới).
-6. Test toàn bộ qua Telegram thật (CẦN NGƯỜI THẬT — không tự động hóa được việc gõ `@@` trong nhóm
-   Telegram thật hoặc bấm nút `/user_list` thật) → đây là điểm dừng cần user can thiệp.
-7. Audit subagent độc lập cho toàn bộ tính năng (nhiều node, đụng 2 workflow + 1 workflow mới).
+**⚠️ 1 rủi ro KHÔNG THỂ tự xác nhận, đã CHẤP NHẬN chờ test thật** (đúng tinh thần RULES.md #21, mở
+rộng từ "loại replyMarkup" sang "số lượng nút biến động"): node `Send Mention Menu` cần hiện SỐ
+LƯỢNG nút KHÁC NHAU tùy số nhóm mention đã tạo (nút toggle) — đây là bàn phím Telegram ĐẦU TIÊN
+trong cả dự án có SỐ NÚT không cố định (mọi bàn phím khác từ trước tới giờ đều số nút cố định).
+Đã thử 2 cách viết `inlineKeyboard.rows` dạng expression, cả 2 đều bị validator tĩnh của
+`update_workflow` báo sai kiểu (`expected array, got string`) dù đã lưu được và publish thành công
+(giống các cảnh báo validator "false-positive" đã gặp trước — nhưng đây liên quan trực tiếp tới
+render nút, KHÔNG thể tự tin như trường hợp Switch fallback trước đó). **CHƯA xác nhận được nút có
+hiện đúng hay không — bắt buộc cần bấm thử "🏷️ Nhóm mention" qua Telegram thật.**
+
+### Điểm dừng cần NGƯỜI THẬT (đã làm tới đây, không tự làm tiếp được nữa):
+1. Gõ `@@all` thật trong 1 nhóm Telegram có Elite Crawl Bot → xác nhận bot mention đúng người, xác
+   nhận câu SQL UNION ALL ở `GW Mention Resolver` chạy thật không lỗi.
+2. Gõ `/tao_group <tên>` thật trên bot Admin → xác nhận tạo nhóm thành công, thử gõ `@@<tên nhóm>`
+   trong 1 nhóm Telegram (SAU KHI đã thêm ít nhất 1 user vào nhóm qua bước 3) → xác nhận đúng người
+   được mention.
+3. Vào `/user_list` → chọn 1 user → bấm "🏷️ Nhóm mention" → **XÁC NHẬN NÚT TOGGLE CÓ HIỆN RA ĐÚNG SỐ
+   LƯỢNG KHÔNG** (rủi ro chưa xác nhận ở trên) → bấm thử toggle 1 nhóm → xác nhận panel refresh đúng
+   trạng thái ✅/➕.
 
 ## 🔖 Bàn giao cuối phiên (10/09/2026, phiên tiếp 19) — dừng ở đây, mai làm tiếp
 

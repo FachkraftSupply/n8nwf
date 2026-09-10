@@ -4,6 +4,35 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 30) — Build tính năng Mention Group (@@nhóm/@@all) — 3 workflow
+
+Admin tạo "nhóm mention" (danh sách user đặt tên) qua `/tao_group <tên>`; gán/gỡ user qua nút mới
+"🏷️ Nhóm mention" trong `/user_list`; user thường gõ `@@<tên nhóm>` hoặc `@@all` trong 1 nhóm
+Telegram → bot mention đúng người. Tự build tới giới hạn tối đa theo yêu cầu user, không dừng lại
+hỏi giữa chừng.
+
+- **2 bảng mới**: `gateway.mention_groups`, `gateway.mention_group_members` — không dual-write
+  Supabase (đã biết cơ chế đó hỏng từ trước, bỏ cho gọn).
+- **Workflow MỚI `GW Mention Resolver`** (`ESbedUROf4udAkY6`) — tách hẳn logic xử lý mention ra
+  sub-workflow riêng theo đúng yêu cầu user (nhẹ, độc lập, không làm nặng workflow chính). Nhận
+  `{chatId, messageId, messageThreadId, tokens}`, resolve user qua 1 câu SQL UNION ALL (`@@all` lấy
+  từ `group_chat_log`, tên nhóm cụ thể lấy từ `bot_users` JOIN `mention_group_members`), build text
+  mention (`@username` hoặc `tg://user?id=` fallback, cap 50), gửi bằng credential Elite Crawl Bot
+  (đã có mặt sẵn trong nhóm, Privacy Mode tắt sẵn). Tự phát hiện + sửa 1 bug thật lúc build (trigger
+  node `setNodeParameter` lồng sai vị trí, đúng RULES.md #16). Test bằng `test_workflow`+pin data
+  2 kịch bản (có user / không có user) — cả 2 đúng thiết kế.
+- **Hook vào `GW Crawl Bot - Group Capture`**: thêm tách `mentionTokens` (regex `@@(\w+)`) không đổi
+  hành vi ghi log cũ, gọi `GW Mention Resolver` song song (fire-and-forget, lỗi không ảnh hưởng ghi
+  log chính).
+- **`Telebot Admin System`**: thêm `/tao_group`, mở rộng `/user_list` (nút toggle nhóm mention, tái
+  dùng nguyên pattern "toggle rồi refresh panel" đã có cho quyền bot). `Switch (Admin Extras)` 14→17
+  output, verify lại đủ 14 kết nối cũ.
+- **Rủi ro CHƯA xác nhận được** (như RULES.md #21 — validator không tin được, cần Telegram thật):
+  `Send Mention Menu` là bàn phím Telegram ĐẦU TIÊN trong dự án có SỐ NÚT không cố định (tùy số
+  nhóm mention đã tạo) — cú pháp `inlineKeyboard.rows` dạng expression bị validator tĩnh báo sai kiểu
+  dù publish thành công, CHƯA xác nhận render đúng qua Telegram thật.
+- Đã spawn subagent audit độc lập cho cả 3 workflow.
+
 ## 2026-09-10 (tiếp 29) — Fix bug thật: nút 1/3/5/7 ngày dính nhầm vào tin không liên quan (Admin)
 
 User báo "/lichsu bên admin không có link" + "nhầm lẫn với /error_log_now khi bấm nút ngày". Tra
