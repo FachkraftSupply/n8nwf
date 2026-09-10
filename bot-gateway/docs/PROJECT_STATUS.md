@@ -92,7 +92,14 @@ trong nhóm Telegram có Elite Crawl Bot để xác nhận** — đây là đi�
   `$('Admin Extras Router').first().json.extraUid` (không dùng `$json.uid` vì 1 trong 2 nguồn vào
   là `Toggle Mention Membership` không có field `uid`).
 - ✅ **Đã cập nhật `/help` (Admin)** thêm `/tao_group` + giải thích `@@nhóm`/`@@all`.
-- ✅ **Đã spawn subagent audit độc lập** cho toàn bộ 3 workflow — chờ kết quả.
+- **✅ Audit PASS (10/09/2026)** — subagent độc lập đọc lại JSON thật cả 3 workflow, xác nhận PASS
+  toàn bộ ~15 điểm kiểm tra (SQL syntax, mode Code node, escape HTML trước khi build link, cap 50
+  mention, IF false-branch im lặng đúng thiết kế, ghi log cũ không bị ảnh hưởng, 2 nhánh song song
+  không phụ thuộc nhau, `Admin Extras Router` giữ nguyên đủ 18 route cũ, `Switch (Admin Extras)`
+  đúng cả 17/17 output, `Send Detail Panel` giữ nguyên đủ 6 nút cũ, chuỗi `/tao_group` và mention-menu
+  đúng thiết kế, `/help` giữ nguyên đủ nội dung cũ). **Không tìm thấy bug mới nào.** Rủi ro
+  `Send Mention Menu` (bàn phím số nút động) được xác nhận là điểm DUY NHẤT chưa chắc chắn — mọi thứ
+  khác đã verify xong bằng JSON thật, không cần đoán.
 
 **⚠️ 1 rủi ro KHÔNG THỂ tự xác nhận, đã CHẤP NHẬN chờ test thật** (đúng tinh thần RULES.md #21, mở
 rộng từ "loại replyMarkup" sang "số lượng nút biến động"): node `Send Mention Menu` cần hiện SỐ

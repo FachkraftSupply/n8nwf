@@ -31,7 +31,9 @@ hỏi giữa chừng.
   `Send Mention Menu` là bàn phím Telegram ĐẦU TIÊN trong dự án có SỐ NÚT không cố định (tùy số
   nhóm mention đã tạo) — cú pháp `inlineKeyboard.rows` dạng expression bị validator tĩnh báo sai kiểu
   dù publish thành công, CHƯA xác nhận render đúng qua Telegram thật.
-- Đã spawn subagent audit độc lập cho cả 3 workflow.
+- **Audit PASS**: subagent độc lập đọc lại JSON thật cả 3 workflow, xác nhận PASS ~15 điểm kiểm tra,
+  không tìm thấy bug mới. Rủi ro `Send Mention Menu` (bàn phím số nút động) vẫn là điểm DUY NHẤT
+  chưa xác nhận được — cần Telegram thật.
 
 ## 2026-09-10 (tiếp 29) — Fix bug thật: nút 1/3/5/7 ngày dính nhầm vào tin không liên quan (Admin)
 
