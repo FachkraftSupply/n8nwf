@@ -19,6 +19,9 @@ nếu cần.
   https://app.clickup.com/9018351620/docs/8crj804-4598
 - Ghi nhận roadmap mới (chưa build): mention `@@group`/`@@all`, quản lý nhóm mention qua
   `/tao_group`/`/user_list`, AI đọc tin nhắn visa/vé máy bay để tự update ClickUp.
+- **Audit độc lập tìm ra 1 bug thật**: `Linkify Summary` thiếu `mode: "runOnceForEachItem"` — chạy
+  đúng khi test với 1 nhóm/ngày (không lộ bug), sẽ lỗi/lẫn dữ liệu giữa các nhóm khi có ≥2 nhóm cùng
+  ngày. Sửa ngay + verify lại thật với 3 nhóm cùng lúc, xác nhận đúng.
 
 ## 2026-09-10 (tiếp 24) — Fix GW Daily Chat Summary không bao giờ ra kết quả (2 bug thật)
 

@@ -95,8 +95,14 @@ lại, verify lại lần nữa trước khi publish.
 `Linkify Summary` render ra link thật dạng `<a href="https://t.me/c/2768213220/50082">🔗</a>`, ghi
 DB thành công.
 
-**Đã spawn subagent audit độc lập** (đọc lại JSON thật cả 4 workflow, đối chiếu RULES.md/FAQ.md, verify
-riêng 3 chỗ tự sửa connection ở trên) — **CHỜ KẾT QUẢ**, chưa coi là xong hoàn toàn.
+**✅ Audit PASS (10/09/2026)** — subagent độc lập đọc lại JSON thật cả 4 workflow, xác nhận PASS toàn
+bộ, RIÊNG tìm ra **1 bug thật**: node `Linkify Summary` viết code kiểu xử lý từng item nhưng THIẾU
+`mode: "runOnceForEachItem"` — chạy đúng khi chỉ 1 nhóm/ngày (đúng lúc tôi test lần đầu, nên không lộ
+ra), nhưng SẼ lỗi/lẫn dữ liệu giữa các nhóm khi có ≥2 nhóm cùng ngày (do Code node mặc định "Run Once
+for All Items", `$json`/`.item` không còn đúng nghĩa "item hiện tại"). **Đã sửa ngay**: thêm
+`mode: "runOnceForEachItem"`, đổi `.item` → `.itemMatching($itemIndex)` để đảm bảo đúng cặp item qua
+ranh giới node LangChain. **Đã verify lại thật với đúng 3 nhóm cùng lúc** (execution `1807`) — xác
+nhận mỗi nhóm giờ lấy đúng `chat_id` của chính nó, không còn lẫn lộn. 3 dòng ghi thành công vào DB.
 
 **Việc cần user làm**: thử `/lichsu` và `/timkiem <chat_id> <từ khóa>` qua Telegram thật (cả bot
 chính lẫn bot admin nếu có quyền) để xác nhận link bấm vào nhảy đúng tới tin nhắn.
