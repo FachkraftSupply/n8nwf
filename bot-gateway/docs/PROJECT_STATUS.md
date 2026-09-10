@@ -58,6 +58,36 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ SỬA XONG (10/09/2026, phiên tiếp 18) — Sửa logic `/timkiem` + đồng bộ help text đầy đủ
+
+User báo `/timkiem việt thương` không ra kết quả (do gõ sai cú pháp cũ, xem execution `1812` — chạy
+bằng code CŨ vì user test đúng lúc tôi đang sửa dở, không phải bug ở bản mới) và báo lỗi
+"Circular reference detected" khi gõ `/timkiem` trống.
+
+**Nguyên nhân thật tìm được khi tra kỹ**: nhánh "hiện danh sách nhóm" (`Show List?` true) và nhánh
+"tìm kiếm" (`Search`) đang **CHẠY SONG SONG** thay vì loại trừ nhau — cả 2 đều nối trực tiếp từ
+`Parse Params`, không đi qua đúng 2 nhánh của IF `Show List?`. Khi gõ `/timkiem` trống, CẢ 2 tin nhắn
+đều bắn ra cùng lúc (dù nhánh Search có guard trả 0 kết quả) — không tìm được execution lỗi thật
+khớp với "Circular reference" (có thể là lỗi UI n8n editor khi user tự test node, không phải lỗi bot
+thật qua Telegram) nhưng hành vi song song này CHẮC CHẮN sai, đã sửa triệt để.
+
+**Đã sửa** (cả `Telebot ClickUp Reader` lẫn `Telebot Admin System`):
+1. **Đổi cú pháp `/timkiem`**: giờ `/timkiem <từ khóa>` (không cần chat_id) mặc định tìm trong TẤT CẢ
+   nhóm user tham gia (bản admin: tất cả nhóm không giới hạn) — vẫn giữ `/timkiem <chat_id> <từ khóa>`
+   nếu muốn giới hạn 1 nhóm. Nhận diện chat_id bằng regex `/^-?\d+$/` ở từ đầu tiên.
+2. **Tách bạch 2 nhánh**: `Parse Params` → `Show List?` (IF) → true: hiện danh sách nhóm (kèm hướng
+   dẫn cú pháp rõ ràng, có dòng "❌ Bạn cần nhập từ khóa" khi gọi trống) / false: mới chạy `Search`.
+   KHÔNG còn chạy song song.
+3. **Guard SQL** `$N <> ''` chặn trường hợp từ khóa rỗng vô tình khớp TẤT CẢ tin nhắn (rủi ro tôi tự
+   phát hiện lúc build, không phải bug thật đã xảy ra nhưng đã chặn trước).
+4. **Cập nhật `/help`** cả 2 bot: user — cú pháp `/timkiem` mới; admin — thêm nhãn 🔒 phân biệt rõ
+   lệnh CHỈ CÓ trên bot Admin (user_list, error_logs, sync, backup, version) vs lệnh dùng chung với
+   bot chính (/task, /lichsu, /timkiem, /cancel).
+
+Đã verify wiring qua `get_workflow_details` + publish cả 4 lần update (2 workflow × 2 thay đổi).
+**Việc cần user làm**: test lại `/timkiem <từ khóa>` (không cần chat_id) và `/timkiem` trống (phải chỉ
+ra 1 tin nhắn hướng dẫn, không phải 2 tin/lỗi).
+
 ## ✅ SỬA XONG (10/09/2026, phiên tiếp 17) — Cập nhật `/help` thiếu 2 nút xóa file + link timkiem
 
 Task được đẩy qua từ 1 phiên chat khác (không có quyền truy cập thư mục dự án/n8n MCP tools) nhờ xử

@@ -4,6 +4,15 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 27) — Sửa /timkiem: cú pháp mới + tách nhánh song song + help text đầy đủ
+
+- `/timkiem <từ khóa>` giờ tìm trong TẤT CẢ nhóm (user: nhóm mình tham gia; admin: mọi nhóm), không
+  bắt buộc chat_id nữa. `/timkiem <chat_id> <từ khóa>` vẫn dùng được để giới hạn 1 nhóm.
+- Root cause của báo lỗi user: nhánh "hiện danh sách nhóm" và "tìm kiếm" chạy SONG SONG thay vì qua
+  đúng 2 nhánh IF `Show List?` — sửa lại mutually exclusive, chỉ 1 tin nhắn/lần gõ lệnh.
+- Thêm guard SQL chặn từ khóa rỗng khớp mọi tin nhắn.
+- Cập nhật `/help` cả 2 bot: cú pháp `/timkiem` mới + nhãn 🔒 phân biệt lệnh admin-exclusive.
+
 ## 2026-09-10 (tiếp 26) — Cập nhật /help: thêm 2 nút xóa file + link timkiem
 
 Node `Nội dung lệnh help` (`Telebot ClickUp Reader`) chưa nhắc "🗑️ Xóa file vừa upload"/"🗑️ Xóa & thu
