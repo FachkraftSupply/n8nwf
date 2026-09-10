@@ -4,6 +4,25 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 24) — Fix GW Daily Chat Summary không bao giờ ra kết quả (2 bug thật)
+
+Kiểm tra thực tế xác nhận `GW Crawl Bot - Group Capture` đang capture đúng dữ liệu thật vào
+`gateway.group_chat_log`, nhưng `GW Daily Chat Summary` (`ElSGQgdHPMtrzwME`) chưa từng ra kết quả kể
+từ lúc build (09/09) dù chạy đúng lịch.
+
+- **Bug 1 (root cause)**: `Query Groups Aggregated` so sánh `ts::date = (now() - interval '1
+  day')::date` bằng UTC (server timezone), trong khi lịch chạy job là 1h sáng giờ Việt Nam (=18:00
+  UTC ngày hôm trước) — lệch mất 1 ngày, không bao giờ khớp dữ liệu thật. Sửa: quy đổi cả `ts` lẫn
+  `now()` về `Asia/Ho_Chi_Minh` trước khi lấy `::date`, áp dụng đồng bộ cho cả node lọc lẫn node ghi
+  `summary_date`.
+- **Bug 2**: `Upsert Daily Summary` dùng `queryBatching` mặc định (`single`) — n8n tự cảnh báo khi
+  chạy thật với 3 item cùng lúc, rủi ro sai lệch tham số giữa các nhóm. Sửa: `queryBatching:
+  'independently'`.
+- Xác nhận bằng 2 lần chạy thật (`execute_workflow`, không phải test giả lập): tìm đúng 3 nhóm có
+  dữ liệu, AI tóm tắt đúng, ghi thành công vào `gateway.daily_chat_summary`, không còn cảnh báo.
+- Đổi tên `08_upload_notify_queue_delete.sql` → `09_upload_notify_queue_delete.sql` (trùng số với
+  `08_gateway_group_chat_capture.sql` có sẵn).
+
 ## 2026-09-09 (tiếp 23) — Xóa file OneDrive vừa upload + xóa & thu hồi tin đã forward
 
 Build 4 stage (mỗi stage publish riêng để chống mất tiến độ giữa chừng): thêm 6 cột vào

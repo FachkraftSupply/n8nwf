@@ -58,6 +58,46 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ SỬA XONG + XÁC NHẬN THẬT (10/09/2026, phiên tiếp 15) — Fix `GW Daily Chat Summary` không bao giờ chạy ra kết quả
+
+User yêu cầu kiểm tra xem `GW Crawl Bot - Group Capture` đã capture được dữ liệu thật chưa, rồi tiếp
+tục phát triển `GW Daily Chat Summary`. Kiểm tra execution thật xác nhận **Crawl Bot ĐANG hoạt động
+đúng** (tin nhắn thật đã ghi vào `gateway.group_chat_log`) — nhưng `GW Daily Chat Summary` (chạy 1
+lần/ngày, tóm tắt AI cho `/lichsu`/`/sum`) từ lúc build (09/09) tới giờ **CHƯA BAO GIỜ ra kết quả**,
+dù có dữ liệu thật.
+
+**Bug 1 — lệch múi giờ (root cause chính)**: node `Query Groups Aggregated` so `ts::date = (now() -
+interval '1 day')::date` — nhưng lịch chạy job đặt "1h sáng" theo giờ Việt Nam (Asia/Ho_Chi_Minh,
+UTC+7), trong khi `now()` trên Postgres server trả về theo UTC. Job chạy lúc 01:00 giờ VN = 18:00 UTC
+NGÀY HÔM TRƯỚC — nên `now() - 1 ngày` (tính theo UTC) luôn lệch mất 1 ngày so với ý định thật, làm
+điều kiện lọc không bao giờ khớp dữ liệu thật (đã tự tay tính tay + verify bằng execution `1534`:
+0 nhóm dù có tin nhắn thật từ execution `1398` cùng ngày). **Đã sửa**: quy đổi cả `ts` lẫn `now()` về
+`Asia/Ho_Chi_Minh` trước khi lấy `::date`, áp dụng cho cả node `Query Groups Aggregated` (điều kiện
+lọc) lẫn `Upsert Daily Summary` (giá trị `summary_date` ghi vào DB) — đảm bảo lọc và ghi cùng 1 mốc
+ngày nhất quán.
+
+**Bug 2 — `queryBatching` mặc định không an toàn cho nhiều item (phát hiện khi chạy test thật)**:
+chạy thật lần 1 (execution `1748`, 3 nhóm có dữ liệu) → n8n tự cảnh báo `"Inserts were batched for
+performance... đổi 'Query batching' sang 'Independent'"` ở node `Upsert Daily Summary` — mặc định
+`queryBatching: 'single'` gộp nhiều item thành 1 lần gọi query, có rủi ro sai lệch tham số giữa các
+item khi query có `$1..$N` tham chiếu riêng từng item (đúng loại lỗi âm thầm dự án đã dính nhiều
+lần). **Đã sửa**: set `queryBatching: 'independently'` — mỗi item chạy 1 query riêng, đảm bảo đúng
+cặp tham số. Verify bằng execution `1749`: `pairedItem` giờ tách riêng từng item (trước là gộp
+chung), không còn cảnh báo.
+
+**Đã xác nhận THẬT (không phải giả lập)**: chạy `execute_workflow` thật 2 lần (`1748`, `1749`) —
+tìm đúng 3 nhóm có dữ liệu ngày hôm trước ("Elite Xử lý hồ sơ", "01 (K CHAT) HỢP ĐỒNG/TÀI LIỆU/GIẤY
+TỜ", "Đơn hàng 86"), DeepSeek tóm tắt đúng nội dung, ghi thành công vào `gateway.daily_chat_summary`.
+Tính năng `GW Daily Chat Summary` giờ **hoạt động thật, không chỉ "build xong chưa test"** như trước.
+
+**Việc cần user làm tiếp**: thử lệnh `/lichsu` hoặc `/sum` trong Telegram để xem tóm tắt AI có hiển
+thị đúng nội dung 3 nhóm trên không (chưa test đường đọc lại từ phía user-facing command, chỉ mới
+xác nhận phần ghi dữ liệu ở trên).
+
+**Dọn dẹp phụ**: đổi tên file `bot-gateway/sql/08_upload_notify_queue_delete.sql` →
+`09_upload_notify_queue_delete.sql` vì trùng số với `08_gateway_group_chat_capture.sql` đã có sẵn từ
+trước (lỗi đặt tên của phiên trước, không phải lỗi chức năng).
+
 ## ✅ BUILD XONG + AUDIT PASS (09/09/2026, phiên tiếp 14) — Xóa file OneDrive vừa upload + thu hồi tin forward
 
 Build xong cả 4 stage, publish, audit độc lập PASS toàn bộ. **CHỈ CÒN CHỜ user**: (1) dán token Zalo

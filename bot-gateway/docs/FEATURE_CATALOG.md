@@ -91,7 +91,7 @@ workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
 | `SQL - Backup System (n8n + Postgres)` (`iVtOA9LEtjpLDkln`) | Backup n8n + Postgres lên OneDrive; `/backup_*` trả lời trực tiếp admin, chạy tự động Chủ nhật 2h sáng báo vào nhóm topic 6 | @elite_n8n_system_bot (báo kết quả) | 2026-09-08, định tuyến nhóm/topic 09/09 |
 | `GW Error Handler` (`34ccboHpyoY2r691`) | Bắt lỗi từ MỌI workflow khác (`errorWorkflow` setting), báo vào nhóm topic 4 + ghi `gateway.error_logs` | Nhóm hệ thống, topic 4 | 2026-09-03, ghi DB+định tuyến topic 09/09 |
 | **`GW Crawl Bot - Group Capture`** (`SNNrXneenXVnLHh6`) | Bot riêng (`Elite Crawl Bot`) lắng nghe MỌI tin nhắn thường trong nhóm bot có mặt, ghi vào `gateway.group_chat_log` (giữ 14 ngày) — nền tảng cho `/lichsu`/`/timkiem`/`/sum` | Ghi log âm thầm, không phản hồi user | 2026-09-09 |
-| **`GW Daily Chat Summary`** (`ElSGQgdHPMtrzwME`) | Chạy 1h sáng mỗi ngày: tóm tắt `group_chat_log` của từng nhóm bằng AI (DeepSeek) → `gateway.daily_chat_summary` (giữ 365 ngày); kèm dọn dữ liệu cũ tự động | AI tóm tắt, không gửi Telegram trực tiếp (dữ liệu được `/lichsu`/`/sum` đọc lại) | 2026-09-09 — build xong, CHƯA test qua Telegram thật lượt nào |
+| **`GW Daily Chat Summary`** (`ElSGQgdHPMtrzwME`) | Chạy 1h sáng mỗi ngày: tóm tắt `group_chat_log` của từng nhóm bằng AI (DeepSeek) → `gateway.daily_chat_summary` (giữ 365 ngày); kèm dọn dữ liệu cũ tự động | AI tóm tắt, không gửi Telegram trực tiếp (dữ liệu được `/lichsu`/`/sum` đọc lại) | 2026-09-09 build → 10/09 fix 2 bug thật (lệch múi giờ + queryBatching), xác nhận chạy thật ra kết quả đúng — CHƯA test đường đọc lại `/lichsu`/`/sum` qua Telegram |
 
 ## 6. Bot/bot_key CHƯA hoàn thiện (placeholder, đã khai báo route nhưng chưa gắn workflow thật)
 
