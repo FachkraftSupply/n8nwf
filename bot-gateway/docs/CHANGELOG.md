@@ -4,6 +4,11 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 26) — Cập nhật /help: thêm 2 nút xóa file + link timkiem
+
+Node `Nội dung lệnh help` (`Telebot ClickUp Reader`) chưa nhắc "🗑️ Xóa file vừa upload"/"🗑️ Xóa & thu
+hồi" (phiên tiếp 14) và link "Xem gốc" của `/timkiem` (phiên tiếp 16). Đã bổ sung, publish, verify.
+
 ## 2026-09-10 (tiếp 25) — Link tin nhắn gốc cho /lichsu + /timkiem (admin + user), bỏ capture media
 
 - `GW Crawl Bot - Group Capture`: bỏ capture tin nhắn media/file (chỉ giữ text thuần).

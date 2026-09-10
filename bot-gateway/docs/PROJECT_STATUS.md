@@ -58,6 +58,14 @@ toàn bộ bot cho mọi user).
 > con số bạn nhớ — ĐỪNG cho là mình nhớ nhầm, hãy đọc lại file này (bản mới nhất trên GitHub, không
 > tin bộ nhớ hội thoại) trước khi sửa tiếp.
 
+## ✅ SỬA XONG (10/09/2026, phiên tiếp 17) — Cập nhật `/help` thiếu 2 nút xóa file + link timkiem
+
+Task được đẩy qua từ 1 phiên chat khác (không có quyền truy cập thư mục dự án/n8n MCP tools) nhờ xử
+lý hộ. Node `Nội dung lệnh help` (`Telebot ClickUp Reader`) đã thiếu 2 nút xóa file (build phiên tiếp
+14) và chưa nhắc link "Xem gốc" mới ở `/timkiem` (phiên tiếp 16). Đã cập nhật đầy đủ text, publish
+(`activeVersionId: 069b1f99-3e1e-4b9b-9054-f7a65fdc030e`), verify wiring `Switch → Nội dung lệnh help
+→ help` không đổi.
+
 ## ✅ BUILD XONG + CHỜ AUDIT (10/09/2026, phiên tiếp 16) — Link tin nhắn gốc trong `/lichsu`/`/timkiem` + bỏ capture media
 
 **Yêu cầu user**: (1) lưu link tới tin nhắn gốc để `/lichsu` hiện link chủ đề bắt đầu, `/timkiem` hiện
