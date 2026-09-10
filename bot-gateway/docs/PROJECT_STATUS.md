@@ -136,9 +136,14 @@ thật phát hiện vấn đề (khả năng cao nhất nằm ở rủi ro #1 d�
   `SWITCH_FALLBACK_OUTPUT_DISABLED` xác nhận đúng là false-positive, cả 2 chuỗi `od_del`/`od_delfwd`,
   cách xử lý Zalo (gửi tin mới, không gọi API xóa không có thật), `onError`/`alwaysOutputData` đúng
   vị trí, không có `replyMarkup` động, `final_name` được escape HTML đúng chỗ). Không tìm thấy bug
-  thật nào. 1 góp ý nhỏ không bắt buộc: `OD Del: Reply Error`/`OD Delfwd: Reply Error` dùng `$json.chatId`
-  trần thay vì tham chiếu tường minh qua tên node như các node Reply Success khác — hợp lệ theo Rule #2
-  (IF đứng ngay trước, 1 item) nhưng khác style, có thể sửa sau nếu muốn, không ảnh hưởng chức năng.
+  thật nào. Góp ý style nhỏ đã được sửa (10/09/2026, publish `activeVersionId:
+  8fa4f989-af67-488c-81af-7d75ba27cd30`): `OD Del: Reply Error`/`OD Delfwd: Reply Error` đổi từ
+  `$json.chatId` trần sang tham chiếu tường minh `$('...Build Result').item.json.chatId` cho nhất
+  quán với các node Reply Success — chỉ là polish, không đổi hành vi (bản cũ vẫn đúng vì IF không
+  biến đổi data).
+  **Kiểm tra execution thật (10/09/2026)**: đã xem log execution hôm nay — user mới upload thử 2
+  file (`Genehmigung der HWK.pdf`), CHƯA bấm nút forward hay nút xóa nào — tính năng xóa/thu hồi
+  VẪN CHƯA được test thật.
   **2 rủi ro CHƯA kiểm chứng được bằng test giả lập (RULES.md #21 mở rộng)**, chỉ xác nhận được qua
   Telegram thật:
   1. `OD Fwd: Extract Send Result` giả định response của node Telegram `Send Forward Message` có
