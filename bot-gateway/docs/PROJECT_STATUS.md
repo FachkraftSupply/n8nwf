@@ -59,11 +59,19 @@ cần người thật can thiệp.
   **Đã test bằng `test_workflow`+pin data 2 kịch bản**: (1) `@@all` với 2 user giả (có/không có
   username) → text mention đúng cả 2 dạng; (2) tên nhóm không tồn tại + 0 kết quả → đúng như thiết
   kế, KHÔNG gửi gì (nhánh false của IF), im lặng bỏ qua.
-  **Rủi ro CHƯA kiểm chứng được** (như RULES.md #21 — `test_workflow` pin hết node Postgres/Telegram
-  nên KHÔNG chạy câu SQL thật): câu SQL `Resolve Mention Users` (UNION ALL + DISTINCT ON + `ANY($2::
-  text[])`) chưa được chạy thật lần nào — cú pháp đã rà kỹ bằng tay, tự tin đúng, nhưng CẦN xác nhận
-  bằng 1 lần `@@all` thật qua Telegram sau khi nối xong Crawl Bot (bước tiếp theo) trước khi coi là
-  an toàn 100%.
+- ✅ **Hook `@@` vào `GW Crawl Bot - Group Capture`** — publish `activeVersionId:
+  c15976cb-142b-4f34-b981-37c10f227976`. `Build Envelope` thêm `mentionTokens` (regex `@@(\w+)`,
+  lowercase, dedupe), KHÔNG đổi field ghi log cũ. Fan-out song song: ghi log (như cũ) + IF
+  `Has Mention Tokens?` → `Trigger Mention Resolver` (Execute Workflow, `waitForSubWorkflow:false`,
+  `onError:continueRegularOutput` — lỗi ở resolver KHÔNG làm hỏng việc ghi log chính). Verify wiring
+  đầy đủ qua `get_workflow_details` trước khi publish.
+
+**⚠️ Rủi ro CHƯA kiểm chứng được** (như RULES.md #21 — `test_workflow` pin hết node Postgres/Telegram
+nên KHÔNG chạy câu SQL thật, Telegram Trigger cũng không execute được qua MCP): câu SQL
+`Resolve Mention Users` (UNION ALL + DISTINCT ON + `ANY($2::text[])`) và toàn bộ chuỗi `@@all` CHƯA
+chạy thật lần nào — cú pháp đã rà kỹ bằng tay, tự tin đúng, nhưng **CẦN 1 tin nhắn `@@all` thật gõ
+trong nhóm Telegram có Elite Crawl Bot để xác nhận** — đây là điểm dừng cần người thật. Sẽ build tiếp
+2 stage còn lại (không cần test thật ngay) trước khi báo điểm dừng này cho user.
 
 ### Stage CHƯA làm (làm tiếp theo đúng thứ tự):
 
