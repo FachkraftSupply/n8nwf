@@ -4,6 +4,59 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🚧 ĐANG BUILD DỞ (10/09/2026, phiên tiếp 20) — Tính năng Mention Group (`@@nhóm`/`@@all`)
+
+**QUAN TRỌNG NẾU ĐỌC LẠI Ở PHIÊN MỚI**: đang xây dở, chia stage như mọi lần lớn trước — đọc "Stage
+đã xong" trước khi tiếp tục, ĐỪNG build lại từ đầu.
+
+**Yêu cầu user**: admin tạo "nhóm mention" (danh sách user đặt tên) qua `/tao_group`; gán/gỡ user vào
+nhóm qua mở rộng `/user_list` có sẵn; user thường gõ `@@<tên nhóm>` trong 1 nhóm Telegram → bot
+mention tất cả user trong nhóm mention đó; `@@all` → mention tất cả user đã từng nhắn trong group đó.
+User yêu cầu tách hẳn logic xử lý mention sang 1 SUB-WORKFLOW riêng để nhẹ, tối ưu, tự làm tới khi
+cần người thật can thiệp.
+
+**Thiết kế đã chốt** (dựa trên research thật qua subagent đọc live workflow, không đoán):
+- **2 bảng mới**: `gateway.mention_groups` (id, group_key UNIQUE, label, created_by, created_at),
+  `gateway.mention_group_members` (group_id FK, user_id, PK kép). KHÔNG dual-write Supabase (đã biết
+  dual-write hiện đang trỏ nhầm cùng credential Docker, vô nghĩa — bỏ hẳn cho gọn, đúng tinh thần
+  "tối ưu nhẹ nhất" user yêu cầu).
+- **`/tao_group <tên>`** (Admin System, bot System, KHÔNG qua Gateway) — lệnh 1 phát ăn ngay, KHÔNG
+  cần multi-turn hỏi-đáp (tránh phải build thêm bảng pending_state chỉ cho 1 lệnh admin ít dùng).
+- **Mở rộng `/user_list`**: thêm nút "🏷️ Nhóm mention" vào panel chi tiết user có sẵn (`Send Detail
+  Panel`) → mở panel MỚI liệt kê tất cả mention_groups dạng nút toggle (✅ đã có / ➕ chưa có), bấm
+  1 nút = INSERT/DELETE luôn (1 câu SQL kiểu CTE delete-if-exists-else-insert, "đi nhờ" 1 round-trip
+  theo đúng Rule #11) rồi refresh lại panel — TÁI SỬ DỤNG NGUYÊN VẸN pattern "toggle rồi refresh
+  panel tại chỗ" đã có sẵn cho phần cấp/xóa quyền bot (`ga:`/`rv:`), không phát minh lại UI mới.
+- **Sub-workflow MỚI `GW Mention Resolver`** (Execute Workflow Trigger, gọi từ `GW Crawl Bot - Group
+  Capture`): nhận `{chatId, messageId, messageThreadId, tokens}` → tách `all` vs tên nhóm cụ thể →
+  query đúng bảng tương ứng → build danh sách mention (ưu tiên `@username`, fallback `tg://user?id=`
+  cho user không có username) → gửi reply bằng CHÍNH credential `Elite Crawl Bot` (bot này đã có mặt
+  sẵn trong nhóm, Privacy Mode đã tắt sẵn — xác nhận qua research, không cần bot mới/đổi quyền gì).
+  **`@@all` = mention mọi user ĐÃ TỪNG nhắn tin trong group đó** (lấy từ `gateway.group_chat_log`,
+  KHÔNG phải member list thật của Telegram — Bot API không cho bot thường lấy danh sách member đầy
+  đủ của group lớn, đây là cách khả thi duy nhất không cần quyền admin group).
+- **Hook phát hiện trong `GW Crawl Bot - Group Capture`**: `Build Envelope (Crawl) + Filter Group`
+  thêm regex tách token `@@\w+` từ `message_text` (không đổi hành vi ghi log hiện có) → nếu có token
+  → gọi `GW Mention Resolver` qua Execute Workflow (fire-and-forget, `waitForSubWorkflow: false`,
+  đúng pattern đã dùng cho backup/reconcile) SONG SONG với việc ghi log bình thường, không chặn nhau.
+  Token `@@xxx` KHÔNG khớp nhóm nào đã tạo → im lặng bỏ qua (không spam báo lỗi cho gõ nhầm/tình cờ).
+- **KHÔNG cần sửa Gateway** (`GW Gateway - Telegram`) — cả `/tao_group` (bot System, own trigger) lẫn
+  detect `@@` (bot Crawl, own trigger) đều KHÔNG đi qua Gateway/COMMAND_MAP, xác nhận qua research.
+
+### Stage đã xong: CHƯA CÓ — bắt đầu build ngay sau khi ghi status này.
+
+### Thứ tự build dự kiến (cập nhật ngay sau mỗi stage):
+1. Tạo file SQL lịch sử schema + build DDL "Ensure" node.
+2. Build `GW Mention Resolver` (workflow mới, độc lập, test qua `execute_workflow` thật với dữ liệu
+   nhóm/tin nhắn có sẵn từ trước — có thể test khá trọn vẹn vì không cần tương tác admin).
+3. Hook `@@` detection vào `GW Crawl Bot - Group Capture` (removeNode+addNode node có sẵn, cẩn thận
+   Rule #16 vì đây là node đang chạy sống, không được làm gãy phần ghi log hiện tại).
+4. `/tao_group` trong `Telebot Admin System` (thêm route + node mới, sửa `Admin Extras Router`).
+5. Mở rộng `/user_list` (nút mới trên `Send Detail Panel` + panel toggle mới + route mới).
+6. Test toàn bộ qua Telegram thật (CẦN NGƯỜI THẬT — không tự động hóa được việc gõ `@@` trong nhóm
+   Telegram thật hoặc bấm nút `/user_list` thật) → đây là điểm dừng cần user can thiệp.
+7. Audit subagent độc lập cho toàn bộ tính năng (nhiều node, đụng 2 workflow + 1 workflow mới).
+
 ## 🔖 Bàn giao cuối phiên (10/09/2026, phiên tiếp 19) — dừng ở đây, mai làm tiếp
 
 Tất cả thay đổi trong ngày đã publish + commit/push GitHub đầy đủ, không có việc dở dang giữa chừng.
