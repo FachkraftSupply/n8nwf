@@ -4,6 +4,12 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-10 (tiếp 28) — Help text: phân biệt /sum vs /lichsu
+
+Thêm 1 dòng giải thích ngắn vào `/help` (chỉ bot user — `/sum` không tồn tại ở Admin System):
+`/sum` = xem nhanh tuần này của TẤT CẢ nhóm, không cần bấm gì thêm; `/lichsu` = tự chọn số ngày
+(1/3/5/7) và có thể xem riêng 1 nhóm.
+
 ## 2026-09-10 (tiếp 27) — Sửa /timkiem: cú pháp mới + tách nhánh song song + help text đầy đủ
 
 - `/timkiem <từ khóa>` giờ tìm trong TẤT CẢ nhóm (user: nhóm mình tham gia; admin: mọi nhóm), không
