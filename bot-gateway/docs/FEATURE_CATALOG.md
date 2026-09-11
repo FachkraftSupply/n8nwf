@@ -78,6 +78,10 @@ workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
 | 🗑️ Xóa hoàn toàn user | Xóa vĩnh viễn record user khỏi hệ thống, có bước xác nhận vì không thể hoàn tác | Callback `dl:<uid>` → panel xác nhận (✅/❌) → `dlc:<uid>` mới thực sự DELETE `bot_users`+`bot_permissions` (dual-write) | 2026-09-08 (tối, phiên 3) |
 | ⬅️ Quay lại danh sách | Điều hướng quay lại `/user_list` từ bất kỳ panel con nào | Callback `ub` | 2026-09-08 (tối) |
 | **`/version`** | Xem phiên bản hiện tại + các thay đổi gần nhất, link sang file này | Query bảng `gateway.changelog` (seed v1-v8), chỉ admin (`Check Admin (Version)`) | 2026-09-09 |
+| **`/tao_group <tên>`** | Tạo 1 "nhóm mention" mới (danh sách user đặt tên, dùng để `@@<nhóm>` mention hàng loạt) | INSERT `gateway.mention_groups` (slugify tên → `group_key`, chặn tên rỗng/trùng) | 2026-09-10 |
+| **`/xem_nhom`** | Xem danh sách nhóm mention (deep-link) → bấm 1 nhóm xem thành viên + 4 nút: ➕ Thêm người/➖ Xóa người/🗑️ Xóa nhóm/⬅️ Quay lại, nút ❌ Hủy riêng chỉ xóa tin không gửi gì thêm | 19 node, danh sách nhóm/người đều deep-link text (không dùng inline keyboard động, rút kinh nghiệm RULES.md #21); thêm/xóa dùng lại SQL toggle `Toggle Mention Membership`; xóa nhóm dựa FK `ON DELETE CASCADE` | 2026-09-11 |
+| 🏷️ Nhóm mention (nút trong panel chi tiết user, `/user_list`) | Gán/gỡ 1 user cụ thể khỏi các nhóm mention đã tạo, dạng danh sách deep-link ✅/➕ theo từng nhóm | Callback `mmenu:<uid>`/deep-link `mmenu_<uid>` → danh sách nhóm dạng text link `mgt_<uid>_<groupId>` → bấm = toggle ngay + refresh | 2026-09-10, đổi từ inline keyboard sang deep-link text 2026-09-11 (nút không hiện được do số nút động) |
+| `@@<tên nhóm>` / `@@all` (gõ trong group Telegram thường) | User thường gõ trong 1 nhóm có Elite Crawl Bot → bot mention tất cả user trong nhóm mention đó (`@@all` = tất cả ai đã từng nhắn trong đúng group đó) | Hook trong `GW Crawl Bot - Group Capture` → gọi sub-workflow `GW Mention Resolver` (không qua Gateway/COMMAND_MAP) | 2026-09-10 |
 
 ## 5. Workflow nền (không có lệnh Telegram trực tiếp, chạy tự động)
 
