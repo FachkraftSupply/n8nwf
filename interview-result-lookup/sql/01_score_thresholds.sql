@@ -28,6 +28,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS score_thresholds_default_uidx
   ON score_thresholds (scope)
   WHERE scope = 'default';
 
+-- RLS: chỉ service_role (n8n dùng credential supabaseApi = service_role) được đọc/ghi, giống
+-- policy hiện có trên bảng interview_evaluations. Không cấp quyền cho anon/authenticated.
+ALTER TABLE score_thresholds ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS service_role_full_access ON score_thresholds;
+CREATE POLICY service_role_full_access ON score_thresholds
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
 -- Seed dữ liệu tương đương logic hardcode cũ (specialCompanies -> ngưỡng 5, còn lại -> ngưỡng 6).
 -- Node "Format tin nhắn kết quả" vẫn có fallback = 6 trong code nếu bảng này trống/thiếu dòng default.
 INSERT INTO score_thresholds (scope, scope_value, threshold, note) VALUES
