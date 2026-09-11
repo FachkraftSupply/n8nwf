@@ -4,6 +4,20 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ Fix help text bot user (11/09/2026, phiên tiếp 22)
+
+User báo `/help` bên bot chính (user, `Telebot ClickUp Reader`, node "Nội dung lệnh help") "chưa chia
+nhóm để hướng dẫn và chưa có tiếng việt". Kiểm tra ra 2 lỗi thật: (1) toàn bộ chữ Việt viết KHÔNG DẤU
+("Danh sach lenh" thay vì "Danh sách lệnh"); (2) emoji bị viết sai thành escape kiểu Python
+`\U0001F4D8` (không phải cú pháp unicode hợp lệ trong JS) → khi gửi thật, user thấy chữ thô
+"U0001F4D8..." thay vì icon 📘/👉/💬 — text nhìn rất lộn xộn, giải thích đúng cảm nhận "chưa có tiếng
+việt" của user. Đã viết lại toàn bộ: emoji UTF-8 thật nhúng trực tiếp, có dấu đầy đủ, chia 5 mục rõ
+ràng (1️⃣ Tìm task, 2️⃣ Lịch sử chat, 3️⃣ Mention nhóm — MỚI THÊM vì user thường cũng gõ được
+`@@all`/`@@<nhóm>`, chưa từng được ghi trong help cũ, 4️⃣ Upload OneDrive, 5️⃣ Sau khi forward). Giữ
+nguyên toàn bộ placeholder dạng `&lt;...&gt;` (escape HTML) để không dính lại đúng bug "Unsupported
+start tag" vừa fix ở mục dưới. Đối chiếu: help bên bot Admin (`Telebot Admin System`) không bị lỗi
+này (emoji/dấu đều ổn từ trước), chỉ bot user bị. Publish xong, verify `versionId`==`activeVersionId`.
+
 ## ✅ FIX BUG THẬT + MỞ RỘNG tính năng Mention Group (11/09/2026, phiên tiếp 21)
 
 User test thật qua Telegram phát hiện đúng rủi ro đã cảnh báo ở phiên trước ("🏷️ Nhóm mention" —
@@ -55,6 +69,10 @@ thật (`eWtu7Qs85Hes0HuP`, execution #1882) ra 2 lỗi:
 **Cần user test lại thật qua Telegram** (lần trước không test được vì bug #1/#2 chặn ngay từ đầu):
 bấm lại "🏷️ Nhóm mention" trong `/user_list` xem nút toggle hiện đúng chưa, và gõ `@@<tên nhóm>`
 trong 1 group có/không có thành viên nhóm đó từng nhắn để xác nhận filter mới hoạt động đúng.
+
+**⏳ User chủ động dời việc test này lại ~1 tuần** (hẹn 18/09/2026) để có đủ dữ liệu chat thật trong
+nhóm trước khi test filter "chỉ mention người đã từng nhắn trong đúng group" — KHÔNG phải do bug hay
+vướng mắc, chỉ là chờ đủ data. Phiên sau nhắc lại đúng 3 việc cần test ở trên nếu user quên.
 
 ## ✅ BUILD XONG, CHỜ AUDIT + TEST THẬT (10/09/2026, phiên tiếp 20) — Tính năng Mention Group (`@@nhóm`/`@@all`)
 

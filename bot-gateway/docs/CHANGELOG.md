@@ -4,6 +4,14 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 32) — Fix help text bot user: mất dấu tiếng Việt + emoji hỏng
+
+`/help` bên bot chính (user) bị 2 lỗi thật: chữ Việt không dấu, và emoji viết sai thành escape kiểu
+Python (`\U0001F4D8`, không hợp lệ trong JS) nên gửi ra hiện chữ thô thay vì icon. Viết lại toàn bộ
+với emoji UTF-8 thật, đủ dấu, chia 5 mục rõ ràng, thêm mục mới hướng dẫn `@@all`/`@@<nhóm>` (tính
+năng user cũng dùng được, help cũ chưa từng nói tới). Giữ nguyên escape `&lt;...&gt;` cho placeholder
+để không dính lại bug "Unsupported start tag" ở mục dưới. Help bên bot Admin không bị lỗi này.
+
 ## 2026-09-11 (tiếp 31) — Fix bug thật Mention Group (menu gửi lỗi 100%) + filter theo group thật
 
 User test thật phát hiện đúng rủi ro "chưa verify" của bản build hôm trước là bug có thật: bấm
