@@ -4,6 +4,58 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ FIX BUG THẬT + MỞ RỘNG tính năng Mention Group (11/09/2026, phiên tiếp 21)
+
+User test thật qua Telegram phát hiện đúng rủi ro đã cảnh báo ở phiên trước ("🏷️ Nhóm mention" —
+dynamic keyboard chưa test thật) là BUG THẬT, không phải chỉ "chưa xác nhận". Đọc execution log lỗi
+thật (`eWtu7Qs85Hes0HuP`, execution #1882) ra 2 lỗi:
+
+1. **`Send Mention Menu` gửi thất bại 100%**: Telegram trả lỗi "Bad Request: can't parse entities:
+   Unsupported start tag "tên"" — do text gợi ý "Dùng /tao_group **&lt;tên&gt;** để tạo mới" có dấu
+   `<>` thật, bị Telegram hiểu là HTML tag lạ (vì message gửi `parse_mode: HTML`). Fix: đổi thành
+   "ten_nhom" (không dấu ngoặc).
+2. **`inlineKeyboard.rows` không dynamic được** — phiên trước thử 2 cách (a) để cả field `inlineKeyboard`
+   thành 1 string expression, và (b) chỉ để riêng field con `rows` thành string expression trong khi
+   `inlineKeyboard` vẫn là object. Cách (b) được chọn dùng (vì validator ít phàn nàn hơn) và **publish
+   rồi** — nhưng log lỗi thật cho thấy node vẫn resolve ra đúng cấu trúc CŨ (17 hàng rỗng tĩnh từ lúc
+   scaffold ban đầu), tức cách (b) KHÔNG hoạt động ở runtime dù save/validate không báo lỗi gì bất
+   thường. Đây là bằng chứng thật đầu tiên trong dự án này cho biết: field con kiểu `array` (như
+   `rows`) NẰM TRONG 1 fixedCollection object KHÔNG được resolve expression đúng — phải để CẢ field
+   cha (`inlineKeyboard`) thành 1 string expression (cách a) thì mới chạy đúng. Đã đổi lại về cách
+   (a): `inlineKeyboard: "={{ { rows: $json.rows } }}"`, verify lại bằng `get_workflow_details` xác
+   nhận đã lưu đúng dạng string (không bị nested-path bug của Rule #16), publish lại
+   (`activeVersionId: 8e5a8a0c-d8cc-4844-b5e8-82dd452b9174`).
+   - **Phát hiện phụ quan trọng**: lúc đọc lại workflow để debug, thấy `versionId` (draft) khác
+     `activeVersionId` (live) — nghĩa là ít nhất 1 lần ở phiên trước, sửa xong QUÊN publish (hoặc bị
+     phiên khác/song song ghi đè draft sau khi publish). Từ nay: LUÔN diff `versionId` vs
+     `activeVersionId` sau mỗi `get_workflow_details`, không chỉ tin `publish_workflow` trả
+     `success:true` một lần là xong.
+3. **Trả lời câu hỏi user "chỉ mention người bot ghi nhận thôi phải không?"** — ĐÚNG, đây là thiết kế
+   có chủ đích từ đầu (không phải bug): Bot Telegram thường không có quyền lấy full member list của
+   group lớn, nên `@@all`/`@@<nhóm>` chỉ mention được người đã có ít nhất 1 dòng trong
+   `gateway.group_chat_log` (tức đã từng nhắn chữ trong group đó) — thành viên im lặng chưa từng nhắn
+   sẽ không bị mention được. Đã giải thích lại cho user, không có gì để fix.
+4. **Trả lời câu hỏi "/tao_group + /user_list chỉ bot Admin dùng được đúng không?"** — ĐÚNG, toàn bộ
+   quản lý nhóm mention (tạo nhóm, thêm/xóa thành viên) đi qua `Admin Extras Router` /
+   `Switch (Admin Extras)` trong `Telebot Admin System`, chỉ Telegram Trigger của bot Admin (System
+   Bot) mới bắn vào router này — bot chính (user) không có route nào tới các lệnh này. Ngược lại,
+   việc GÕ `@@<nhóm>`/`@@all` để KÍCH HOẠT mention là ở group chat thường, qua `GW Crawl Bot - Group
+   Capture` (không qua router Admin) — ai gõ trong group cũng kích hoạt được, không cần quyền admin.
+5. **Ý tưởng mới của user: nhóm mention "universal" (dùng chung mọi group) nhưng chỉ mention người
+   THỰC TẾ có mặt trong group đang gõ lệnh** — đánh giá KHẢ THI, đã tự triển khai draft để user đánh
+   giá: sửa `Resolve Mention Users` trong `GW Mention Resolver` (nhánh named-group) thêm điều kiện
+   `EXISTS (SELECT 1 FROM gateway.group_chat_log gcl WHERE gcl.chat_id=$1 AND gcl.user_id=bu.user_id)`
+   — tái dùng đúng tín hiệu "đã từng nhắn trong group này" mà `@@all` đang dùng, thay vì lấy toàn bộ
+   thành viên global của nhóm mention. Publish rồi (`activeVersionId: 4be88e1a-72ac-49d0-a72a-e1877b2df209`).
+   **Giới hạn cố hữu (không tránh được)**: vẫn chỉ nhận diện được người ĐÃ NHẮN chữ trong group đó ít
+   nhất 1 lần — không phải danh sách member Telegram thật (Bot API không cho lấy đầy đủ member list
+   nhóm lớn mà không cần quyền admin đặc biệt). Nếu user join nhóm nhưng chưa từng nhắn gì, sẽ không
+   được mention dù có trong nhóm mention và đang ở trong group đó thật.
+
+**Cần user test lại thật qua Telegram** (lần trước không test được vì bug #1/#2 chặn ngay từ đầu):
+bấm lại "🏷️ Nhóm mention" trong `/user_list` xem nút toggle hiện đúng chưa, và gõ `@@<tên nhóm>`
+trong 1 group có/không có thành viên nhóm đó từng nhắn để xác nhận filter mới hoạt động đúng.
+
 ## ✅ BUILD XONG, CHỜ AUDIT + TEST THẬT (10/09/2026, phiên tiếp 20) — Tính năng Mention Group (`@@nhóm`/`@@all`)
 
 **Đã build + publish TOÀN BỘ 5 stage** (schema, `GW Mention Resolver`, hook Crawl Bot, `/tao_group`,

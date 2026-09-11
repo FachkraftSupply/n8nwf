@@ -4,6 +4,27 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 31) — Fix bug thật Mention Group (menu gửi lỗi 100%) + filter theo group thật
+
+User test thật phát hiện đúng rủi ro "chưa verify" của bản build hôm trước là bug có thật: bấm
+"🏷️ Nhóm mention" trong `/user_list` không hiện nút gì. Đọc execution log lỗi thật của
+`Telebot Admin System` ra 2 nguyên nhân: (1) text gợi ý "/tao_group <tên>" chứa dấu `<>` thật bị
+Telegram HTML parser (`parse_mode: HTML`) hiểu nhầm là tag lạ → toàn bộ message lỗi 400, không gửi
+được gì hết — sửa bỏ dấu ngoặc. (2) Cách set `inlineKeyboard.rows` = string expression (field CON
+trong 1 object) mà bản trước chọn dùng KHÔNG hoạt động ở runtime (node vẫn resolve ra 17 hàng rỗng
+tĩnh từ lúc scaffold, dù save/publish không báo lỗi) — đổi sang set CẢ field `inlineKeyboard` = 1
+string expression (`={{ { rows: $json.rows } }}`), verify lại qua `get_workflow_details` xác nhận
+đã lưu đúng, publish lại. Phát hiện phụ: `versionId` (draft) từng lệch `activeVersionId` (live) ở
+workflow này — nghĩa là 1 lần sửa trước có publish nhưng bản live không khớp bản vừa sửa; từ nay
+luôn diff 2 giá trị này sau mỗi lần sửa, không chỉ tin `publish_workflow` trả `success:true`.
+
+Ngoài ra, theo yêu cầu mới của user (nhóm mention "universal" dùng chung mọi group, nhưng chỉ
+mention người thật có mặt trong group đang gõ lệnh): sửa `Resolve Mention Users` trong
+`GW Mention Resolver`, nhánh named-group thêm `EXISTS (... gateway.group_chat_log WHERE
+chat_id=$1 AND user_id=bu.user_id)` — tái dùng tín hiệu "đã từng nhắn trong group này" mà `@@all`
+đã dùng, thay vì lấy toàn bộ member global của nhóm mention. Giới hạn cố hữu: vẫn chỉ nhận diện
+được người ĐÃ NHẮN chữ trong group đó ít nhất 1 lần, không phải member list Telegram thật.
+
 ## 2026-09-10 (tiếp 30) — Build tính năng Mention Group (@@nhóm/@@all) — 3 workflow
 
 Admin tạo "nhóm mention" (danh sách user đặt tên) qua `/tao_group <tên>`; gán/gỡ user qua nút mới
