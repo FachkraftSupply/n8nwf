@@ -73,6 +73,24 @@ màn hình, xác nhận thêm/xóa người đúng, xóa nhóm đúng (nhóm bi�
 ("✅ Không có thao tác nào đang chờ để hủy.") có thể hơi khó hiểu trong ngữ cảnh vừa hủy 1 thao tác
 thêm/xóa người/xóa nhóm cụ thể — không phải bug, chỉ là câu chữ hơi chung chung.
 
+**✅ Cập nhật theo yêu cầu user (11/09/2026, cùng phiên)**:
+1. **Nút ❌ Hủy tách riêng** thành route `mgcancel` (route mới `mention_cancel`) CHỈ dùng cho 4 màn hình
+   `/xem_nhom` — không còn dùng chung `admin_cancel`/`Reply Cancelled (Admin)` nữa. Route mới là
+   "dead-end" có chủ đích trong `Switch (Admin Extras)` (output 25, không nối đi đâu cả) — tin cũ đã tự
+   xóa nhờ cơ chế toàn cục `Delete Old Panel Message` (chạy TRƯỚC MỌI callback, không điều kiện), sau
+   đó KHÔNG gửi thêm tin gì → bấm Hủy = tin biến mất, sạch sẽ, không còn dòng "Không có thao tác nào
+   đang chờ" gây khó hiểu. **Đã test kỹ phần logic** qua `test_workflow` chạy THẬT (không phải đoán):
+   xác nhận `Delete Old Panel Message` chạy thật không điều kiện, `Switch (Admin Extras)` route đúng
+   output 25, không node nào chạy tiếp sau đó — đúng thiết kế "chỉ xóa, không gửi gì thêm". Giới hạn
+   còn lại: bản thân API call `deleteMessage` thật KHÔNG test được qua MCP (Telegram node luôn bị pin
+   trong `test_workflow`, đúng RULES.md #21) — cần user xác nhận cuối bằng cách bấm thật.
+2. **Bug thật**: user báo danh sách "Thêm người" hiện `user_id` thô thay vì tên — nguyên nhân: 3 câu
+   SQL mới (`Mention Group View/Add/Remove Query`) chỉ SELECT `username` (thường NULL vì không phải
+   ai cũng đặt `@username` công khai), bỏ sót cột `display_name` — trong khi quy ước cũ của dự án
+   (`/user_list`) luôn ưu tiên `display_name || username || user_id`. Đã sửa cả 3 query + 3 Code node
+   hiển thị cho đồng nhất với quy ước cũ, verify + publish (`activeVersionId:
+   839d2527-0e6c-42d2-9b49-d72e68e47194`).
+
 ## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 37) — Bug thật: nút "🏷️ Nhóm mention" không hiện nút
 
 User báo sau khi `/user_list` → bấm "🏷️ Nhóm mention", chỉ nhận được 1 tin nhắn có tiêu đề, KHÔNG có

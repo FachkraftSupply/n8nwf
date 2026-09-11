@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 39) — `/xem_nhom`: nút Hủy riêng (dead-end route) + fix hiện user_id thay vì tên
+
+Theo yêu cầu user: (1) tách nút "❌ Hủy" ở `/xem_nhom` thành route riêng `mgcancel`→`mention_cancel`,
+KHÔNG dùng chung `admin_cancel` nữa — route mới là dead-end có chủ đích trong `Switch (Admin Extras)`
+(output 25, không nối node nào) vì cơ chế `Delete Old Panel Message` đã chạy TRƯỚC MỌI callback không
+điều kiện từ trước — bấm Hủy giờ chỉ xóa tin, không gửi thêm gì, hết luôn dòng "Không có thao tác nào
+đang chờ" gây khó hiểu. **Test kỹ bằng `test_workflow` chạy thật** (không đoán): execution xác nhận
+`Delete Old Panel Message` chạy thật không điều kiện, `Switch` route đúng output 25, dừng sạch không
+lỗi. Giới hạn còn lại: API `deleteMessage` thật không test được qua MCP (Telegram node luôn bị pin).
+(2) Bug thật: `Mention Group View/Add/Remove Query` chỉ SELECT `username` (thường NULL), bỏ sót
+`display_name` — trong khi quy ước cũ của dự án (`/user_list`) ưu tiên `display_name || username ||
+user_id`. Đã sửa đồng bộ cả 3 query + 3 Code node build text. Phát hiện phụ lúc sửa: quên nối lại
+connection Query→Build sau khi `removeNode`+`addNode` (đúng bài học Rule #16 — dễ quên nối lại), tự
+phát hiện qua `validationWarnings` (`DISCONNECTED_NODE`) trước khi publish, sửa ngay. Publish
+`activeVersionId: 839d2527-0e6c-42d2-9b49-d72e68e47194`.
+
 ## 2026-09-11 (tiếp 38) — Lệnh mới `/xem_nhom` — quản lý đầy đủ nhóm mention (xem/thêm/xóa người/xóa nhóm)
 
 19 node mới, build 4 batch nhỏ (verify riêng từng batch): danh sách nhóm + danh sách người (thêm/xóa)
