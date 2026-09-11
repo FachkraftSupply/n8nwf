@@ -4,6 +4,26 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ⏳ Chờ user tắt Privacy Mode trên BotFather — `/tomtat` (11/09/2026, phiên tiếp 23)
+
+User báo gõ `/tomtat` (ảnh kèm caption) trong nhóm "Elite Nhà cửa" không có phản hồi gì. Đọc log
+thật + ảnh chụp danh sách thành viên nhóm xác nhận nguyên nhân gốc: bot `ClickupElite`
+(`@Elite_clickup_bot`, workflow `GW Gateway - Telegram (DEV)`) đang **Privacy Mode BẬT** trên
+BotFather → Telegram KHÔNG chuyển tiếp ảnh-kèm-caption-lệnh cho bot này (chỉ chuyển tin nhắn CHỮ
+thường bắt đầu bằng `/`), khớp đúng badge "has no access to messages" trong ảnh user gửi, và khớp
+việc Gateway không có execution nào ở đúng thời điểm đó.
+
+**Đã sửa trước ở phía workflow** (node `GW-01 Envelope`): thêm chặn sớm — trong group/supergroup,
+tin nhắn KHÔNG phải lệnh (`/xxx`, kiểm tra cả `text` lẫn `caption`) thì bỏ qua hoàn toàn, không
+chạy auth-check/audit-log/reply gì cả. Bước này BẮT BUỘC phải làm TRƯỚC khi tắt Privacy Mode, vì
+nếu không, sau khi tắt Privacy Mode bot sẽ nhận mọi tin nhắn trong nhóm → mọi thành viên CHƯA được
+cấp quyền sẽ bị bot trả lời công khai "bạn chưa có quyền..." NGAY TRONG GROUP mỗi khi họ nhắn bất kỳ
+câu gì (bug tiềm ẩn nghiêm trọng, tự phát hiện qua đọc code trước khi user gặp phải).
+
+**Việc còn lại CẦN USER làm thủ công qua BotFather** (không tự động hóa được, thao tác ngoài n8n):
+mở `@BotFather` → `/mybots` → chọn bot `ClickupElite` → *Bot Settings* → *Group Privacy* →
+**Turn off**. Sau đó `/tomtat`/`/xoanen` gửi kèm ảnh trong group sẽ hoạt động bình thường.
+
 ## ✅ Fix help text bot user (11/09/2026, phiên tiếp 22)
 
 User báo `/help` bên bot chính (user, `Telebot ClickUp Reader`, node "Nội dung lệnh help") "chưa chia

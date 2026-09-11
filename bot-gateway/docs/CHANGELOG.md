@@ -4,6 +4,19 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 33) — Gateway: chặn tin không phải lệnh trong group (chuẩn bị tắt Privacy Mode)
+
+Debug `/tomtat` không phản hồi trong nhóm "Elite Nhà cửa" ra nguyên nhân gốc ở tầng Telegram, không
+phải bug code: bot Gateway (`ClickupElite`) đang Privacy Mode BẬT nên Telegram không chuyển tiếp
+ảnh-kèm-caption-lệnh cho bot (chỉ chuyển text thường bắt đầu bằng `/`) — xác nhận qua ảnh member
+list ("has no access to messages") + Gateway hoàn toàn không có execution ở đúng thời điểm gửi.
+Cần user tắt Privacy Mode qua BotFather để fix triệt để, nhưng trước khi tắt phải sửa `GW-01
+Envelope` thêm chặn sớm: trong group, tin không phải lệnh thì bỏ qua hoàn toàn (không auth-check,
+không audit log, không reply) — nếu không, tắt Privacy Mode xong bot sẽ nhận MỌI tin nhắn trong
+nhóm và trả lời công khai "bạn chưa có quyền" cho mọi thành viên chưa duyệt mỗi khi họ nhắn bất kỳ
+gì, gây spam group. Đã publish phần sửa workflow; phần tắt Privacy Mode trên BotFather cần user
+thao tác thủ công (ngoài phạm vi n8n).
+
 ## 2026-09-11 (tiếp 32) — Fix help text bot user: mất dấu tiếng Việt + emoji hỏng
 
 `/help` bên bot chính (user) bị 2 lỗi thật: chữ Việt không dấu, và emoji viết sai thành escape kiểu
