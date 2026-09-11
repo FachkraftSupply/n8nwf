@@ -18,7 +18,13 @@ CREATE TABLE IF NOT EXISTS score_thresholds (
   )
 );
 
--- company/profession: mỗi giá trị chỉ 1 dòng (scope_value nên lưu sẵn dạng lowercase, trim)
+-- Cách so khớp trong node "Format tin nhắn kết quả": company so khớp CHÍNH XÁC (field company sạch,
+-- 1 giá trị/dòng). profession so khớp DẠNG CHỨA CHUỖI sau khi đã bỏ dấu (umlaut Đức, dấu tiếng Việt) +
+-- lowercase — vì field profession trong interview_evaluations thường là chuỗi ghép nhiều nghề, ví dụ
+-- "Koch/Köchin - Fleischer", "Fachverkäufer/in, flex", "Bäckerin". Xem sql/02_profession_thresholds.sql.
+
+-- company/profession: mỗi giá trị chỉ 1 dòng (scope_value nên lưu sẵn dạng lowercase, trim, KHÔNG dấu
+-- đối với profession vì code so khớp đã bỏ dấu)
 CREATE UNIQUE INDEX IF NOT EXISTS score_thresholds_scope_value_uidx
   ON score_thresholds (scope, scope_value)
   WHERE scope_value IS NOT NULL;
@@ -54,10 +60,8 @@ INSERT INTO score_thresholds (scope, scope_value, threshold, note) VALUES
   ('company', 'eltsht', 5, NULL)
 ON CONFLICT DO NOTHING;
 
--- Ví dụ cấu hình ngưỡng riêng theo nghề (bỏ comment và chỉnh giá trị khi cần dùng):
--- INSERT INTO score_thresholds (scope, scope_value, threshold, note)
--- VALUES ('profession', 'dieu duong', 6.5, 'Ngành Điều dưỡng yêu cầu ngưỡng cao hơn')
--- ON CONFLICT DO NOTHING;
+-- Ngưỡng theo nghề: xem sql/02_profession_thresholds.sql (fleischer, bäcker, làm bánh, flex,
+-- lebensmittelverarbeitung = 5.5).
 
 -- Tạm dừng 1 dòng ngưỡng (giữ lại lịch sử) mà không xoá:
 -- UPDATE score_thresholds SET active = false WHERE scope = 'company' AND scope_value = 'elmc';

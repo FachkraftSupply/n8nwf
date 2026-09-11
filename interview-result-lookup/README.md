@@ -67,13 +67,20 @@ total_score, final_score, situations (JSON string),
 detail_pronunciation, detail_listening, detail_content, detail_attitude, notes
 ```
 
-### Bảng Supabase `score_thresholds` (mới — xem `sql/01_score_thresholds.sql`)
+### Bảng Supabase `score_thresholds` (mới — xem `sql/01_score_thresholds.sql`, `sql/02_profession_thresholds.sql`)
 
 Cấu hình ngưỡng điểm "Đạt/Chưa đạt", chạy 1 lần trước khi import workflow (hoặc chạy lại an toàn — script dùng `IF NOT EXISTS`/`ON CONFLICT`):
 
 ```
 id, scope ('company'|'profession'|'default'), scope_value, threshold, note, active
 ```
+
+**Cách so khớp khác nhau giữa `company` và `profession`:**
+
+- `company`: field `company` trong `interview_evaluations` sạch, 1 giá trị/dòng → so khớp **chính xác** (đã lowercase + trim).
+- `profession`: field `profession` thường là chuỗi ghép nhiều nghề (vd `"Koch/Köchin - Fleischer"`, `"Fachverkäufer/in, flex"`, `"Bäckerin"`) → so khớp **dạng chứa chuỗi** sau khi đã **bỏ dấu** (umlaut tiếng Đức ä/ö/ü, dấu tiếng Việt) + lowercase. Vì vậy `scope_value` cho `profession` nên lưu **không dấu** (vd `backer` cho `Bäcker`, `lam banh` cho `Làm bánh`).
+
+Đã seed sẵn ngưỡng 5.5 cho nhóm nghề chế biến/làm bánh (`sql/02_profession_thresholds.sql`): `fleischer`, `backer` (Bäcker/Bäckerin), `lam banh`, `flex`, `lebensmittelverarbeitung` (chế biến thực phẩm).
 
 ## Cài đặt
 
@@ -106,9 +113,9 @@ VALUES ('company', 'elmc', 5, 'Đối tác ELMC')
 ON CONFLICT (scope, scope_value) WHERE scope_value IS NOT NULL
 DO UPDATE SET threshold = EXCLUDED.threshold, updated_at = now();
 
--- Set ngưỡng riêng cho 1 nghề
+-- Set ngưỡng riêng cho 1 nghề (scope_value KHÔNG DẤU, xem cách so khớp ở trên)
 INSERT INTO score_thresholds (scope, scope_value, threshold, note)
-VALUES ('profession', 'dieu duong', 6.5, 'Điều dưỡng yêu cầu cao hơn')
+VALUES ('profession', 'fleischer', 5.5, 'Nghề Fleischer (chế biến thịt)')
 ON CONFLICT (scope, scope_value) WHERE scope_value IS NOT NULL
 DO UPDATE SET threshold = EXCLUDED.threshold, updated_at = now();
 
@@ -133,6 +140,7 @@ UPDATE score_thresholds SET active = false WHERE scope = 'company' AND scope_val
 
 ## Changelog
 
+- **v1.3** — Sửa cách so khớp ngưỡng theo nghề: field `profession` thường ghép nhiều nghề trong 1 chuỗi (vd `"Koch/Köchin - Fleischer"`), so khớp exact bỏ sót các dòng này → đổi sang so khớp "chứa chuỗi" sau khi bỏ dấu. Seed ngưỡng 5.5 cho nhóm chế biến/làm bánh (Fleischer, Bäcker, làm bánh, Flex, Lebensmittelverarbeitung).
 - **v1.2** — Chuyển ngưỡng điểm "Đạt/Chưa đạt" từ hardcode (`specialCompanies` trong code) sang cấu hình trong bảng Supabase `score_thresholds`, hỗ trợ set riêng theo công ty hoặc theo nghề. Thêm node **"Supabase: Lấy ngưỡng điểm"**.
 - **v1.1** — Sửa lỗi nút chọn (2–5 kết quả) không gửi được do thiếu `callback_data`; thêm lệnh `/help`.
 - **v1.0** — Bản gốc: tra cứu theo tên/công ty, fuzzy match bằng AI Agent, format kết quả chi tiết.
