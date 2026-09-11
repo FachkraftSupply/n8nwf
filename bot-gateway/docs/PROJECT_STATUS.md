@@ -91,6 +91,32 @@ thêm/xóa người/xóa nhóm cụ thể — không phải bug, chỉ là câu 
    hiển thị cho đồng nhất với quy ước cũ, verify + publish (`activeVersionId:
    839d2527-0e6c-42d2-9b49-d72e68e47194`).
 
+## 🔖 DỞ DANG, dừng vì hết token (11/09/2026, phiên tiếp 40) — Artifact đối chiếu tính năng Admin/User
+
+User yêu cầu: lập 1 bảng so sánh chức năng bot Admin vs bot User để dễ tick test. Đã chọn giải pháp:
+Artifact HTML tương tác (không phải bảng markdown tĩnh) — dùng capability `artifact` để tick/ghi chú
+tự lưu lại, mở lại vẫn còn, có link riêng.
+
+**Đã làm xong**:
+1. Cập nhật `FEATURE_CATALOG.md` bổ sung 4 dòng còn thiếu (`/tao_group`, `/xem_nhom`, nút "🏷️ Nhóm
+   mention", `@@nhóm`/`@@all`) — **đã commit + push**.
+2. Viết xong file `bot-gateway/scratch_feature_matrix.html` (local, CHƯA commit — file scratch, không
+   nên đưa vào repo) — full HTML/CSS/JS: ~30 dòng tính năng lấy từ `FEATURE_CATALOG.md` (7 nhóm: Tra
+   cứu, Lịch sử chat, Upload OneDrive, Xử lý ảnh, Quản lý user, Nhóm mention, Vận hành), mỗi dòng có
+   badge User/Admin, checkbox "Đã test" (pre-tick sẵn cho các mục docs ghi rõ "test thật OK"), ô ghi
+   chú, bộ lọc (Tất cả/Cả 2 bot/Chỉ User/Chỉ Admin/Chưa test), thống kê tổng quan + progress bar. Đã
+   load skill `artifact-design` + `artifact-capabilities` trước khi viết, dùng `claude.use("artifact")`
+   để tự publish lại khi tick/ghi chú (debounce 400ms), có xử lý fallback khi capability không khả
+   dụng (tick tạm thời, không lưu).
+
+**Việc còn lại (phiên sau làm tiếp)**:
+1. Đọc lại `bot-gateway/scratch_feature_matrix.html`, kiểm tra 1 lượt (chưa xem preview lần nào).
+2. Publish qua tool `Artifact` (title ngắn gọn kiểu "Bot Feature Matrix", favicon 1-2 emoji, capability
+   `{artifact: {}}`), xem preview 1 lần, sửa nếu cần rồi publish lại — đúng quy trình "write, look once,
+   publish" của skill `artifact-design`.
+3. Sau khi publish thành công, xóa file scratch cục bộ (không cần giữ, nội dung đã nằm trong artifact).
+4. Gửi link cho user.
+
 ## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 37) — Bug thật: nút "🏷️ Nhóm mention" không hiện nút
 
 User báo sau khi `/user_list` → bấm "🏷️ Nhóm mention", chỉ nhận được 1 tin nhắn có tiêu đề, KHÔNG có
