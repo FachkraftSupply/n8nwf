@@ -4,6 +4,17 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 36) — Audit độc lập PASS + thêm comment SQL cho 1 caveat MVCC nhỏ
+
+Audit subagent thứ 2 (kiểm tra lại toàn bộ `GW Error Knowledge` + `Telebot Admin System` sau 2 lần sửa
+liên tiếp) PASS toàn bộ, không tìm bug mới nào đang xảy ra thật. Ghi chú duy nhất: `Errors: Mark
+Reported` có 2 CTE trong CÙNG 1 câu SQL (`updated` UPDATE + `stats` SELECT) — theo ngữ nghĩa Postgres,
+mọi CTE trong 1 câu `WITH` dùng chung 1 snapshot, nên `stats` không thấy được thay đổi `updated` vừa
+ghi TRONG CÙNG câu lệnh đó. Hiện KHÔNG sai (vì `open_cnt` tính gộp cả `'open'` lẫn `'reported'` là
+"còn mở", việc chuyển trạng thái không đổi con số) nhưng là bẫy tiềm ẩn nếu sau này tách riêng đếm
+2 trạng thái đó. Đã thêm comment SQL giải thích ngay trong node để phiên sau không bị bất ngờ, publish
+lại (`activeVersionId: 2a977928-6b08-4016-8420-bf247bdedbb8`).
+
 ## 2026-09-11 (tiếp 35) — Fix bug thật: `/help` (Admin) mất phản hồi do backtick thừa trong Code node
 
 User báo `/help` bên bot Admin không phản hồi gì ("menu help lại biến mất"). Tra execution log thật
