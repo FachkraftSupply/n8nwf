@@ -4,6 +4,48 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 34) — Nâng cấp `/error_logs`: fix knowledge base cho agent đọc lại
+
+Yêu cầu user: khi 1 lỗi được sửa xong, lưu lại vào Postgres kèm link execution + nội dung lỗi + cách
+sửa, để lần sau AI agent (Claude Code) đọc lại được thay vì phải debug lại từ đầu.
+
+**Workflow MỚI `GW Error Knowledge`** (`GSz6ZluGT5jCgdEc`, publish
+`activeVersionId: d79bd142-24d4-4d6c-9f03-8c209c7a0947`): Webhook POST
+`https://n8n.toididuhoc.net/webhook/gw-error-knowledge` (không xác thực — chấp nhận rủi ro thấp vì
+chỉ chứa mô tả lỗi/cách sửa nội bộ, không PII/tài chính) → `Normalize Input` → `Ensure Fix Columns`
+(ALTER 3 cột mới `fix_description`/`fixed_at`/`fixed_by` vào `gateway.error_logs`, idempotent,
+`alwaysOutputData`+`onError` đúng Rule #18) → `Switch (Action)` → `action:"search"` (tìm lỗi ĐÃ TỪNG
+được sửa khớp từ khóa trong workflow_name/node_name/error_message/fix_description) hoặc
+`action:"log_fix"` (UPDATE `status='fixed'`, ghi `fix_description`+`fixed_at`+`fixed_by` theo `id`).
+Gọi được qua n8n MCP `execute_workflow` (triggerNodeName `"From Webhook"`, vì `executeWorkflowTrigger`
+KHÔNG hỗ trợ gọi trực tiếp qua MCP — đã thử ban đầu, đổi sang Webhook mới chạy được) hoặc HTTP POST
+trực tiếp từ bất kỳ agent nào có mạng. **Đã test thật** (execution `2023`, `action:"search"` với từ
+khóa không khớp) — xác nhận DDL chạy thật, routing đúng, trả về 0 kết quả như thiết kế.
+
+**Mở rộng `/error_logs`+`/error_log_now`** (`Telebot Admin System`, publish
+`activeVersionId: 27ac63ad-9b8e-4121-a152-6a27c25cb691`): SQL của `Errors: Query Recent`/
+`Errors: Mark Reported` bọc thêm 1 CTE thống kê (`fixed_cnt`/`open_cnt`/`total_cnt` 7 ngày qua, CROSS
+JOIN vào mỗi dòng — tái dùng đúng pattern "1 câu SQL" Rule #11) + trả thêm cột `id`. 2 Code node
+`Errors: Build Report (Logs)`/`(Now)` hiện `id` từng lỗi trong tin nhắn, thêm dòng thống kê ✅ đã sửa/
+🔓 còn mở, và **prompt Claude Code nhúng sẵn giờ có thêm 2 bước mới**: TRƯỚC khi sửa 1 lỗi → gọi
+`GW Error Knowledge` với `action:"search"` xem đã có cách sửa biết trước chưa; SAU khi sửa xong (đã
+publish+verify) → gọi lại với `action:"log_fix"` kèm `id`+mô tả cách sửa để lưu lại cho phiên sau —
+KHÔNG thay thế bước cập nhật CHANGELOG.md/PROJECT_STATUS.md như cũ, chỉ bổ sung 1 nguồn tra cứu
+nhanh bằng SQL. Sửa cả 4 node bằng `removeNode`+`addNode` (đúng Rule #16, không dùng
+`updateNodeParameters` cho node đã tồn tại), verify lại đầy đủ SQL/JS/connections qua
+`get_workflow_details` trước khi publish.
+
+File mới: `sql/11_gateway_error_logs_fix_tracking.sql` (lưu cấu trúc 3 cột mới, tham khảo — cột thật
+đã được `Ensure Fix Columns` tự ALTER, không cần chạy tay).
+
+**Audit độc lập (subagent) tìm ra 1 bug thật**: `Errors: Query Recent`/`Errors: Mark Reported` dùng
+`CROSS JOIN` với CTE thống kê — khi 0 lỗi trong 7 ngày, vế trái (0 dòng) làm CROSS JOIN ra 0 dòng
+luôn (dù CTE thống kê có 1 dòng), thiếu `alwaysOutputData: true` nên node bị SKIP hoàn toàn theo
+đúng cơ chế Rule #6 → tin nhắn "✅ Không có lỗi nào" sẽ KHÔNG BAO GIỜ được gửi trong trường hợp 0 lỗi
+(im lặng không phản hồi gì, giống bug hiện tại project rất hay gặp). **Đã sửa ngay**: thêm
+`setNodeSettings` `alwaysOutputData: true` cho cả 2 node, verify qua `get_workflow_details`, publish
+lại (`activeVersionId: 13e755f0-dfd7-40ea-ae86-fc3eec9e0c42`).
+
 ## 2026-09-11 (tiếp 33) — Gateway: chặn tin không phải lệnh trong group (chuẩn bị tắt Privacy Mode)
 
 Debug `/tomtat` không phản hồi trong nhóm "Elite Nhà cửa" ra nguyên nhân gốc ở tầng Telegram, không

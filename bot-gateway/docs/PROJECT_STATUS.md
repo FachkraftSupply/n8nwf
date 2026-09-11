@@ -4,6 +4,51 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ BUILD XONG + TEST THẬT MỘT PHẦN (11/09/2026, phiên tiếp 34) — Fix knowledge base cho `/error_logs`
+
+Yêu cầu user: khi 1 lỗi được sửa xong, ghi lại vào Postgres kèm link execution + nội dung lỗi + cách
+sửa, để lần sau agent (Claude Code) đọc lại được thay vì debug lại từ đầu.
+
+**Workflow mới `GW Error Knowledge`** (`GSz6ZluGT5jCgdEc`, đã publish) — Webhook POST
+`https://n8n.toididuhoc.net/webhook/gw-error-knowledge`, 2 action:
+- `{action:"search", keyword}` → SELECT lỗi ĐÃ TỪNG `status='fixed'` khớp từ khóa (workflow_name/
+  node_name/error_message/fix_description), trả về `fix_description` đã lưu.
+- `{action:"log_fix", id, fixDescription, fixedBy}` → UPDATE dòng `error_logs` đó `status='fixed'`
+  + lưu `fix_description`/`fixed_at`/`fixed_by`.
+
+Gọi qua n8n MCP `execute_workflow` (`triggerNodeName:"From Webhook"`) hoặc HTTP POST trực tiếp.
+**Lưu ý kỹ thuật quan trọng phát hiện khi build**: dự định ban đầu dùng `executeWorkflowTrigger` (như
+`GW Mention Resolver`) nhưng tool `execute_workflow` của n8n MCP KHÔNG hỗ trợ gọi trực tiếp loại
+trigger này (chỉ hỗ trợ Schedule/Webhook/Form/Chat) — đã đổi sang Webhook trigger giữa chừng, xác
+nhận hoạt động qua 1 execution thật (`2023`, DDL 3 cột mới chạy thật, routing đúng).
+
+**Mở rộng `/error_logs`+`/error_log_now`** (`Telebot Admin System`) — SQL bọc thêm CTE thống kê
+(✅ đã sửa / 🔓 còn mở / Σ tổng, 7 ngày qua) + trả thêm cột `id` từng dòng để agent biết log_fix vào
+đâu. Prompt Claude Code nhúng sẵn trong tin nhắn giờ có thêm 2 bước: TRƯỚC khi sửa → gọi
+`action:"search"` tra cứu; SAU khi sửa xong → gọi `action:"log_fix"` lưu lại. Không thay thế
+CHANGELOG.md/PROJECT_STATUS.md, chỉ bổ sung tra cứu nhanh bằng SQL.
+
+**Chưa test được** (không tự làm tiếp được, cần dùng thật qua ít nhất 1 chu kỳ sửa lỗi): action
+`log_fix` mới verify đúng SQL bằng mắt, CHƯA chạy thật lần nào (test bằng `action:"search"` an toàn
+hơn nên chỉ test nhánh đó) — lần đầu `/error_logs` chạy ra 1 lỗi thật và Claude Code phiên sau làm
+theo đúng prompt mới (gọi `log_fix` sau khi sửa) sẽ là lần xác nhận đầu tiên toàn bộ vòng lặp hoạt
+động đúng.
+
+**✅ Audit độc lập PASS + tìm ra 1 bug thật, đã sửa**: subagent đọc lại JSON thật cả 2 workflow xác
+nhận toàn bộ wiring/SQL/JS đúng thiết kế (routing Switch cả 2 workflow đúng, `Switch (Admin Extras)`
+17 route + `Send Detail Panel` không bị ảnh hưởng, code JS không còn tham chiếu node cũ đã xóa). Bug
+tìm được: `Errors: Query Recent`/`Errors: Mark Reported` thiếu `alwaysOutputData: true` → khi 0 lỗi
+trong 7 ngày, `CROSS JOIN` với CTE thống kê ra 0 dòng → node bị skip hoàn toàn → tin "✅ Không có lỗi
+nào" không bao giờ gửi được. Đã sửa + publish lại (`activeVersionId: 13e755f0-dfd7-40ea-ae86-fc3eec9e0c42`).
+Hạn chế nêu trong audit: không có tool để tự xác nhận `ALTER TABLE` đã chạy thật trên Postgres thật
+(chỉ có Supabase MCP, không phải Docker Postgres chính của dự án) — dựa vào kết quả execution `2023`
+đã chạy thật thành công (DDL không báo lỗi) làm bằng chứng.
+
+**Rủi ro bảo mật đã cân nhắc**: webhook `GW Error Knowledge` KHÔNG có xác thực (authentication:
+none) — công khai trên internet nếu ai đó đoán đúng URL. Chấp nhận vì dữ liệu chỉ là mô tả lỗi/cách
+sửa nội bộ (không PII, không tài chính), rủi ro cao nhất là spam dòng rác vào `error_logs` (dễ dọn).
+Nếu muốn siết lại, có thể thêm `headerAuth` credential sau.
+
 ## ⏳ Chờ user tắt Privacy Mode trên BotFather — `/tomtat` (11/09/2026, phiên tiếp 23)
 
 User báo gõ `/tomtat` (ảnh kèm caption) trong nhóm "Elite Nhà cửa" không có phản hồi gì. Đọc log
