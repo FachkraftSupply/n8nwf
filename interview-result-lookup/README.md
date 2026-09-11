@@ -16,6 +16,7 @@ Workflow n8n cho bot Telegram tra cứu kết quả phỏng vấn học sinh (in
 - **`/ketqua <tên học sinh>`** — tìm trên toàn bộ công ty
 - **`/ketqua <công ty> + <tên học sinh>`** — tìm trong 1 công ty cụ thể
 - **`/help`** — hiển thị hướng dẫn sử dụng
+- **`/nguong`** — xem ngưỡng điểm "Đạt" đang áp dụng (mặc định / theo công ty / theo nghề), đọc trực tiếp từ bảng `score_thresholds`
 - Nếu có **2–5 kết quả** trùng tên → bot gửi inline keyboard để người dùng chọn đúng học sinh
 - Nếu có **>5 kết quả** → yêu cầu gõ tên đầy đủ hơn hoặc kèm tên công ty
 - Nếu **0 kết quả** → báo không tìm thấy
@@ -52,7 +53,9 @@ Telegram Trigger (message + callback_query)
               │                 └─ false → Trả lời: Không có kết quả
               └─ false → Là lệnh /help?
                           ├─ true  → Trả lời: Hướng dẫn
-                          └─ false → Trả lời: Sai cú pháp
+                          └─ false → Là lệnh /nguong?
+                                      ├─ true  → Supabase: Xem ngưỡng hiện tại → Format danh sách ngưỡng → Trả lời: Danh sách ngưỡng
+                                      └─ false → Trả lời: Sai cú pháp
 
 Chuẩn bị lấy chi tiết → Supabase: Lấy chi tiết → Supabase: Lấy ngưỡng điểm → Format tin nhắn kết quả → Trả lời: Kết quả phỏng vấn
 ```
@@ -162,6 +165,7 @@ UPDATE score_thresholds SET active = false WHERE scope = 'company' AND scope_val
 
 ## Changelog
 
+- **v1.5** — Thêm lệnh `/nguong`: xem ngay trong Telegram ngưỡng điểm "Đạt" đang áp dụng (mặc định/công ty/nghề) mà không cần mở Supabase. Thêm link Supabase Table Editor vào `/help`.
 - **v1.4** — Đổi cách so khớp ngưỡng theo nghề từ "chứa chuỗi" về lại **khớp chính xác** (sau khi bỏ dấu): "chứa chuỗi" vô tình áp ngưỡng 5.5 cho hồ sơ ghép nhiều nghề (vd `"Refa/Fachverkäufer/Koch/Bäcker"`, `"Fachverkäufer/in, flex"`) dù nghề đó chỉ là 1 trong nhiều kỹ năng liệt kê. Bỏ `backer`, thêm biến thể chính xác `backer/in`, `backerin`, `fleischer/-in`. Thêm ngành xây dựng (`xay dung`, chưa có dữ liệu thực tế).
 - **v1.3** — Sửa cách so khớp ngưỡng theo nghề: field `profession` thường ghép nhiều nghề trong 1 chuỗi (vd `"Koch/Köchin - Fleischer"`), so khớp exact bỏ sót các dòng này → đổi sang so khớp "chứa chuỗi" sau khi bỏ dấu. Seed ngưỡng 5.5 cho nhóm chế biến/làm bánh (Fleischer, Bäcker, làm bánh, Flex, Lebensmittelverarbeitung).
 - **v1.2** — Chuyển ngưỡng điểm "Đạt/Chưa đạt" từ hardcode (`specialCompanies` trong code) sang cấu hình trong bảng Supabase `score_thresholds`, hỗ trợ set riêng theo công ty hoặc theo nghề. Thêm node **"Supabase: Lấy ngưỡng điểm"**.
