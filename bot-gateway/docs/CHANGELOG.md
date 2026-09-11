@@ -16,6 +16,10 @@ với `<a href="...?start=mgt_<uid>_<groupId>">` cho từng nhóm; `Send Mention
 `/start mmenu_<uid>` (tái dùng nguyên logic toggle/refresh cũ). Verify `node -c` + `get_workflow_details`
 (node count vẫn 120, connections đúng), publish (`activeVersionId: 7b411b06-1be5-408f-99aa-016723317e12`).
 
+**Audit độc lập PASS** + 1 finding nhỏ đã sửa: `Send Mention Menu` dùng `$json` trần (vi phạm Rule #2)
+thay vì `$('Build Mention Menu').first().json...` — không sai hiện tại nhưng là rủi ro âm thầm nếu
+sau này chèn thêm node. Đã sửa, publish lại (`activeVersionId: a749356c-eb34-4d7d-bb5c-16df9048b4a6`).
+
 ## 2026-09-11 (tiếp 36) — Audit độc lập PASS + thêm comment SQL cho 1 caveat MVCC nhỏ
 
 Audit subagent thứ 2 (kiểm tra lại toàn bộ `GW Error Knowledge` + `Telebot Admin System` sau 2 lần sửa

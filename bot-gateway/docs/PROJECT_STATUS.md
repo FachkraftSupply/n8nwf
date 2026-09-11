@@ -33,6 +33,16 @@ KHÔNG test được qua MCP (Telegram Trigger không hỗ trợ `execute_workfl
 SÁCH LINK (không phải nút) với đúng số nhóm mention đã tạo, bấm thử 1 link → xác nhận toggle đúng
 (icon ✅/➕ đổi) và panel refresh lại đúng trạng thái mới.
 
+**✅ Audit độc lập PASS** (subagent thứ 2) — đọc lại JSON thật, xác nhận: thứ tự điều kiện trong
+`Admin Extras Router` không bị 1 điều kiện chung chung nào chặn nhầm route mới; `Build Mention Menu`
+escape HTML đúng cho `label` (dữ liệu do admin gõ qua `/tao_group`, tránh lặp lại bug "Unsupported
+start tag" đã gặp trước); giá trị `?start=` chỉ gồm chữ số (uid + serial id), không chứa ký tự cấm;
+connections + node count (120) không đổi. **1 finding nhỏ tìm được + đã sửa ngay**: node `Send Mention
+Menu` dùng `$json` trần thay vì tham chiếu tường minh (Rule #2) — không sai ở hiện tại (chỉ 1 node
+đứng trước) nhưng là rủi ro âm thầm nếu sau này có ai chèn thêm node vào giữa. Đã đổi sang
+`$('Build Mention Menu').first().json...`, verify + publish lại (`activeVersionId:
+a749356c-eb34-4d7d-bb5c-16df9048b4a6`).
+
 ## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 35) — Bug thật: `/help` (Admin) mất phản hồi hoàn toàn
 
 User báo "menu help của admin lại biến mất". Tra execution log thật (`2064`, `2065`, `2066` — user tự
