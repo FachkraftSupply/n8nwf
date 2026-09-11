@@ -4,6 +4,27 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 35) — Bug thật: `/help` (Admin) mất phản hồi hoàn toàn
+
+User báo "menu help của admin lại biến mất". Tra execution log thật (`2064`, `2065`, `2066` — user tự
+gõ `/help`, `/tao_group` liên tiếp lúc debug) ra đúng nguyên nhân gốc: node `Nội dung lệnh help`
+(`Telebot Admin System`) bị **SyntaxError** khi chạy — dòng text mới thêm ở phiên trước (mục "Nhóm
+mention") có 2 dấu backtick (`` ` ``) THỪA nằm ngay TRONG chuỗi template literal bao ngoài
+(`` helpText = `...` ``): `` (`<code>@@all</code>` = tất cả...) `` — backtick lạc làm JS hiểu nhầm là
+kết thúc chuỗi sớm, phần còn lại phá vỡ cú pháp → node lỗi ngay, KHÔNG có tin nhắn nào được gửi (giống
+hệt hiện tượng "bot im lặng" — không phải nút/route sai, mà lệnh `/help` chưa từng chạy được tới bước
+gửi tin từ lúc phiên trước thêm đoạn text này).
+
+**Đã sửa**: bỏ 2 dấu backtick thừa, giữ nguyên `<code>@@all</code>` dạng HTML tag bình thường (không
+cần backtick ở đây — nhầm lẫn cú pháp Markdown vào code JS/HTML). Verify bằng `node -c` xác nhận file
+JS parse được, verify lại qua `get_workflow_details` xác nhận đúng nội dung + connections
+(`Switch`→`Nội dung lệnh help`→`help`) không đổi, publish lại (`activeVersionId:
+5ecf1ab4-2a73-46be-8620-5c821d9dd76d`). KHÔNG test được qua MCP (Telegram Trigger không hỗ trợ
+`execute_workflow` trực tiếp) — cần user gõ lại `/help` qua Telegram để xác nhận.
+
+**Việc cần user làm**: gõ `/help` trên bot Admin (`Telebot Admin System`) xác nhận đã trả lời bình
+thường (bao gồm cả đoạn "Nhóm mention" mới).
+
 ## ✅ BUILD XONG + TEST THẬT MỘT PHẦN (11/09/2026, phiên tiếp 34) — Fix knowledge base cho `/error_logs`
 
 Yêu cầu user: khi 1 lỗi được sửa xong, ghi lại vào Postgres kèm link execution + nội dung lỗi + cách

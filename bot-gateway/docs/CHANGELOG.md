@@ -4,6 +4,16 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 35) — Fix bug thật: `/help` (Admin) mất phản hồi do backtick thừa trong Code node
+
+User báo `/help` bên bot Admin không phản hồi gì ("menu help lại biến mất"). Tra execution log thật
+(`2064`) ra node `Nội dung lệnh help` bị `SyntaxError` — 2 dấu backtick thừa nằm bên trong template
+literal bao ngoài (`` `<code>@@all</code>` ``, thêm ở phiên tiếp 21 khi viết đoạn "Nhóm mention" vào
+help text) làm JS hiểu nhầm kết thúc chuỗi sớm → node lỗi ngay, không tin nào được gửi. Đã bỏ 2
+backtick thừa, verify bằng `node -c` (parse OK) + `get_workflow_details` (connections không đổi),
+publish lại (`activeVersionId: 5ecf1ab4-2a73-46be-8620-5c821d9dd76d`). Không test được qua MCP
+(Telegram Trigger không hỗ trợ `execute_workflow`) — cần user xác nhận lại qua Telegram thật.
+
 ## 2026-09-11 (tiếp 34) — Nâng cấp `/error_logs`: fix knowledge base cho agent đọc lại
 
 Yêu cầu user: khi 1 lỗi được sửa xong, lưu lại vào Postgres kèm link execution + nội dung lỗi + cách
