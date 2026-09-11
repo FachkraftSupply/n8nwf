@@ -4,6 +4,53 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ BUILD XONG, CHỜ AUDIT + TEST THẬT (11/09/2026, phiên tiếp 38) — Lệnh mới `/xem_nhom` quản lý nhóm mention đầy đủ
+
+Yêu cầu user: thêm vòng quản lý nhóm mention thứ 2 (bổ sung cho toggle theo TỪNG USER đã có sẵn ở
+`/user_list`) — `/xem_nhom` xem TẤT CẢ nhóm dạng deep-link, bấm vào 1 nhóm xem thành viên + 4 nút thao
+tác (thêm người, xóa người, xóa nhóm, quay lại) + nút Hủy xóa tin nhắn.
+
+**Thiết kế** (áp dụng đúng bài học RULES.md #21 ngay từ đầu — không lặp lại lỗi vừa gặp): danh sách
+NHÓM và danh sách NGƯỜI (khi thêm/xóa) đều là DEEP-LINK dạng text (số lượng động, không dùng inline
+keyboard). CHỈ dùng inline keyboard cho các bộ nút ĐẾM CỐ ĐỊNH ở mỗi màn hình (2-5 nút, y hệt pattern
+"Send Delete Confirm" đã proven ổn định) — literal object, chỉ `callback_data` bên trong mới là
+expression.
+
+**19 node mới**, build theo 4 batch nhỏ (mỗi batch verify riêng trước khi sang batch tiếp, tránh rủi ro
+rollback cả batch lớn theo Rule #15):
+1. `/xem_nhom` → `Xem Nhom Query` → `Build Xem Nhom List` → `Send Xem Nhom List` (text deep-link mỗi
+   nhóm `xnv_<id>` + 1 nút Hủy tĩnh).
+2. Bấm 1 nhóm (`xnv_<id>` deep-link hoặc `mgv:<id>` callback) → `Mention Group View Query` → `Build
+   Mention Group View` → `Send Mention Group View`: hiện danh sách thành viên (text, không phải deep-
+   link — chỉ xem, không bấm được) + 5 nút tĩnh (➕ Thêm người/➖ Xóa người/🗑️ Xóa nhóm/⬅️ Quay lại/❌ Hủy).
+3. ➕/➖ → `Mention Add|Remove Candidates Query` → `Build Mention Add|Remove List` → `Send Mention
+   Add|Remove List`: text deep-link mỗi user (`mga_<groupId>_<uid>` / `mgr_<groupId>_<uid>`), bấm vào
+   user = thêm/xóa NGAY (dùng lại đúng SQL toggle của `Toggle Mention Membership` cũ, an toàn 1 chiều
+   vì màn "Thêm" chỉ liệt kê user CHƯA có, màn "Xóa" chỉ liệt kê user ĐÃ có — 2 nút khác màn hình, cùng
+   1 cơ chế toggle) → refresh lại ĐÚNG màn hình vừa bấm (list tự rút gọn dần, xác nhận trực quan).
+4. 🗑️ Xóa nhóm → confirm 2 nút (✅ Xác nhận xóa / ❌ Hủy, y hệt pattern "Delete Confirm Panel" cho
+   xóa user) → `Mention Delete Group Exec` (`DELETE ... RETURNING label`, cascade tự xóa hết thành
+   viên nhờ FK `ON DELETE CASCADE` có sẵn) → tin xác nhận.
+
+**Route mới trong `Admin Extras Router`** (8 callback `mgv:`/`mgadd:`/`mgrm:`/`mgdel:`/`mgdelc:`/
+`mgback` + 3 deep-link `xnv_`/`mga_`/`mgr_` + lệnh `/xem_nhom`) và **8 output mới trong `Switch (Admin
+Extras)`** (giờ 25 output, s18-s25) — sửa bằng `removeNode`+`addNode` đúng Rule #16 (không dùng
+`updateNodeParameters` cho node đã tồn tại), verify TOÀN BỘ 25 output bằng script so khớp từng cái
+(không chỉ tin `appliedOperations`) — khớp 100%, không mất/lệch kết nối cũ nào. Cũng cập nhật `/help`
+thêm dòng `/xem_nhom`.
+
+Nút "❌ Hủy" TÁI SỬ DỤNG `admin_cancel` có sẵn — phát hiện ra khi đọc code: workflow này đã có sẵn cơ
+chế "xóa tin nhắn panel cũ" chạy TRƯỚC MỌI callback (node `Delete Old Panel Message`, không riêng cho
+flow nào) nên không cần xây thêm gì — bấm Hủy ở bất kỳ đâu trong `/xem_nhom` đều tự động vừa xóa tin
+cũ vừa trả lời "Đã hủy", đúng yêu cầu user mà không tốn thêm node.
+
+**Chưa test được** (không tự làm tiếp — Telegram Trigger không hỗ trợ `execute_workflow` qua MCP):
+toàn bộ flow `/xem_nhom` mới chỉ verify tĩnh (cú pháp JS sạch, SQL đúng tham số, routing khớp), CHƯA
+chạy qua Telegram thật lần nào. Đang chờ audit subagent độc lập trước khi báo hoàn tất.
+
+**Việc cần user làm**: gõ `/xem_nhom` → bấm vào 1 nhóm → thử cả 4 nút (➕/➖/🗑️/⬅️) + nút ❌ Hủy ở từng
+màn hình, xác nhận thêm/xóa người đúng, xóa nhóm đúng (nhóm biến mất khỏi `/xem_nhom` sau khi xóa).
+
 ## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 37) — Bug thật: nút "🏷️ Nhóm mention" không hiện nút
 
 User báo sau khi `/user_list` → bấm "🏷️ Nhóm mention", chỉ nhận được 1 tin nhắn có tiêu đề, KHÔNG có

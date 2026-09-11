@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 38) — Lệnh mới `/xem_nhom` — quản lý đầy đủ nhóm mention (xem/thêm/xóa người/xóa nhóm)
+
+19 node mới, build 4 batch nhỏ (verify riêng từng batch): danh sách nhóm + danh sách người (thêm/xóa)
+đều dùng deep-link text (áp dụng ngay bài học Rule #21 vừa gặp ở mục trên, không lặp lại inline
+keyboard động); các bộ nút CỐ ĐỊNH (5 nút xem nhóm, 2 nút thêm/xóa list, 2 nút confirm xóa) dùng inline
+keyboard TĨNH đúng pattern đã proven (`Send Delete Confirm`). Toggle add/remove tái dùng nguyên SQL
+`Toggle Mention Membership` cũ (an toàn vì mỗi màn hình chỉ liệt kê đúng 1 chiều — màn Thêm chỉ có user
+chưa vào nhóm, màn Xóa chỉ có user đã vào nhóm). Xóa nhóm dùng `DELETE ... RETURNING label`, dựa vào
+FK `ON DELETE CASCADE` có sẵn để tự dọn `mention_group_members`. Mở rộng `Admin Extras Router` (8
+route callback + 3 deep-link + 1 lệnh mới) và `Switch (Admin Extras)` (17→25 output, verify khớp
+100% toàn bộ output bằng script so sánh, không chỉ tin response). Nút Hủy tái dùng `admin_cancel` có
+sẵn — phát hiện workflow đã có sẵn cơ chế xóa-tin-panel-cũ chạy TRƯỚC MỌI callback (không riêng flow
+nào), nên không cần xây thêm gì cho yêu cầu "hủy + xóa tin nhắn cũ". Cập nhật `/help` thêm dòng lệnh
+mới. Publish `activeVersionId: e88477ff-8745-4ed6-93f6-5a113e4d7275`. CHƯA test qua Telegram thật
+(Telegram Trigger không gọi được qua MCP) — chỉ verify tĩnh (cú pháp, SQL, routing).
+
 ## 2026-09-11 (tiếp 37) — Fix bug thật: nút "🏷️ Nhóm mention" không hiện, đổi sang deep-link text
 
 User xác nhận thật rủi ro đã cảnh báo ở phiên tiếp 20 (RULES.md #21): `inlineKeyboard` với số nút
