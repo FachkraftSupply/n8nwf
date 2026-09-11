@@ -722,14 +722,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const r = $input.first().json;\nconst chatId = $('Chuẩn bị lấy chi tiết').first().json.chat_id;\n\nlet situations = [];\ntry { situations = JSON.parse(r.situations || '[]'); } catch (e) { situations = []; }\n\nconst situationLines = situations\n  .filter((s) => s.answer && !/Chưa hỏi/i.test(s.answer))\n  .map((s) => `• ${s.question}: ${s.answer}`)\n  .join('\\n') || 'Không có';\n\n// Các mã công ty trong specialCompanies: ngưỡng đạt 5, còn lại: ngưỡng đạt 6\nconst specialCompanies = ['elmc', 'el', 'elhz', 'elts', 'elht', 'elnb', 'elmb', 'eltshz', 'eltsht'];\nconst companyCode = String(r.company || '').trim().toLowerCase();\nconst threshold = specialCompanies.includes(companyCode) ? 5 : 6;\nconst finalScore = Number(r.final_score) || 0;\nconst verdict = finalScore >= threshold ? 'Đạt' : 'Chưa đạt';\n\nconst msg = [\n  '*Kết quả phỏng vấn*',\n  `Công ty: ${r.company}`,\n  `Học viên: ${r.student_name}`,\n  `Ngành: ${r.profession}`,\n  `Ngày PV: ${r.interview_date}`,\n  `Giám khảo: ${r.evaluator}`,\n  '',\n  `Điểm: Phát âm ${r.score_pronunciation} | Nghe ${r.score_listening} | Nội dung ${r.score_content} | Tình huống ${r.score_situation} | Thái độ ${r.score_attitude}`,\n  `Tổng điểm: *${r.total_score}* → Điểm cuối: *${r.final_score}*`,\n  `Kết luận: *${verdict}* (ngưỡng đạt: ${threshold})`,\n  '',\n  `Nhận xét phát âm: ${r.detail_pronunciation || '-'}`,\n  `Nhận xét nghe hiểu: ${r.detail_listening || '-'}`,\n  `Nhận xét nội dung: ${r.detail_content || '-'}`,\n  `Thái độ: ${r.detail_attitude || '-'}`,\n  '',\n  `Câu hỏi tình huống đã hỏi:\\n${situationLines}`,\n  '',\n  `Ghi chú: ${r.notes || '-'}`,\n].join('\\n');\n\nreturn [{ json: { chat_id: chatId, message: msg } }];"
+        "jsCode": "const r = $('Supabase: Lấy chi tiết kết quả').first().json;\nconst chatId = $('Chuẩn bị lấy chi tiết').first().json.chat_id;\n\nlet situations = [];\ntry { situations = JSON.parse(r.situations || '[]'); } catch (e) { situations = []; }\n\nconst situationLines = situations\n  .filter((s) => s.answer && !/Chưa hỏi/i.test(s.answer))\n  .map((s) => `• ${s.question}: ${s.answer}`)\n  .join('\\n') || 'Không có';\n\n// Ngưỡng điểm đạt/chưa đạt lấy từ bảng Supabase \"score_thresholds\" (node \"Supabase: Lấy ngưỡng điểm\"),\n// thay cho mảng specialCompanies hardcode trước đây. Ưu tiên khi tra: company > profession > default.\n// Thêm/sửa ngưỡng cho đối tác hoặc nghề mới chỉ cần INSERT/UPDATE 1 dòng trong Supabase, không cần sửa code.\nconst thresholdRows = $input.all().map((i) => i.json);\nconst companyCode = String(r.company || '').trim().toLowerCase();\nconst professionCode = String(r.profession || '').trim().toLowerCase();\n\nconst byCompany = thresholdRows.find((t) => t.scope === 'company' && String(t.scope_value || '').trim().toLowerCase() === companyCode);\nconst byProfession = thresholdRows.find((t) => t.scope === 'profession' && String(t.scope_value || '').trim().toLowerCase() === professionCode);\nconst byDefault = thresholdRows.find((t) => t.scope === 'default');\n\n// Fallback 6 nếu bảng score_thresholds trống hoặc chưa có dòng default (an toàn, không sập workflow)\nconst threshold = Number((byCompany || byProfession || byDefault || {}).threshold ?? 6);\nconst finalScore = Number(r.final_score) || 0;\nconst verdict = finalScore >= threshold ? 'Đạt' : 'Chưa đạt';\n\nconst msg = [\n  '*Kết quả phỏng vấn*',\n  `Công ty: ${r.company}`,\n  `Học viên: ${r.student_name}`,\n  `Ngành: ${r.profession}`,\n  `Ngày PV: ${r.interview_date}`,\n  `Giám khảo: ${r.evaluator}`,\n  '',\n  `Điểm: Phát âm ${r.score_pronunciation} | Nghe ${r.score_listening} | Nội dung ${r.score_content} | Tình huống ${r.score_situation} | Thái độ ${r.score_attitude}`,\n  `Tổng điểm: *${r.total_score}* → Điểm cuối: *${r.final_score}*`,\n  `Kết luận: *${verdict}* (ngưỡng đạt: ${threshold})`,\n  '',\n  `Nhận xét phát âm: ${r.detail_pronunciation || '-'}`,\n  `Nhận xét nghe hiểu: ${r.detail_listening || '-'}`,\n  `Nhận xét nội dung: ${r.detail_content || '-'}`,\n  `Thái độ: ${r.detail_attitude || '-'}`,\n  '',\n  `Câu hỏi tình huống đã hỏi:\\n${situationLines}`,\n  '',\n  `Ghi chú: ${r.notes || '-'}`,\n].join('\\n');\n\nreturn [{ json: { chat_id: chatId, message: msg } }];"
       },
       "id": "919daae9-4ecb-4f32-ac26-a9fad4df1b76",
       "name": "Format tin nhắn kết quả",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5296,
+        5520,
         1152
       ]
     },
@@ -747,7 +747,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        5520,
+        5744,
         1152
       ],
       "webhookId": "7cea07f6-29d5-4d62-81f0-32a97f4697e8",
@@ -755,6 +755,36 @@
         "telegramApi": {
           "id": "fsG8yZbiw2BrCHiU",
           "name": "CSFSINT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "score_thresholds",
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "active",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "id": "af007a21-ef66-4af1-8675-ad48bdab2c59",
+      "name": "Supabase: Lấy ngưỡng điểm",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5296,
+        1152
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "cISqWlLc6VmWWp7A",
+          "name": "Supabase account"
         }
       }
     }
@@ -1034,7 +1064,7 @@
       "main": [
         [
           {
-            "node": "Format tin nhắn kết quả",
+            "node": "Supabase: Lấy ngưỡng điểm",
             "type": "main",
             "index": 0
           }
@@ -1046,6 +1076,17 @@
         [
           {
             "node": "Trả lời: Kết quả phỏng vấn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Lấy ngưỡng điểm": {
+      "main": [
+        [
+          {
+            "node": "Format tin nhắn kết quả",
             "type": "main",
             "index": 0
           }
