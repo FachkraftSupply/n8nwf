@@ -176,7 +176,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.chat_id }}",
-        "text": "=📖 *Hướng dẫn tra cứu kết quả phỏng vấn*\n\n*Cách 1 — Tìm theo tên học sinh:*\n`/ketqua Tên học sinh`\nVí dụ: `/ketqua Bùi Diệu Linh`\n(tìm trên toàn bộ công ty)\n\n*Cách 2 — Tìm theo công ty + tên:*\n`/ketqua Tên công ty + Tên học sinh`\nVí dụ: `/ketqua ICO + Bùi Diệu Linh`\n\n*Lưu ý:*\n• Gõ thiếu dấu bot vẫn tự nhận diện tên gần đúng\n• Nếu có 2-5 kết quả trùng, bot sẽ hiện nút để chọn\n• Nếu quá 5 kết quả, gõ tên đầy đủ hơn hoặc kèm tên công ty",
+        "text": "=📖 *Hướng dẫn tra cứu kết quả phỏng vấn*\n\n*Cách 1 — Tìm theo tên học sinh:*\n`/ketqua Tên học sinh`\nVí dụ: `/ketqua Bùi Diệu Linh`\n(tìm trên toàn bộ công ty)\n\n*Cách 2 — Tìm theo công ty + tên:*\n`/ketqua Tên công ty + Tên học sinh`\nVí dụ: `/ketqua ICO + Bùi Diệu Linh`\n\n*Lưu ý:*\n• Gõ thiếu dấu bot vẫn tự nhận diện tên gần đúng\n• Nếu có 2-5 kết quả trùng, bot sẽ hiện nút để chọn\n• Nếu quá 5 kết quả, gõ tên đầy đủ hơn hoặc kèm tên công ty\n\n*Ngưỡng điểm đạt:*\n`/nguong` — xem ngưỡng điểm đạt hiện tại (mặc định / theo công ty / theo nghề)\nChỉnh ngưỡng trực tiếp tại Supabase (bảng `score_thresholds`):\nhttps://supabase.com/dashboard/project/oreodamslizkrmdpvgye/editor",
         "additionalFields": {
           "appendAttribution": false,
           "parse_mode": "Markdown"
@@ -282,8 +282,8 @@
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "cISqWlLc6VmWWp7A",
-          "name": "Supabase account"
+          "id": "LLZ2H3Sv9uyj5V1a",
+          "name": "Supabase account test tiếng"
         }
       }
     },
@@ -313,8 +313,8 @@
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "cISqWlLc6VmWWp7A",
-          "name": "Supabase account"
+          "id": "LLZ2H3Sv9uyj5V1a",
+          "name": "Supabase account test tiếng"
         }
       }
     },
@@ -715,14 +715,14 @@
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "cISqWlLc6VmWWp7A",
-          "name": "Supabase account"
+          "id": "LLZ2H3Sv9uyj5V1a",
+          "name": "Supabase account test tiếng"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "const r = $('Supabase: Lấy chi tiết kết quả').first().json;\nconst chatId = $('Chuẩn bị lấy chi tiết').first().json.chat_id;\n\nlet situations = [];\ntry { situations = JSON.parse(r.situations || '[]'); } catch (e) { situations = []; }\n\nconst situationLines = situations\n  .filter((s) => s.answer && !/Chưa hỏi/i.test(s.answer))\n  .map((s) => `• ${s.question}: ${s.answer}`)\n  .join('\\n') || 'Không có';\n\n// Ngưỡng điểm đạt/chưa đạt lấy từ bảng Supabase \"score_thresholds\" (node \"Supabase: Lấy ngưỡng điểm\"),\n// thay cho mảng specialCompanies hardcode trước đây. Ưu tiên khi tra: company > profession > default.\n// Thêm/sửa ngưỡng cho đối tác hoặc nghề mới chỉ cần INSERT/UPDATE 1 dòng trong Supabase, không cần sửa code.\nconst thresholdRows = $input.all().map((i) => i.json);\nconst companyCode = String(r.company || '').trim().toLowerCase();\nconst professionCode = String(r.profession || '').trim().toLowerCase();\n\nconst byCompany = thresholdRows.find((t) => t.scope === 'company' && String(t.scope_value || '').trim().toLowerCase() === companyCode);\nconst byProfession = thresholdRows.find((t) => t.scope === 'profession' && String(t.scope_value || '').trim().toLowerCase() === professionCode);\nconst byDefault = thresholdRows.find((t) => t.scope === 'default');\n\n// Fallback 6 nếu bảng score_thresholds trống hoặc chưa có dòng default (an toàn, không sập workflow)\nconst threshold = Number((byCompany || byProfession || byDefault || {}).threshold ?? 6);\nconst finalScore = Number(r.final_score) || 0;\nconst verdict = finalScore >= threshold ? 'Đạt' : 'Chưa đạt';\n\nconst msg = [\n  '*Kết quả phỏng vấn*',\n  `Công ty: ${r.company}`,\n  `Học viên: ${r.student_name}`,\n  `Ngành: ${r.profession}`,\n  `Ngày PV: ${r.interview_date}`,\n  `Giám khảo: ${r.evaluator}`,\n  '',\n  `Điểm: Phát âm ${r.score_pronunciation} | Nghe ${r.score_listening} | Nội dung ${r.score_content} | Tình huống ${r.score_situation} | Thái độ ${r.score_attitude}`,\n  `Tổng điểm: *${r.total_score}* → Điểm cuối: *${r.final_score}*`,\n  `Kết luận: *${verdict}* (ngưỡng đạt: ${threshold})`,\n  '',\n  `Nhận xét phát âm: ${r.detail_pronunciation || '-'}`,\n  `Nhận xét nghe hiểu: ${r.detail_listening || '-'}`,\n  `Nhận xét nội dung: ${r.detail_content || '-'}`,\n  `Thái độ: ${r.detail_attitude || '-'}`,\n  '',\n  `Câu hỏi tình huống đã hỏi:\\n${situationLines}`,\n  '',\n  `Ghi chú: ${r.notes || '-'}`,\n].join('\\n');\n\nreturn [{ json: { chat_id: chatId, message: msg } }];"
+        "jsCode": "const r = $('Supabase: Lấy chi tiết kết quả').first().json;\nconst chatId = $('Chuẩn bị lấy chi tiết').first().json.chat_id;\n\nlet situations = [];\ntry { situations = JSON.parse(r.situations || '[]'); } catch (e) { situations = []; }\n\nconst situationLines = situations\n  .filter((s) => s.answer && !/Chưa hỏi/i.test(s.answer))\n  .map((s) => `• ${s.question}: ${s.answer}`)\n  .join('\\n') || 'Không có';\n\n// Ngưỡng điểm đạt/chưa đạt lấy từ bảng Supabase \"score_thresholds\" (node \"Supabase: Lấy ngưỡng điểm\"),\n// thay cho mảng specialCompanies hardcode trước đây. Ưu tiên khi tra: company > profession > default.\n// Thêm/sửa ngưỡng cho đối tác hoặc nghề mới chỉ cần INSERT/UPDATE 1 dòng trong Supabase, không cần sửa code.\nconst thresholdRows = $input.all().map((i) => i.json);\n\n// Bỏ dấu (umlaut tiếng Đức, dấu tiếng Việt) + lowercase, để so khớp không phụ thuộc cách gõ dấu\nfunction normalize(s) {\n  return String(s || '')\n    .trim()\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '');\n}\n\nconst companyCode = String(r.company || '').trim().toLowerCase();\nconst professionNorm = normalize(r.profession);\n\n// company: field sạch, 1 giá trị -> so khớp chính xác\nconst byCompany = thresholdRows.find((t) => t.scope === 'company' && String(t.scope_value || '').trim().toLowerCase() === companyCode);\n\n// profession: field thường bị ghi ghép nhiều nghề trong 1 chuỗi (vd \"Refa/Fachverkäufer/Koch/Bäcker\").\n// Chỉ áp ngưỡng riêng khi profession KHỚP CHÍNH XÁC (sau khi bỏ dấu) với 1 giá trị đã cấu hình -\n// tránh cho nhầm ngưỡng ưu đãi khi ứng viên chỉ liệt kê nghề đó như 1 trong nhiều kỹ năng.\n// Muốn bao phủ thêm biến thể viết khác (vd \"Bäcker/in\", \"Bäckerin\") -> thêm dòng scope_value riêng trong Supabase.\nconst byProfession = thresholdRows.find((t) => t.scope === 'profession' && professionNorm === normalize(t.scope_value));\n\nconst byDefault = thresholdRows.find((t) => t.scope === 'default');\n\n// Fallback 6 nếu bảng score_thresholds trống hoặc chưa có dòng default (an toàn, không sập workflow)\nconst threshold = Number((byCompany || byProfession || byDefault || {}).threshold ?? 6);\nconst finalScore = Number(r.final_score) || 0;\nconst verdict = finalScore >= threshold ? 'Đạt' : 'Chưa đạt';\n\nconst msg = [\n  '*Kết quả phỏng vấn*',\n  `Công ty: ${r.company}`,\n  `Học viên: ${r.student_name}`,\n  `Ngành: ${r.profession}`,\n  `Ngày PV: ${r.interview_date}`,\n  `Giám khảo: ${r.evaluator}`,\n  '',\n  `Điểm: Phát âm ${r.score_pronunciation} | Nghe ${r.score_listening} | Nội dung ${r.score_content} | Tình huống ${r.score_situation} | Thái độ ${r.score_attitude}`,\n  `Tổng điểm: *${r.total_score}* → Điểm cuối: *${r.final_score}*`,\n  `Kết luận: *${verdict}* (ngưỡng đạt: ${threshold})`,\n  '',\n  `Nhận xét phát âm: ${r.detail_pronunciation || '-'}`,\n  `Nhận xét nghe hiểu: ${r.detail_listening || '-'}`,\n  `Nhận xét nội dung: ${r.detail_content || '-'}`,\n  `Thái độ: ${r.detail_attitude || '-'}`,\n  '',\n  `Câu hỏi tình huống đã hỏi:\\n${situationLines}`,\n  '',\n  `Ghi chú: ${r.notes || '-'}`,\n].join('\\n');\n\nreturn [{ json: { chat_id: chatId, message: msg } }];"
       },
       "id": "919daae9-4ecb-4f32-ac26-a9fad4df1b76",
       "name": "Format tin nhắn kết quả",
@@ -783,8 +783,109 @@
       ],
       "credentials": {
         "supabaseApi": {
-          "id": "cISqWlLc6VmWWp7A",
-          "name": "Supabase account"
+          "id": "LLZ2H3Sv9uyj5V1a",
+          "name": "Supabase account test tiếng"
+        }
+      }
+    },
+    {
+      "id": "ebd1cea5-302e-4c37-809e-c602a4d1c6e1",
+      "name": "Là lệnh /nguong?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1328,
+        880
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-is-nguong",
+              "leftValue": "={{ $json.raw_text.toLowerCase() }}",
+              "rightValue": "/nguong",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cf6fc6ad-126a-489a-ba98-d10d52750fa4",
+      "name": "Supabase: Xem ngưỡng hiện tại",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        880
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "score_thresholds",
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "active",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "LLZ2H3Sv9uyj5V1a",
+          "name": "Supabase account test tiếng"
+        }
+      }
+    },
+    {
+      "id": "ca9c9ed9-7fdc-4cbe-b7aa-06b424417dbb",
+      "name": "Format danh sách ngưỡng",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        880
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map((i) => i.json);\nconst chatId = $('Là lệnh /nguong?').first().json.chat_id;\n\nconst byScope = { default: [], company: [], profession: [] };\nfor (const r of rows) {\n  if (byScope[r.scope]) byScope[r.scope].push(r);\n}\n\nconst def = byScope.default[0];\nconst companies = byScope.company.sort((a, b) => String(a.scope_value).localeCompare(String(b.scope_value)));\nconst professions = byScope.profession.sort((a, b) => String(a.scope_value).localeCompare(String(b.scope_value)));\n\nconst lines = [];\nlines.push('*Ngưỡng điểm \"Đạt\" hiện tại*');\nlines.push('');\nlines.push(`Mặc định: *${def ? def.threshold : 6}*`);\n\nif (companies.length) {\n  lines.push('');\n  lines.push('*Theo công ty:*');\n  for (const c of companies) lines.push(`• \\`${c.scope_value}\\` — ${c.threshold}`);\n}\n\nif (professions.length) {\n  lines.push('');\n  lines.push('*Theo nghề:*');\n  for (const p of professions) lines.push(`• \\`${p.scope_value}\\` — ${p.threshold}`);\n}\n\nlines.push('');\n// Telegram parse_mode Markdown (legacy) coi dấu _ trần là mở/đóng italic -> phải bọc tên\n// bảng trong backtick (code span) để không bị parse nhầm entity, tránh lỗi 400 'can't parse entities'.\nlines.push('Chỉnh ngưỡng tại Supabase (bảng `score_thresholds`):');\nlines.push('https://supabase.com/dashboard/project/oreodamslizkrmdpvgye/editor');\n\nreturn [{ json: { chat_id: chatId, message: lines.join('\\n') } }];"
+      }
+    },
+    {
+      "id": "0d3b58eb-f1aa-4ae9-b31c-5c3f267d4fa4",
+      "name": "Trả lời: Danh sách ngưỡng",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        880
+      ],
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "webhookId": "1ce247c2-8363-4f04-a565-6e4e437508f9",
+      "credentials": {
+        "telegramApi": {
+          "id": "ULzoIY1vw0zMeOTk",
+          "name": "@csfsintbot"
         }
       }
     }
@@ -875,7 +976,7 @@
         ],
         [
           {
-            "node": "Trả lời: Sai cú pháp",
+            "node": "Là lệnh /nguong?",
             "type": "main",
             "index": 0
           }
@@ -1087,6 +1188,46 @@
         [
           {
             "node": "Format tin nhắn kết quả",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Là lệnh /nguong?": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Xem ngưỡng hiện tại",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trả lời: Sai cú pháp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Xem ngưỡng hiện tại": {
+      "main": [
+        [
+          {
+            "node": "Format danh sách ngưỡng",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format danh sách ngưỡng": {
+      "main": [
+        [
+          {
+            "node": "Trả lời: Danh sách ngưỡng",
             "type": "main",
             "index": 0
           }

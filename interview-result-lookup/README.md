@@ -2,11 +2,21 @@
 
 Workflow n8n cho bot Telegram tra cứu kết quả phỏng vấn học sinh (interview evaluations) lưu trong Supabase, dùng AI Agent để fuzzy-match tên học sinh (chấp nhận sai dấu, viết tắt, gõ nhầm nhẹ).
 
+## Link nhanh
+
+| | |
+|---|---|
+| **n8n workflow** | https://n8n.toididuhoc.net/workflow/1gPcUduwtUkbA1aX |
+| **Supabase project** ("Test tiếng") | https://supabase.com/dashboard/project/oreodamslizkrmdpvgye |
+| **Supabase Table Editor** (sửa ngưỡng không cần SQL) | https://supabase.com/dashboard/project/oreodamslizkrmdpvgye/editor |
+| **Supabase SQL Editor** | https://supabase.com/dashboard/project/oreodamslizkrmdpvgye/sql/new |
+
 ## Chức năng
 
 - **`/ketqua <tên học sinh>`** — tìm trên toàn bộ công ty
 - **`/ketqua <công ty> + <tên học sinh>`** — tìm trong 1 công ty cụ thể
 - **`/help`** — hiển thị hướng dẫn sử dụng
+- **`/nguong`** — xem ngưỡng điểm "Đạt" đang áp dụng (mặc định / theo công ty / theo nghề), đọc trực tiếp từ bảng `score_thresholds`
 - Nếu có **2–5 kết quả** trùng tên → bot gửi inline keyboard để người dùng chọn đúng học sinh
 - Nếu có **>5 kết quả** → yêu cầu gõ tên đầy đủ hơn hoặc kèm tên công ty
 - Nếu **0 kết quả** → báo không tìm thấy
@@ -43,7 +53,9 @@ Telegram Trigger (message + callback_query)
               │                 └─ false → Trả lời: Không có kết quả
               └─ false → Là lệnh /help?
                           ├─ true  → Trả lời: Hướng dẫn
-                          └─ false → Trả lời: Sai cú pháp
+                          └─ false → Là lệnh /nguong?
+                                      ├─ true  → Supabase: Xem ngưỡng hiện tại → Format danh sách ngưỡng → Trả lời: Danh sách ngưỡng
+                                      └─ false → Trả lời: Sai cú pháp
 
 Chuẩn bị lấy chi tiết → Supabase: Lấy chi tiết → Supabase: Lấy ngưỡng điểm → Format tin nhắn kết quả → Trả lời: Kết quả phỏng vấn
 ```
@@ -67,7 +79,7 @@ total_score, final_score, situations (JSON string),
 detail_pronunciation, detail_listening, detail_content, detail_attitude, notes
 ```
 
-### Bảng Supabase `score_thresholds` (mới — xem `sql/01_score_thresholds.sql`)
+### Bảng Supabase `score_thresholds` (mới — xem `sql/01_score_thresholds.sql`, `sql/02_profession_thresholds.sql`, `sql/03_profession_exact_match.sql`)
 
 Cấu hình ngưỡng điểm "Đạt/Chưa đạt", chạy 1 lần trước khi import workflow (hoặc chạy lại an toàn — script dùng `IF NOT EXISTS`/`ON CONFLICT`):
 
@@ -75,9 +87,29 @@ Cấu hình ngưỡng điểm "Đạt/Chưa đạt", chạy 1 lần trước khi
 id, scope ('company'|'profession'|'default'), scope_value, threshold, note, active
 ```
 
+**Cách so khớp khác nhau giữa `company` và `profession`:**
+
+- `company`: field `company` trong `interview_evaluations` sạch, 1 giá trị/dòng → so khớp **chính xác** (đã lowercase + trim).
+- `profession`: field `profession` thường bị ghi ghép nhiều nghề trong 1 chuỗi (vd `"Refa/Fachverkäufer/Koch/Bäcker"`, `"Fachverkäufer/in, flex"`) → so khớp **CHÍNH XÁC** sau khi đã **bỏ dấu** (umlaut tiếng Đức ä/ö/ü, dấu tiếng Việt) + lowercase — **không** khớp dạng chứa chuỗi, để hồ sơ chỉ liệt kê 1 nghề đó (không phải ghép nhiều nghề) mới được hưởng ngưỡng riêng. `scope_value` nên lưu **không dấu, đúng y nguyên cách field `profession` ghi** (vd `backer/in` cho `Bäcker/in`, `lam banh` cho `Làm bánh`).
+
+Đã seed sẵn ngưỡng 5.5 cho nhóm nghề chế biến/làm bánh/xây dựng (`sql/02_profession_thresholds.sql` + `sql/03_profession_exact_match.sql`):
+
+| scope_value | Khớp với (dữ liệu thật) |
+|---|---|
+| `fleischer` | `Fleischer` |
+| `fleischer/-in` | `Fleischer/-in` |
+| `backer/in` | `Bäcker/in` |
+| `backerin` | `Bäckerin` |
+| `flex` | `Flex` |
+| `lam banh` | `Làm bánh` |
+| `lebensmittelverarbeitung` | `Lebensmittelverarbeitung` (chế biến thực phẩm) |
+| `xay dung` | *(chưa có dữ liệu thực tế — thêm sẵn cho ngành xây dựng)* |
+
+Vì khớp chính xác, hồ sơ ghi ghép nhiều nghề (vd `"Koch/Köchin - Fleischer"`, `"Refa/Fachverkäufer/Koch/Bäcker"`, `"Koch/Köchin, làm bánh, bán bánh"`) sẽ **không** được ngưỡng riêng, rơi về `default`. Muốn áp dụng cho cách ghi ghép cụ thể nào đó → thêm 1 dòng `scope_value` đúng y nguyên chuỗi đó (đã bỏ dấu, lowercase).
+
 ## Cài đặt
 
-1. Chạy `sql/01_score_thresholds.sql` trên Supabase (SQL Editor) để tạo bảng `score_thresholds` + seed dữ liệu tương đương logic cũ.
+1. Chạy lần lượt `sql/01_score_thresholds.sql`, `sql/02_profession_thresholds.sql`, `sql/03_profession_exact_match.sql` trên Supabase (SQL Editor) để tạo bảng `score_thresholds` + seed dữ liệu.
 2. Import file `interview-result-lookup.json` vào n8n (**Workflow → Import from File**).
 3. Gán lại credentials cho: Telegram Trigger, các node Telegram, Supabase (bao gồm node mới **"Supabase: Lấy ngưỡng điểm"**), OpenRouter, DeepSeek.
 4. Mở node **"Gửi danh sách để chọn (HTTP)"** → thay `<TOKEN>` trong URL bằng bot token thật:
@@ -106,9 +138,9 @@ VALUES ('company', 'elmc', 5, 'Đối tác ELMC')
 ON CONFLICT (scope, scope_value) WHERE scope_value IS NOT NULL
 DO UPDATE SET threshold = EXCLUDED.threshold, updated_at = now();
 
--- Set ngưỡng riêng cho 1 nghề
+-- Set ngưỡng riêng cho 1 nghề (scope_value KHÔNG DẤU, xem cách so khớp ở trên)
 INSERT INTO score_thresholds (scope, scope_value, threshold, note)
-VALUES ('profession', 'dieu duong', 6.5, 'Điều dưỡng yêu cầu cao hơn')
+VALUES ('profession', 'fleischer', 5.5, 'Nghề Fleischer (chế biến thịt)')
 ON CONFLICT (scope, scope_value) WHERE scope_value IS NOT NULL
 DO UPDATE SET threshold = EXCLUDED.threshold, updated_at = now();
 
@@ -133,6 +165,10 @@ UPDATE score_thresholds SET active = false WHERE scope = 'company' AND scope_val
 
 ## Changelog
 
+- **v1.6** — Fix bug `/nguong` không trả lời gì: node "Trả lời: Danh sách ngưỡng" lỗi `400 can't parse entities` vì text có dấu `_` trần trong `score_thresholds` (ngoài backtick) — Telegram `parse_mode: Markdown` (legacy) hiểu nhầm là mở entity italic không tìm được dấu đóng, khiến `sendMessage` fail và bot im lặng. Bọc `score_thresholds` trong backtick để fix.
+- **v1.5** — Thêm lệnh `/nguong`: xem ngay trong Telegram ngưỡng điểm "Đạt" đang áp dụng (mặc định/công ty/nghề) mà không cần mở Supabase. Thêm link Supabase Table Editor vào `/help`.
+- **v1.4** — Đổi cách so khớp ngưỡng theo nghề từ "chứa chuỗi" về lại **khớp chính xác** (sau khi bỏ dấu): "chứa chuỗi" vô tình áp ngưỡng 5.5 cho hồ sơ ghép nhiều nghề (vd `"Refa/Fachverkäufer/Koch/Bäcker"`, `"Fachverkäufer/in, flex"`) dù nghề đó chỉ là 1 trong nhiều kỹ năng liệt kê. Bỏ `backer`, thêm biến thể chính xác `backer/in`, `backerin`, `fleischer/-in`. Thêm ngành xây dựng (`xay dung`, chưa có dữ liệu thực tế).
+- **v1.3** — Sửa cách so khớp ngưỡng theo nghề: field `profession` thường ghép nhiều nghề trong 1 chuỗi (vd `"Koch/Köchin - Fleischer"`), so khớp exact bỏ sót các dòng này → đổi sang so khớp "chứa chuỗi" sau khi bỏ dấu. Seed ngưỡng 5.5 cho nhóm chế biến/làm bánh (Fleischer, Bäcker, làm bánh, Flex, Lebensmittelverarbeitung).
 - **v1.2** — Chuyển ngưỡng điểm "Đạt/Chưa đạt" từ hardcode (`specialCompanies` trong code) sang cấu hình trong bảng Supabase `score_thresholds`, hỗ trợ set riêng theo công ty hoặc theo nghề. Thêm node **"Supabase: Lấy ngưỡng điểm"**.
 - **v1.1** — Sửa lỗi nút chọn (2–5 kết quả) không gửi được do thiếu `callback_data`; thêm lệnh `/help`.
 - **v1.0** — Bản gốc: tra cứu theo tên/công ty, fuzzy match bằng AI Agent, format kết quả chi tiết.
