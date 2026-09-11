@@ -4,6 +4,18 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-11 (tiếp 37) — Fix bug thật: nút "🏷️ Nhóm mention" không hiện, đổi sang deep-link text
+
+User xác nhận thật rủi ro đã cảnh báo ở phiên tiếp 20 (RULES.md #21): `inlineKeyboard` với số nút
+ĐỘNG (tùy số nhóm mention) đặt bằng 1 expression động cho cả field không render được nút thật qua
+Telegram (dù `test_workflow` báo logic đúng — không xác nhận được hiển thị vì Postgres/Telegram bị
+pin khi test). Đã bỏ hẳn cách dùng inline keyboard cho màn hình này, chuyển sang deep-link dạng text
+(đúng mặc định RULES.md #3, đã proven ổn định ở các tính năng khác): `Build Mention Menu` xây text
+với `<a href="...?start=mgt_<uid>_<groupId>">` cho từng nhóm; `Send Mention Menu` bỏ `inlineKeyboard`,
+`replyMarkup: none`; `Admin Extras Router` thêm nhận diện `/start mgt_<uid>_<groupId>` +
+`/start mmenu_<uid>` (tái dùng nguyên logic toggle/refresh cũ). Verify `node -c` + `get_workflow_details`
+(node count vẫn 120, connections đúng), publish (`activeVersionId: 7b411b06-1be5-408f-99aa-016723317e12`).
+
 ## 2026-09-11 (tiếp 36) — Audit độc lập PASS + thêm comment SQL cho 1 caveat MVCC nhỏ
 
 Audit subagent thứ 2 (kiểm tra lại toàn bộ `GW Error Knowledge` + `Telebot Admin System` sau 2 lần sửa

@@ -4,6 +4,35 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 37) — Bug thật: nút "🏷️ Nhóm mention" không hiện nút
+
+User báo sau khi `/user_list` → bấm "🏷️ Nhóm mention", chỉ nhận được 1 tin nhắn có tiêu đề, KHÔNG có
+nút nào cả — đúng y hệt rủi ro CHƯA XÁC NHẬN đã cảnh báo trước ở phiên tiếp 20 (xem RULES.md #21):
+`inlineKeyboard` với SỐ NÚT ĐỘNG (tùy số nhóm mention đã tạo) đặt bằng 1 expression động cho CẢ field
+(`inlineKeyboard: "={{ { rows: $json.rows } }}"`) — `test_workflow` từng báo logic đúng nhưng KHÔNG
+xác nhận được hiển thị thật (Postgres/Telegram bị pin khi test), và giờ xác nhận THẬT qua Telegram:
+nút không hiện.
+
+**Đã sửa triệt để theo đúng mặc định của dự án (RULES.md #3 — deep-link dạng text thay vì inline
+keyboard)**, KHÔNG cố sửa tiếp cách dùng inline keyboard động (đã 2 lần chứng minh không đáng tin cho
+số nút thay đổi):
+- `Build Mention Menu`: đổi hẳn từ xây `rows` (inlineKeyboard) sang xây TEXT với deep-link
+  `<a href="https://t.me/elite_n8n_system_bot?start=mgt_<uid>_<groupId>">✅/➕ Tên nhóm</a>` cho mỗi
+  nhóm, kèm `<a href="...?start=um_<uid>">⬅️ Quay lại</a>` ở cuối.
+- `Send Mention Menu`: bỏ hẳn `replyMarkup: inlineKeyboard` + field `inlineKeyboard`, chuyển về
+  `replyMarkup: none` (tin nhắn text thuần, link bấm được nhờ `parse_mode: HTML`).
+- `Admin Extras Router`: thêm nhận diện `/start mgt_<uid>_<groupId>` → route `mention_toggle` (y hệt
+  callback `mgt:<uid>:<groupId>` cũ, tái dùng nguyên `Toggle Mention Membership` + luồng refresh panel
+  có sẵn) và `/start mmenu_<uid>` → route `mention_menu`, theo đúng pattern đã có sẵn cho `um_<uid>`.
+
+Verify bằng `node -c` (cả 2 Code node parse sạch) + `get_workflow_details` (routing/connections không
+đổi, node count vẫn 120), publish lại (`activeVersionId: 7b411b06-1be5-408f-99aa-016723317e12`).
+KHÔNG test được qua MCP (Telegram Trigger không hỗ trợ `execute_workflow` trực tiếp).
+
+**Việc cần user làm**: vào `/user_list` → chọn 1 user → bấm "🏷️ Nhóm mention" → xác nhận thấy DANH
+SÁCH LINK (không phải nút) với đúng số nhóm mention đã tạo, bấm thử 1 link → xác nhận toggle đúng
+(icon ✅/➕ đổi) và panel refresh lại đúng trạng thái mới.
+
 ## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 35) — Bug thật: `/help` (Admin) mất phản hồi hoàn toàn
 
 User báo "menu help của admin lại biến mất". Tra execution log thật (`2064`, `2065`, `2066` — user tự
