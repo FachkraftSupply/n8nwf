@@ -20,6 +20,15 @@ nào), nên không cần xây thêm gì cho yêu cầu "hủy + xóa tin nhắn 
 mới. Publish `activeVersionId: e88477ff-8745-4ed6-93f6-5a113e4d7275`. CHƯA test qua Telegram thật
 (Telegram Trigger không gọi được qua MCP) — chỉ verify tĩnh (cú pháp, SQL, routing).
 
+**Audit độc lập tìm 2 vấn đề, đã sửa cả 2**: (1) bug thật do phiên này — `Mention Add Candidates
+Query` dùng `CROSS JOIN` nên không phân biệt được "nhóm đã xóa" vs "nhóm còn nhưng 0 candidate", đổi
+sang `LEFT JOIN ... ON true`. (2) rủi ro có sẵn từ trước ảnh hưởng MỌI nút "❌ Hủy" (`admin_cancel`)
+trong toàn Admin System, không riêng `/xem_nhom`: `Reply Cancelled (Admin)` tham chiếu
+`$('Phân tích lệnh')` — node này KHÔNG chạy ở nhánh callback, chỉ chạy ở nhánh lệnh gõ tay `/cancel`.
+`test_workflow` không xác nhận được vì Telegram node bị pin (RULES.md #21). Đổi sang tham chiếu
+`$('Build Envelope (System Bot)')` (luôn chạy đầu tiên ở mọi nhánh) để an toàn tuyệt đối, không cần
+chờ xác nhận n8n có thật sự lỗi hay không. Publish `activeVersionId: a4dc6cd5-fdd4-4fbd-8f65-3811c1640e3b`.
+
 ## 2026-09-11 (tiếp 37) — Fix bug thật: nút "🏷️ Nhóm mention" không hiện, đổi sang deep-link text
 
 User xác nhận thật rủi ro đã cảnh báo ở phiên tiếp 20 (RULES.md #21): `inlineKeyboard` với số nút

@@ -51,6 +51,28 @@ chạy qua Telegram thật lần nào. Đang chờ audit subagent độc lập t
 **Việc cần user làm**: gõ `/xem_nhom` → bấm vào 1 nhóm → thử cả 4 nút (➕/➖/🗑️/⬅️) + nút ❌ Hủy ở từng
 màn hình, xác nhận thêm/xóa người đúng, xóa nhóm đúng (nhóm biến mất khỏi `/xem_nhom` sau khi xóa).
 
+**✅ Audit độc lập xong — tìm 2 vấn đề, đã sửa cả 2:**
+1. **Bug thật (do phiên này gây ra)**: `Mention Add Candidates Query` dùng `CROSS JOIN` — khi nhóm đã
+   tồn tại nhưng TẤT CẢ user đã có trong nhóm rồi (0 candidate), câu query trả về 0 dòng, không phân
+   biệt được với trường hợp "nhóm đã bị xóa" → hiện nhầm thông báo "Nhóm không tồn tại" thay vì "Tất cả
+   user đã có trong nhóm này rồi". Đã sửa: đổi sang `LEFT JOIN ... ON true` (nhóm luôn ra ít nhất 1
+   dòng nếu tồn tại, giống hệt pattern `Mention Group View Query`/`Mention Remove Candidates Query`
+   đã dùng đúng từ đầu).
+2. **Rủi ro CÓ SẴN TỪ TRƯỚC (không phải do phiên này, nhưng ảnh hưởng trực tiếp nút ❌ Hủy mới thêm)**:
+   node `Reply Cancelled (Admin)` (dùng chung cho MỌI nút "❌ Hủy"/`admin_cancel` trong toàn bộ Admin
+   System, không riêng `/xem_nhom`) tham chiếu `$('Phân tích lệnh').first()` — nhưng node `Phân tích
+   lệnh` CHỈ chạy ở nhánh lệnh gõ tay (`/cancel`), KHÔNG chạy ở nhánh callback (`admin_cancel` từ nút
+   bấm) — nghĩa là mọi lần bấm "❌ Hủy" qua callback (bao gồm cả các menu cũ: grant/revoke/delete
+   user...) có khả năng tham chiếu tới 1 node CHƯA CHẠY trong execution đó. `test_workflow` KHÔNG xác
+   nhận được (Telegram node bị pin tự động, không đánh giá expression thật — đúng RULES.md #21).
+   **Đã sửa để an toàn tuyệt đối** (không cần chờ xác nhận n8n có thật sự lỗi hay không): đổi sang
+   `$('Build Envelope (System Bot)')` — node LUÔN chạy đầu tiên ở CẢ 2 nhánh, không rủi ro gì. Verify
+   + publish lại (`activeVersionId: a4dc6cd5-fdd4-4fbd-8f65-3811c1640e3b`).
+
+**Ghi chú UX nhỏ (không sửa, để user quyết định)**: audit chỉ ra text "Đã hủy" hiện dùng chung
+("✅ Không có thao tác nào đang chờ để hủy.") có thể hơi khó hiểu trong ngữ cảnh vừa hủy 1 thao tác
+thêm/xóa người/xóa nhóm cụ thể — không phải bug, chỉ là câu chữ hơi chung chung.
+
 ## ✅ SỬA XONG, CHỜ USER XÁC NHẬN (11/09/2026, phiên tiếp 37) — Bug thật: nút "🏷️ Nhóm mention" không hiện nút
 
 User báo sau khi `/user_list` → bấm "🏷️ Nhóm mention", chỉ nhận được 1 tin nhắn có tiêu đề, KHÔNG có
