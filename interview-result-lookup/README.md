@@ -165,6 +165,7 @@ UPDATE score_thresholds SET active = false WHERE scope = 'company' AND scope_val
 
 ## Changelog
 
+- **v1.6** — Fix bug `/nguong` không trả lời gì: node "Trả lời: Danh sách ngưỡng" lỗi `400 can't parse entities` vì text có dấu `_` trần trong `score_thresholds` (ngoài backtick) — Telegram `parse_mode: Markdown` (legacy) hiểu nhầm là mở entity italic không tìm được dấu đóng, khiến `sendMessage` fail và bot im lặng. Bọc `score_thresholds` trong backtick để fix.
 - **v1.5** — Thêm lệnh `/nguong`: xem ngay trong Telegram ngưỡng điểm "Đạt" đang áp dụng (mặc định/công ty/nghề) mà không cần mở Supabase. Thêm link Supabase Table Editor vào `/help`.
 - **v1.4** — Đổi cách so khớp ngưỡng theo nghề từ "chứa chuỗi" về lại **khớp chính xác** (sau khi bỏ dấu): "chứa chuỗi" vô tình áp ngưỡng 5.5 cho hồ sơ ghép nhiều nghề (vd `"Refa/Fachverkäufer/Koch/Bäcker"`, `"Fachverkäufer/in, flex"`) dù nghề đó chỉ là 1 trong nhiều kỹ năng liệt kê. Bỏ `backer`, thêm biến thể chính xác `backer/in`, `backerin`, `fleischer/-in`. Thêm ngành xây dựng (`xay dung`, chưa có dữ liệu thực tế).
 - **v1.3** — Sửa cách so khớp ngưỡng theo nghề: field `profession` thường ghép nhiều nghề trong 1 chuỗi (vd `"Koch/Köchin - Fleischer"`), so khớp exact bỏ sót các dòng này → đổi sang so khớp "chứa chuỗi" sau khi bỏ dấu. Seed ngưỡng 5.5 cho nhóm chế biến/làm bánh (Fleischer, Bäcker, làm bánh, Flex, Lebensmittelverarbeitung).
