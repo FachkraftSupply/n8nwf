@@ -91,7 +91,61 @@ thêm/xóa người/xóa nhóm cụ thể — không phải bug, chỉ là câu 
    hiển thị cho đồng nhất với quy ước cũ, verify + publish (`activeVersionId:
    839d2527-0e6c-42d2-9b49-d72e68e47194`).
 
-## 🔖 DỞ DANG, dừng vì hết token (11/09/2026, phiên tiếp 40) — Artifact đối chiếu tính năng Admin/User
+## 📐 QUYẾT ĐỊNH KIẾN TRÚC MỚI (12/09/2026) — Tách 2 luồng Stage / Production
+
+User quyết định (nguyên văn, áp dụng từ nay): chia workflow thành **2 luồng** rõ ràng thay vì 1 luồng
+dùng chung như trước:
+
+1. **Stage** (môi trường thử nghiệm) — trigger là **bot Test** (`@elite_n8n_test_bot`, DEV) + **bot
+   Admin** (`@elite_n8n_system_bot`). Mọi tính năng mới/sửa đổi PHẢI build và test ở đây trước.
+2. **Production** (môi trường thật, user thật đang dùng) — trigger là **bot ClickUp**
+   (`@Elite_clickup_bot`, PROD) + **bot Admin** (dùng chung 1 bot Admin cho cả 2 luồng, không tách
+   riêng).
+3. **Quy trình chuyển stage → production**: CHỈ khi user tự tay test trên Stage xong và xác nhận
+   "OK" thì mới đưa thay đổi đó sang Production. KHÔNG tự ý đẩy thẳng lên Production khi chưa có xác
+   nhận rõ ràng từ user, dù đã tự test kỹ tới đâu.
+
+**Đối chiếu với kiến trúc hiện tại** (xem `docs/ARCHITECTURE.md`, `RULES.md` #9): dự án hiện có 3 bot
+Telegram — `@elite_n8n_test_bot` (DEV, đang là Gateway thật user dùng hàng ngày), `@Elite_clickup_bot`
+(PROD, dự kiến thay DEV ở "Giai đoạn 4 cutover" — chưa xảy ra), `@elite_n8n_system_bot` (System/Admin).
+Quyết định này CHÍNH THỨC HOÁ khái niệm DEV/PROD đã có sẵn thành quy trình Stage/Production bắt buộc,
+thay vì chỉ là kế hoạch cutover 1 lần trong tương lai.
+
+**⚠️ Chưa chốt được ở phiên này (cần hỏi lại user hoặc quyết định ở phiên build đầu tiên theo quy
+trình mới)**: cơ chế kỹ thuật CỤ THỂ để "1 thay đổi tồn tại song song ở cả Stage lẫn Production" —
+hiện `GW Gateway - Telegram (DEV)` là 1 workflow DUY NHẤT, Telegram Trigger trỏ vào bot Test. Có 2
+hướng khả thi, chưa chọn:
+  - (a) Duy trì 2 workflow riêng biệt (1 bản Stage trigger bot Test, 1 bản Production trigger bot
+    ClickUp) — sửa ở Stage xong thì "đồng bộ tay" (copy node) sang bản Production khi user OK.
+  - (b) Chỉ 1 workflow, đổi credential Telegram Trigger qua lại giữa bot Test ↔ bot ClickUp theo từng
+    giai đoạn — không có 2 bản chạy song song thật sự, đúng nghĩa "cutover" hơn là "song song".
+  Cần làm rõ hướng nào trước khi build tính năng tiếp theo theo quy trình Stage/Production mới.
+
+## ✅ TEST THẬT XONG (12/09/2026, phiên tiếp 41) — `/xem_nhom` chạy đúng 100% qua Telegram thật
+
+User đăng nhập Telegram Web, Claude tự thao tác trực tiếp qua bot Admin thật (`elite_n8n_system`) để
+test toàn bộ luồng `/xem_nhom` — **không còn là "verify tĩnh", đã chạy thật qua Telegram**:
+
+1. `/xem_nhom` → hiện đúng danh sách 3 nhóm mention thật (`obd` 6 người, `sales` 2 người, `xlhs`
+   5 người) dạng link, kèm nút ❌ Hủy.
+2. Bấm vào nhóm `sales` → hiện đúng tên thật 2 thành viên ("Mạnh Cường Trần", "Trang Huyen") — **xác
+   nhận bug hiện `user_id` thay vì tên đã sửa đúng** (phiên tiếp 39). Đủ 5 nút.
+3. ➕ Thêm người → danh sách toàn bộ user còn lại hiện đúng tên thật. Bấm "Emily Nguyen" → thêm ngay,
+   danh sách tự refresh (Emily biến mất khỏi danh sách "chưa có") → quay lại xem nhóm xác nhận `sales`
+   giờ có đúng 3 người.
+4. ➖ Xóa người → danh sách 3 thành viên hiện đúng, bấm "Emily Nguyen" → xóa ngay, refresh đúng còn 2
+   người — khôi phục lại đúng trạng thái ban đầu sau khi test.
+5. ❌ Hủy → tin biến mất ngay, KHÔNG gửi thêm gì (không còn dòng "Không có thao tác nào đang chờ") —
+   xác nhận route `mgcancel` (phiên tiếp 39) hoạt động đúng như thiết kế.
+6. Tạo nhóm test riêng (`/tao_group test_xoa`, 0 thành viên) để test 🗑️ Xóa nhóm mà không đụng 3 nhóm
+   thật đang dùng — xác nhận luôn: case 0 thành viên hiện đúng "(chưa có thành viên nào)", panel xác
+   nhận xóa hiện đúng, bấm "✅ Xác nhận xóa" → xóa thật, `/xem_nhom` sau đó không còn thấy nhóm này nữa.
+
+**Kết luận: toàn bộ tính năng `/xem_nhom` (build ở phiên tiếp 38, fix ở 39) đã CONFIRMED hoạt động
+đúng 100% qua Telegram thật, không còn mục nào "chưa test".** `/tao_group` cũng xác nhận không còn
+lỗi "Unsupported start tag" cũ.
+
+## 🔖 DỞ DANG (11/09/2026, phiên tiếp 40) — Artifact đối chiếu tính năng Admin/User
 
 User yêu cầu: lập 1 bảng so sánh chức năng bot Admin vs bot User để dễ tick test. Đã chọn giải pháp:
 Artifact HTML tương tác (không phải bảng markdown tĩnh) — dùng capability `artifact` để tick/ghi chú
