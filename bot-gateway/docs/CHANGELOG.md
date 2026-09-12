@@ -22,6 +22,13 @@ chèn giữa 2 HTTP call và `Build Token Stats`. Xác nhận lại qua Telegram
 log: `Merge Token Results` giờ chạy đúng 1 lần (chờ đủ 2 nguồn), `Send Token Stats` chỉ gửi đúng 1 tin.
 Cập nhật `/help` thêm dòng `/token`. Publish `activeVersionId: dcbf83b7-61c6-45e0-abee-4104bebd3e50`.
 
+**Bug thật thứ 2 tự phát hiện (nhờ user đối chiếu tay)**: endpoint `https://openrouter.ai/api/v1/auth/key`
+trả về `limit`/`usage` là giới hạn chi tiêu PHỤ gán riêng cho đúng API key đó (ở đây bị set $10),
+KHÔNG PHẢI tổng số dư thật của tài khoản — user kiểm tra tay thấy số dư thật là $11.51, lệch hẳn so
+với "$9.8075 còn lại" bot báo. Đã đổi sang endpoint đúng `https://openrouter.ai/api/v1/credits`
+(field `total_credits`/`total_usage`), test lại thật ra "Còn lại: $11.5116" — khớp chính xác số user
+tự kiểm tra. Publish `activeVersionId: 80cd5c53-b127-46eb-9639-a9a6bc8f320e`.
+
 **Cũng trong phiên này**: đã cân nhắc rồi HỦY ý tưởng tách 2 luồng Stage/Production (xem
 `PROJECT_STATUS.md` + RULES.md #22) — không triển khai, khối lượng việc không tương xứng lợi ích.
 
