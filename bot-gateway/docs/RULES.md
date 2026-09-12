@@ -357,17 +357,10 @@ xác nhận ĐANG NHÌN ĐÚNG node có nút thật, không phải node fallback
 nhưng KHÔNG được coi là đủ để xác nhận nút Telegram hiển thị đúng — phải kết hợp với việc tự đọc
 cấu trúc node (không dùng expression cho `replyMarkup`) HOẶC đợi user xác nhận qua Telegram thật.
 
-## 22. 📐 Quyết định 12/09/2026 — Tách 2 luồng Stage / Production, KHÔNG tự ý đẩy thẳng lên Production
+## 22. ❌ (ĐÃ HỦY 12/09/2026) Ý tưởng tách 2 luồng Stage / Production
 
-Từ 12/09/2026, dự án chính thức có 2 luồng tách biệt (xem đầy đủ ở `PROJECT_STATUS.md` mục "QUYẾT
-ĐỊNH KIẾN TRÚC MỚI" — đọc ở đó trước, mục này chỉ tóm tắt):
-1. **Stage** — trigger bot Test (`@elite_n8n_test_bot`) + bot Admin (`@elite_n8n_system_bot`). Mọi
-   tính năng mới/sửa đổi BẮT BUỘC build và tự test ở đây trước.
-2. **Production** — trigger bot ClickUp (`@Elite_clickup_bot`, PROD) + cùng 1 bot Admin dùng chung.
-3. **CHỈ chuyển sang Production khi user tự tay test ở Stage xong và xác nhận rõ ràng "OK"** — dù
-   Claude Code đã tự verify kỹ tới đâu (đọc code, `test_workflow`, thậm chí tự bấm thử qua Telegram
-   Web) cũng KHÔNG được coi là đủ để tự ý đẩy sang Production thay cho xác nhận của user.
-
-**⚠️ Cơ chế kỹ thuật cụ thể (1 workflow đổi credential Trigger hay 2 workflow riêng biệt song song)
-CHƯA CHỐT** — xem chi tiết 2 hướng đang cân nhắc ở `PROJECT_STATUS.md`. Hỏi lại user hoặc chốt cùng
-user ở lần đầu tiên cần build tính năng mới theo quy trình này, đừng tự chọn 1 hướng rồi build.
+Từng cân nhắc 12/09/2026 (chi tiết xem `PROJECT_STATUS.md`, mục đã đánh dấu "ĐÃ CÂN NHẮC NHƯNG QUYẾT
+ĐỊNH KHÔNG LÀM") — tách hẳn workflow thành Stage (bot Test) và Production (bot ClickUp). **User đã
+quyết định KHÔNG triển khai** sau khi thấy khối lượng việc thật (nhân bản tay ~181 node, rủi ro
+cutover user thật) không tương xứng lợi ích. Giữ nguyên kiến trúc 1 luồng hiện tại. Đừng đề xuất lại
+hướng này trừ khi user chủ động nhắc lại.

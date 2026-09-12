@@ -4,6 +4,27 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-12 (tiếp 42) — Lệnh mới `/token` — thống kê usage OpenRouter + số dư DeepSeek
+
+Route mới hoàn toàn độc lập (không dùng chung `Check Admin`/`Switch (Sync Actions)` như
+`/backup_*` để giảm rủi ro đụng route cũ): `Check Admin (Token)` → gọi song song 2 HTTP Request
+(`GET https://openrouter.ai/api/v1/auth/key` dùng credential `openRouterApi` có sẵn; `GET
+https://api.deepseek.com/user/balance` dùng credential `deepSeekApi` có sẵn, cả 2 qua
+`authentication: predefinedCredentialType` — không cần tạo credential mới) → `Build Token Stats`
+dựng text HTML → gửi. Cả 2 node HTTP có `onError: continueRegularOutput` để 1 API lỗi không chặn
+API còn lại.
+
+**Bug thật tự phát hiện qua test lần đầu**: 2 node HTTP nối trực tiếp cùng vào `Build Token Stats`
+khiến node đó chạy **2 LẦN** (mỗi nguồn kích hoạt 1 lần riêng, không tự gộp thành 1 item list như
+tưởng) → gửi trùng 2 tin. Đây đúng lỗi "item multiplication" n8n hay gặp khi 2 nhánh song song không
+qua Merge. **Đã sửa** bằng cách thêm node `Merge Token Results` (mode `append`, chờ đủ cả 2 input)
+chèn giữa 2 HTTP call và `Build Token Stats`. Xác nhận lại qua Telegram Web thật + đối chiếu execution
+log: `Merge Token Results` giờ chạy đúng 1 lần (chờ đủ 2 nguồn), `Send Token Stats` chỉ gửi đúng 1 tin.
+Cập nhật `/help` thêm dòng `/token`. Publish `activeVersionId: dcbf83b7-61c6-45e0-abee-4104bebd3e50`.
+
+**Cũng trong phiên này**: đã cân nhắc rồi HỦY ý tưởng tách 2 luồng Stage/Production (xem
+`PROJECT_STATUS.md` + RULES.md #22) — không triển khai, khối lượng việc không tương xứng lợi ích.
+
 ## 2026-09-11 (tiếp 39) — `/xem_nhom`: nút Hủy riêng (dead-end route) + fix hiện user_id thay vì tên
 
 Theo yêu cầu user: (1) tách nút "❌ Hủy" ở `/xem_nhom` thành route riêng `mgcancel`→`mention_cancel`,

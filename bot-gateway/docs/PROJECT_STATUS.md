@@ -91,7 +91,15 @@ thêm/xóa người/xóa nhóm cụ thể — không phải bug, chỉ là câu 
    hiển thị cho đồng nhất với quy ước cũ, verify + publish (`activeVersionId:
    839d2527-0e6c-42d2-9b49-d72e68e47194`).
 
-## 📐 QUYẾT ĐỊNH KIẾN TRÚC MỚI (12/09/2026) — Tách 2 luồng Stage / Production
+## ❌ ĐÃ CÂN NHẮC NHƯNG QUYẾT ĐỊNH KHÔNG LÀM (12/09/2026) — Tách 2 luồng Stage / Production
+
+Xem đầy đủ bối cảnh + kế hoạch chi tiết từng được đặt ra ở mục "QUYẾT ĐỊNH KIẾN TRÚC MỚI" ngay bên
+dưới (giữ lại để tham khảo, KHÔNG xóa). Sau khi thấy khối lượng công việc thật (nhân bản tay ~181
+node qua 3 workflow lớn do MCP n8n không có tool "duplicate", cộng rủi ro cutover ảnh hưởng user thật),
+**user quyết định KHÔNG triển khai** — chi phí bỏ ra không tương xứng lợi ích rõ ràng ở thời điểm này.
+Không cần đề xuất lại hướng này trừ khi user chủ động nhắc lại.
+
+## 📐 (ĐÃ HỦY — xem mục ngay trên) QUYẾT ĐỊNH KIẾN TRÚC MỚI (12/09/2026) — Tách 2 luồng Stage / Production
 
 User quyết định (nguyên văn, áp dụng từ nay): chia workflow thành **2 luồng** rõ ràng thay vì 1 luồng
 dùng chung như trước:
