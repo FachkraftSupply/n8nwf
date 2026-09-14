@@ -4,17 +4,31 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
-## 🔧 ĐÃ SỬA, CHỜ USER TEST LẠI (14/09/2026, phiên tiếp 43) — Fix `/xoanen` báo lỗi 400 file_id not specified
+## ⚠️ CẦN USER THAO TÁC (14/09/2026, phiên tiếp 43) — Bot lệnh không có mặt trong nhóm "🏠 Elite Nhà cửa"
 
-User báo qua Telegram lúc ~15:00: gửi `/xoanen` + ảnh không nhận được phản hồi. Đối chiếu execution
-log (workflow `Bot Xử Lý Ảnh (xoanen + tomtat)`, id `6I4MnJiJCiv2JOIr`, execution `2528`) xác nhận lỗi
-thật: node `Tải Ảnh Về (Xóa Nền)` tham chiếu `$json.raw.message.photo` bắc cầu qua node Postgres
-`Queue Image For Buttons` (chỉ trả `{id}`) → vi phạm Rule #2. Đã sửa trỏ tường minh về
-`$('Nhận Envelope Từ Gateway')`, publish `activeVersionId: 9b8a69b7-4c42-41ad-adf4-79a7320d12a5`.
-Chi tiết đầy đủ: xem `CHANGELOG.md` (14/09/2026, tiếp 43).
+User báo `/tomtat` gõ trong nhóm "🏠 Elite Nhà cửa / Support / Lịch bay" lúc 15:16 không có phản hồi.
+Đối chiếu execution log xác nhận: tin nhắn chỉ tới bot **Elite Crawl Bot** (bot log tin nhắn thụ động,
+workflow `GW Crawl Bot - Group Capture`) — bot này CHỦ ĐỘNG bỏ qua mọi tin có ảnh/media (chỉ log text
+cho tính năng tóm tắt ngày + mention). Bot xử lý lệnh chính **Elite Clickupbot** (@Elite_clickup_bot)
+KHÔNG nhận được update này — 0 execution ở `GW Gateway - Telegram (DEV)` đúng thời điểm đó. Kết luận:
+**@Elite_clickup_bot chưa được thêm vào nhóm này**, không phải bug code.
 
-**Việc cần user làm**: thử lại `/xoanen` kèm 1 ảnh — xác nhận bot trả về ảnh đã xóa nền. Nhánh
-`/tomtat` không bị ảnh hưởng (không có bug này) nhưng nên thử luôn cho chắc.
+**Việc cần user làm**: thêm bot **@Elite_clickup_bot** vào nhóm "🏠 Elite Nhà cửa / Support / Lịch
+bay" (Privacy Mode bot này đã tắt sẵn, không cần chỉnh gì thêm phía n8n). Sau khi thêm, thử lại
+`/tomtat` + ảnh để xác nhận.
+
+## 🔧 ĐÃ SỬA, CHỜ USER TEST LẠI (14/09/2026, phiên tiếp 43) — Fix `/xoanen` báo lỗi 400 file_id not specified (bug riêng, ở chat private, không liên quan mục trên)
+
+Phát hiện tình cờ khi soát log cùng lúc điều tra việc trên: gửi `/xoanen` + ảnh ở CHAT RIÊNG (private,
+không phải nhóm) không nhận được phản hồi. Đối chiếu execution log (workflow `Bot Xử Lý Ảnh (xoanen +
+tomtat)`, id `6I4MnJiJCiv2JOIr`, execution `2528`) xác nhận lỗi thật: node `Tải Ảnh Về (Xóa Nền)` tham
+chiếu `$json.raw.message.photo` bắc cầu qua node Postgres `Queue Image For Buttons` (chỉ trả `{id}`) →
+vi phạm Rule #2. Đã sửa trỏ tường minh về `$('Nhận Envelope Từ Gateway')`, publish
+`activeVersionId: 9b8a69b7-4c42-41ad-adf4-79a7320d12a5`. Chi tiết đầy đủ: xem `CHANGELOG.md`
+(14/09/2026, tiếp 43).
+
+**Việc cần user làm**: thử lại `/xoanen` kèm 1 ảnh (ở chat riêng với bot) — xác nhận bot trả về ảnh đã
+xóa nền.
 
 ## ✅ BUILD XONG, CHỜ AUDIT + TEST THẬT (11/09/2026, phiên tiếp 38) — Lệnh mới `/xem_nhom` quản lý nhóm mention đầy đủ
 

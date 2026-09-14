@@ -4,9 +4,20 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
-## 2026-09-14 (tiếp 43) — Fix bug thật: `/xoanen` không xóa nền được (báo lỗi 400 file_id not specified)
+## 2026-09-14 (tiếp 43) — Điều tra "/tomtat không phản hồi": phát hiện bot chưa được thêm vào nhóm (không phải bug) + fix bug thật riêng ở `/xoanen`
 
-User phát hiện qua execution log lúc ~15:00 giờ VN. Workflow `Bot Xử Lý Ảnh (xoanen + tomtat)`
+User báo `/tomtat` gõ trong nhóm "🏠 Elite Nhà cửa / Support / Lịch bay" lúc 15:16 giờ VN không có
+phản hồi. Đối chiếu execution log ba workflow (Gateway, Crawl Bot, Bot Xử Lý Ảnh) xác định: tin nhắn
+chỉ được Telegram gửi tới **Elite Crawl Bot** (workflow `GW Crawl Bot - Group Capture`) — bot log tin
+nhắn thụ động, code có dòng `if (isMedia) return [];` CHỦ ĐỘNG bỏ qua mọi tin có ảnh (đúng thiết kế,
+bot này chỉ để log text phục vụ `GW Daily Chat Summary` + mention resolver). Bot xử lý lệnh chính
+**Elite Clickupbot** hoàn toàn không có execution nào ở workflow `GW Gateway - Telegram (DEV)` đúng
+thời điểm đó → kết luận: **bot @Elite_clickup_bot chưa được thêm vào nhóm này**. Không sửa gì ở n8n,
+đã báo user tự thêm bot vào nhóm (Privacy Mode bot đã tắt sẵn từ trước, không cần chỉnh thêm).
+
+**Tình cờ phát hiện bug thật riêng, không liên quan**, khi soát log cùng lúc: `/xoanen` không xóa nền
+được (báo lỗi 400 file_id not specified) ở CHAT RIÊNG (private, không phải nhóm trên). Workflow `Bot Xử
+Lý Ảnh (xoanen + tomtat)`
 (`6I4MnJiJCiv2JOIr`), node `Tải Ảnh Về (Xóa Nền)` (nhánh `/xoanen`) dùng biểu thức bắc cầu
 `$json.raw.message.photo[...]`, nhưng node liền trước là `Queue Image For Buttons` (Postgres INSERT
 `RETURNING id`) chỉ trả `{id: N}` — không còn field `raw` → Telegram API `file.get` báo `400: file_id
