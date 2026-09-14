@@ -4,30 +4,52 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
-## ✅ ĐÃ RÕ NGUYÊN NHÂN + USER ĐÃ QUYẾT ĐỊNH (14/09/2026, phiên tiếp 43) — `/tomtat` "không phản hồi" ở nhóm "🏠 Elite Nhà cửa" là do 2 bot cùng 1 nhóm, KHÔNG phải bug
+## ✅ HOÀN TẤT, TEST THẬT OK (14/09/2026, phiên tiếp 43) — Gộp Crawl Bot vào Gateway + bỏ OCR.space
 
-User báo `/tomtat` gõ trong nhóm "🏠 Elite Nhà cửa / Support / Lịch bay" không có phản hồi. Điều tra
-qua nhiều bước bằng execution log (không đoán):
-1. Lúc đầu tưởng bot **Elite_clickup_bot** chưa được thêm vào nhóm (0 execution ở Gateway đúng lúc đó,
-   trong khi bot **Elite Crawl Bot** — bot log tin nhắn thụ động, chủ động bỏ qua tin có ảnh — vẫn nhận
-   bình thường). User xác nhận bot ĐÃ có trong nhóm → giả thuyết này sai.
-2. Test tiếp: gõ `/help` trần → Gateway vẫn 0 execution. Gõ `/help@Elite_clickup_bot` (Telegram tự gợi ý
-   khi gõ lệnh) → Gateway nhận đúng, chạy thành công. Test `/tomtat@Elite_clickup_bot` + ảnh → chạy
-   thành công toàn bộ (OCR + AI tóm tắt + gửi trả lời `ok:true`, message_id 22474) — chỉ là user không
-   thấy vì bot trả lời đúng vào TOPIC "Duisburg - Düsseldorf" (nhóm này bật chế độ Forum/Topics) chứ
-   không phải topic đang xem.
-3. **Ban đầu nghi do Telegram Group Privacy Mode** (BotFather) — user chụp màn hình cài đặt bot gửi
-   kiểm chứng: mô tả chính Telegram ghi rõ "Group Privacy: Receive only messages that mention or reply
-   to your bot, or contain /commands" — nghĩa là dù bật/tắt setting này, tin nhắn `/command` LUÔN được
-   chuyển tới bot bình thường. Vậy Group Privacy KHÔNG PHẢI nguyên nhân, hướng dẫn tắt nó trước đó
-   trong phiên này là SAI, đã đính chính với user.
-4. **Nguyên nhân thật**: nhóm "Elite Nhà cửa" có **2 bot cùng lúc** (Elite Crawl Bot + Elite_clickup_bot).
-   Đây là quy tắc riêng của Telegram để phân biệt lệnh gửi cho bot nào khi có ≥2 bot trong 1 nhóm/chat —
-   lệnh trần bị bỏ qua, phải gõ kèm `@TênBot`. Không có setting nào ở BotFather tắt được yêu cầu này.
+**Bối cảnh**: `/tomtat` gõ trần (không `@Elite_clickup_bot`) trong nhóm "🏠 Elite Nhà cửa" không có
+phản hồi. Điều tra nhiều bước (chi tiết đầy đủ xem `CHANGELOG.md` 14/09/2026 tiếp 43): ban đầu nghi
+bot chưa vào nhóm (sai, user xác nhận đã có), sau đó nghi Group Privacy Mode (sai, đính chính bằng ảnh
+chụp BotFather), cuối cùng xác định nhóm có **2 bot cùng lúc** (Elite Crawl Bot + Elite_clickup_bot) —
+Telegram không chuyển lệnh trần khi ≥2 bot chung nhóm, phải gõ kèm tên bot.
 
-**Quyết định của user**: chấp nhận gõ kèm `@Elite_clickup_bot` khi dùng lệnh trong nhóm "Elite Nhà
-cửa" (giữ cả 2 bot — không xóa Crawl Bot vì nhóm này vẫn cần tính năng log tin nhắn/tóm tắt ngày/mention
-của nó). Không cần sửa gì thêm ở n8n cho vấn đề này.
+User quyết định thay vì chấp nhận gõ `@`, **gộp hẳn việc của Crawl Bot (log tin nhắn nhóm +
+phát hiện `@@mention`) vào chung Gateway/Elite_clickup_bot**, áp dụng cho TẤT CẢ nhóm.
+
+**Đã build + publish + test thật OK**:
+1. Workflow `GW Gateway - Telegram (DEV)` (`xmEKeIUnzxm2F7dF`): bỏ early-return chặn tin nhắn nhóm
+   không phải lệnh ở `GW-01 Envelope`; thêm node `Cần Auth/Routing?` gate riêng luồng auth/router (giữ
+   nguyên hành vi cũ, không spam "chưa có quyền"); bật lại 2 node có sẵn nhưng bị disabled từ trước
+   (`Là Tin Nhắn Nhóm?`, `Ghi Log Tin Nhắn Nhóm`, thêm `ON CONFLICT DO NOTHING` chống log trùng); xây
+   mới nhánh phát hiện mention (`Detect Mention Tokens` → `Has Mention Tokens? (Gateway)` → `Trigger
+   Mention Resolver (Gateway)`, copy logic từ Crawl Bot).
+2. Workflow `GW Mention Resolver` (`ESbedUROf4udAkY6`): audit phát hiện node `Send Mention Reply` vẫn
+   dùng credential "Elite Crawl Bot" — đổi sang "Elite Clickupbot" để không gãy khi Crawl Bot rời nhóm.
+3. **Test thật xác nhận**: `/tomtat` trần chạy đúng qua Gateway (exec `2630`, `2634`, `2641` — route
+   `image_bot`, gửi tóm tắt thành công); tin nhắn thường log đúng vào `group_chat_log` (exec `2638`,
+   `2639` — `Ghi Log Tin Nhắn Nhóm` + `Detect Mention Tokens` chạy đúng, không mention thì dead-end
+   đúng, không spam quyền cho user lạ).
+4. **Ghi chú thú vị**: log cho thấy `GW Crawl Bot` vẫn nhận `/tomtat` lúc 12:07-12:08 (bot còn trong
+   nhóm), nhưng plain command NGAY LÚC ĐÓ đã route đúng qua Gateway rồi (không cần đợi xóa bot) — từ
+   12:08 trở đi Crawl Bot không còn execution nào ở nhóm này nữa (có vẻ user đã tự xóa bot). Không rõ
+   100% việc gõ `@` từng bắt buộc là do multi-bot ambiguity thật hay do Telegram delay lan truyền
+   quyền/privacy sau khi bot mới vào nhóm — không khẳng định chắc nguyên nhân gốc, chỉ ghi nhận kết quả
+   cuối cùng đã đúng như mong muốn.
+5. **Follow-up chưa làm** (không cấp bách): workflow `GW Crawl Bot - Group Capture` giờ dư thừa cho MỌI
+   nhóm (Gateway đã tự làm việc này) — nên deactivate + báo user xóa bot khỏi các nhóm còn lại để tránh
+   log trùng lặp không cần thiết (đã có `ON CONFLICT DO NOTHING` chống trùng dữ liệu, nhưng vẫn tốn
+   1 webhook + 1 execution thừa mỗi tin nhắn nếu còn sót bot ở nhóm nào).
+
+**Cũng trong phiên này — bỏ hẳn OCR.space khỏi `/tomtat`**: test thật gặp lỗi `E571: Free OCR API
+overloaded` (OCR.space free-tier rate-limit). User yêu cầu bỏ hẳn, chỉ dùng Mistral OCR. Đã gỡ nhánh
+`Tải Ảnh Về (Tóm Tắt)→Chuyển Ảnh Sang Base64→Gọi OCR.space API` + node merge `Gộp OCR + Vision` trong
+workflow `Bot Xử Lý Ảnh (xoanen + tomtat)` (`6I4MnJiJCiv2JOIr`), sửa prompt AI chỉ còn 1 nguồn OCR.
+Test thật OK (exec `2641`).
+
+**Đã nghiên cứu — Mistral KHÔNG có API kiểm tra credit cho `/token`**: Mistral có API
+usage/billing (`/v1/admin/usage`, `/v1/admin/spend-limit`) nhưng yêu cầu "Admin API Key" riêng VÀ đây
+là tính năng **chỉ dành cho gói Enterprise** (theo tài liệu chính thức) — không dùng được với API key
+thường đang có. Không có endpoint balance nào cho key thường (khác OpenRouter/DeepSeek). Quyết định:
+KHÔNG build, giữ nguyên `/token` chỉ có OpenRouter + DeepSeek.
 
 ## 🔧 ĐÃ SỬA, CHỜ USER TEST LẠI (14/09/2026, phiên tiếp 43) — Fix `/xoanen` báo lỗi 400 file_id not specified (bug riêng, ở chat private, không liên quan mục trên)
 

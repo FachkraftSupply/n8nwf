@@ -27,8 +27,51 @@ phản hồi. Điều tra qua nhiều bước bằng execution log thật (khôn
    Elite_clickup_bot) — quy tắc Telegram bắt buộc gõ `@TênBot` để phân biệt khi ≥2 bot chung 1
    chat/nhóm, không có setting nào ở BotFather tắt được. Không phải bug code, không sửa gì ở n8n.
 
-**Quyết định của user**: chấp nhận gõ kèm `@Elite_clickup_bot` khi dùng lệnh ở nhóm "Elite Nhà cửa"
-(giữ cả 2 bot vì vẫn cần tính năng của Crawl Bot ở đây).
+**Quyết định của user (đã đổi ý sau đó)**: ban đầu chấp nhận gõ kèm `@Elite_clickup_bot`, nhưng sau khi
+thấy khối lượng sửa không lớn, quyết định gộp hẳn Crawl Bot vào Gateway thay vì sống chung với việc gõ
+`@` — xem mục tiếp theo.
+
+## 2026-09-14 (tiếp 43, phần 2) — Gộp Crawl Bot vào Gateway; bỏ OCR.space khỏi `/tomtat`; audit Mistral cho `/token`
+
+**Gộp Crawl Bot vào Gateway** (áp dụng mọi nhóm, không riêng "Elite Nhà cửa"): phát hiện workflow
+Gateway (`xmEKeIUnzxm2F7dF`) đã có sẵn 2 node làm đúng việc log group chat (`Là Tin Nhắn Nhóm?`, `Ghi
+Log Tin Nhắn Nhóm`) nhưng bị `disabled` VÀ không bao giờ nhận được dữ liệu vì `GW-01 Envelope` có dòng
+early-return chặn hết tin nhắn nhóm không phải lệnh (`if (kind === 'message' && !command && group...)
+return [];`) — chặn luôn từ gốc trước khi tới được 2 node kia. Build theo 3 batch nhỏ (Rule #15/#16):
+- Batch 1: `addNode` 4 node mới cô lập (`Cần Auth/Routing?`, `Detect Mention Tokens`, `Has Mention
+  Tokens? (Gateway)`, `Trigger Mention Resolver (Gateway)`).
+- Batch 2: `removeNode`+`addNode` giữ nguyên id cho 3 node cần sửa tham số (`GW-01 Envelope` — bỏ
+  early-return; `Là Tin Nhắn Nhóm?` — bật lại + thêm điều kiện loại trừ media/yêu cầu text thật khớp
+  Crawl Bot; `Ghi Log Tin Nhắn Nhóm` — bật lại + thêm `ON CONFLICT DO NOTHING`).
+- Batch 3: nối lại toàn bộ 9 connection bị mất do removeNode (kể cả 1 dây bị BỎ SÓT ban đầu — input
+  `⚙️ Config → GW-01 Envelope` — tự phát hiện qua warning `DISCONNECTED_NODE` sau batch 3, sửa ngay).
+- Verify bằng `python3` so khớp connections object thật với thiết kế (không chỉ tin `appliedOperations`)
+  trước khi publish.
+
+**Audit phát hiện phụ thuộc còn sót**: soát toàn bộ 17 workflow + danh sách credential Telegram, tìm
+thấy `GW Mention Resolver` (`ESbedUROf4udAkY6`) node `Send Mention Reply` vẫn dùng credential "Elite
+Crawl Bot" — nếu không sửa, tính năng `@@mention` sẽ gãy khi Crawl Bot rời nhóm. Đổi sang "Elite
+Clickupbot", publish.
+
+**Test thật xác nhận** (đối chiếu execution log, không chỉ tin UI): `/tomtat` trần chạy đúng qua
+Gateway → route `image_bot` (exec `2630`, `2634`, `2641`); 2 tin nhắn thường từ 2 user khác nhau log
+đúng vào `group_chat_log`, `Detect Mention Tokens` chạy đúng (không mention thì dead-end, không gọi
+Resolver) (exec `2638`, `2639`); không spam "chưa có quyền" cho user gửi tin thường. Ghi chú: log cho
+thấy Crawl Bot vẫn nhận `/tomtat` lúc 12:07-12:08 (còn trong nhóm) nhưng plain command NGAY LÚC ĐÓ đã
+route đúng qua Gateway — không hoàn toàn chắc gõ `@` từng bắt buộc do multi-bot ambiguity thật hay do
+Telegram delay lan truyền sau khi bot mới vào nhóm; chỉ ghi nhận kết quả cuối cùng đúng như mong muốn.
+
+**Bỏ hẳn OCR.space khỏi `/tomtat`**: test thật gặp `E571: Free OCR API overloaded` (rate-limit
+free-tier OCR.space). User yêu cầu bỏ hẳn, chỉ dùng Mistral OCR. Gỡ nhánh `Tải Ảnh Về (Tóm
+Tắt)→Chuyển Ảnh Sang Base64→Gọi OCR.space API` + node merge `Gộp OCR + Vision` trong `Bot Xử Lý Ảnh
+(xoanen + tomtat)` (`6I4MnJiJCiv2JOIr`), nối thẳng `OCR Mistral (Native)` → `Tóm Tắt Bằng AI`, sửa
+prompt chỉ còn 1 nguồn OCR. Test thật OK (exec `2641`).
+
+**Nghiên cứu Mistral cho `/token`**: user hỏi có thể thêm Mistral (check credit/usage) vào `/token`
+không. Tra cứu tài liệu chính thức: Mistral có API usage/billing (`/v1/admin/usage`,
+`/v1/admin/spend-limit`) nhưng yêu cầu "Admin API Key" riêng và đây là tính năng **chỉ dành cho gói
+Enterprise** — không dùng được với API key thường đang có, và không có endpoint balance nào khác cho
+key thường (khác hẳn OpenRouter/DeepSeek). Quyết định KHÔNG build.
 
 **Tình cờ phát hiện bug thật riêng, không liên quan**, khi soát log cùng lúc: `/xoanen` không xóa nền
 được (báo lỗi 400 file_id not specified) ở CHAT RIÊNG (private, không phải nhóm trên). Workflow `Bot Xử
