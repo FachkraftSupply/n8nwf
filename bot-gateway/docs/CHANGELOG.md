@@ -4,6 +4,22 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-14 (tiếp 43) — Fix bug thật: `/xoanen` không xóa nền được (báo lỗi 400 file_id not specified)
+
+User phát hiện qua execution log lúc ~15:00 giờ VN. Workflow `Bot Xử Lý Ảnh (xoanen + tomtat)`
+(`6I4MnJiJCiv2JOIr`), node `Tải Ảnh Về (Xóa Nền)` (nhánh `/xoanen`) dùng biểu thức bắc cầu
+`$json.raw.message.photo[...]`, nhưng node liền trước là `Queue Image For Buttons` (Postgres INSERT
+`RETURNING id`) chỉ trả `{id: N}` — không còn field `raw` → Telegram API `file.get` báo `400: file_id
+not specified`, người dùng gửi `/xoanen` + ảnh không nhận được phản hồi gì. Đúng lỗi vi phạm Rule #2
+(tham chiếu `$json` bắc cầu qua node khác thay vì `$('NodeName')` tường minh) — 2 node song song `Tải
+Ảnh Về (Tóm Tắt)`/`Tải Ảnh Về (Vision)` (nhánh `/tomtat`) không bị lỗi này vì không có node Postgres
+chen giữa.
+
+**Đã sửa**: trỏ tường minh về `$('Nhận Envelope Từ Gateway').item.json.raw.message.photo[...]` (sửa
+bằng `removeNode`+`addNode` giữ nguyên id theo Rule #16, verify lại connections khớp 100%, publish
+`activeVersionId: 9b8a69b7-4c42-41ad-adf4-79a7320d12a5`). **Chưa test lại qua Telegram thật** — cần
+user thử lại `/xoanen` + ảnh để xác nhận, phiên sau đối chiếu execution log.
+
 ## 2026-09-12 (tiếp 42) — Lệnh mới `/token` — thống kê usage OpenRouter + số dư DeepSeek
 
 Route mới hoàn toàn độc lập (không dùng chung `Check Admin`/`Switch (Sync Actions)` như

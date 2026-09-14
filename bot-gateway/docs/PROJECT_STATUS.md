@@ -4,6 +4,18 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔧 ĐÃ SỬA, CHỜ USER TEST LẠI (14/09/2026, phiên tiếp 43) — Fix `/xoanen` báo lỗi 400 file_id not specified
+
+User báo qua Telegram lúc ~15:00: gửi `/xoanen` + ảnh không nhận được phản hồi. Đối chiếu execution
+log (workflow `Bot Xử Lý Ảnh (xoanen + tomtat)`, id `6I4MnJiJCiv2JOIr`, execution `2528`) xác nhận lỗi
+thật: node `Tải Ảnh Về (Xóa Nền)` tham chiếu `$json.raw.message.photo` bắc cầu qua node Postgres
+`Queue Image For Buttons` (chỉ trả `{id}`) → vi phạm Rule #2. Đã sửa trỏ tường minh về
+`$('Nhận Envelope Từ Gateway')`, publish `activeVersionId: 9b8a69b7-4c42-41ad-adf4-79a7320d12a5`.
+Chi tiết đầy đủ: xem `CHANGELOG.md` (14/09/2026, tiếp 43).
+
+**Việc cần user làm**: thử lại `/xoanen` kèm 1 ảnh — xác nhận bot trả về ảnh đã xóa nền. Nhánh
+`/tomtat` không bị ảnh hưởng (không có bug này) nhưng nên thử luôn cho chắc.
+
 ## ✅ BUILD XONG, CHỜ AUDIT + TEST THẬT (11/09/2026, phiên tiếp 38) — Lệnh mới `/xem_nhom` quản lý nhóm mention đầy đủ
 
 Yêu cầu user: thêm vòng quản lý nhóm mention thứ 2 (bổ sung cho toggle theo TỪNG USER đã có sẵn ở
