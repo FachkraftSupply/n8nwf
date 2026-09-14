@@ -4,18 +4,30 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
-## ⚠️ CẦN USER THAO TÁC (14/09/2026, phiên tiếp 43) — Bot lệnh không có mặt trong nhóm "🏠 Elite Nhà cửa"
+## ✅ ĐÃ RÕ NGUYÊN NHÂN + USER ĐÃ QUYẾT ĐỊNH (14/09/2026, phiên tiếp 43) — `/tomtat` "không phản hồi" ở nhóm "🏠 Elite Nhà cửa" là do 2 bot cùng 1 nhóm, KHÔNG phải bug
 
-User báo `/tomtat` gõ trong nhóm "🏠 Elite Nhà cửa / Support / Lịch bay" lúc 15:16 không có phản hồi.
-Đối chiếu execution log xác nhận: tin nhắn chỉ tới bot **Elite Crawl Bot** (bot log tin nhắn thụ động,
-workflow `GW Crawl Bot - Group Capture`) — bot này CHỦ ĐỘNG bỏ qua mọi tin có ảnh/media (chỉ log text
-cho tính năng tóm tắt ngày + mention). Bot xử lý lệnh chính **Elite Clickupbot** (@Elite_clickup_bot)
-KHÔNG nhận được update này — 0 execution ở `GW Gateway - Telegram (DEV)` đúng thời điểm đó. Kết luận:
-**@Elite_clickup_bot chưa được thêm vào nhóm này**, không phải bug code.
+User báo `/tomtat` gõ trong nhóm "🏠 Elite Nhà cửa / Support / Lịch bay" không có phản hồi. Điều tra
+qua nhiều bước bằng execution log (không đoán):
+1. Lúc đầu tưởng bot **Elite_clickup_bot** chưa được thêm vào nhóm (0 execution ở Gateway đúng lúc đó,
+   trong khi bot **Elite Crawl Bot** — bot log tin nhắn thụ động, chủ động bỏ qua tin có ảnh — vẫn nhận
+   bình thường). User xác nhận bot ĐÃ có trong nhóm → giả thuyết này sai.
+2. Test tiếp: gõ `/help` trần → Gateway vẫn 0 execution. Gõ `/help@Elite_clickup_bot` (Telegram tự gợi ý
+   khi gõ lệnh) → Gateway nhận đúng, chạy thành công. Test `/tomtat@Elite_clickup_bot` + ảnh → chạy
+   thành công toàn bộ (OCR + AI tóm tắt + gửi trả lời `ok:true`, message_id 22474) — chỉ là user không
+   thấy vì bot trả lời đúng vào TOPIC "Duisburg - Düsseldorf" (nhóm này bật chế độ Forum/Topics) chứ
+   không phải topic đang xem.
+3. **Ban đầu nghi do Telegram Group Privacy Mode** (BotFather) — user chụp màn hình cài đặt bot gửi
+   kiểm chứng: mô tả chính Telegram ghi rõ "Group Privacy: Receive only messages that mention or reply
+   to your bot, or contain /commands" — nghĩa là dù bật/tắt setting này, tin nhắn `/command` LUÔN được
+   chuyển tới bot bình thường. Vậy Group Privacy KHÔNG PHẢI nguyên nhân, hướng dẫn tắt nó trước đó
+   trong phiên này là SAI, đã đính chính với user.
+4. **Nguyên nhân thật**: nhóm "Elite Nhà cửa" có **2 bot cùng lúc** (Elite Crawl Bot + Elite_clickup_bot).
+   Đây là quy tắc riêng của Telegram để phân biệt lệnh gửi cho bot nào khi có ≥2 bot trong 1 nhóm/chat —
+   lệnh trần bị bỏ qua, phải gõ kèm `@TênBot`. Không có setting nào ở BotFather tắt được yêu cầu này.
 
-**Việc cần user làm**: thêm bot **@Elite_clickup_bot** vào nhóm "🏠 Elite Nhà cửa / Support / Lịch
-bay" (Privacy Mode bot này đã tắt sẵn, không cần chỉnh gì thêm phía n8n). Sau khi thêm, thử lại
-`/tomtat` + ảnh để xác nhận.
+**Quyết định của user**: chấp nhận gõ kèm `@Elite_clickup_bot` khi dùng lệnh trong nhóm "Elite Nhà
+cửa" (giữ cả 2 bot — không xóa Crawl Bot vì nhóm này vẫn cần tính năng log tin nhắn/tóm tắt ngày/mention
+của nó). Không cần sửa gì thêm ở n8n cho vấn đề này.
 
 ## 🔧 ĐÃ SỬA, CHỜ USER TEST LẠI (14/09/2026, phiên tiếp 43) — Fix `/xoanen` báo lỗi 400 file_id not specified (bug riêng, ở chat private, không liên quan mục trên)
 
