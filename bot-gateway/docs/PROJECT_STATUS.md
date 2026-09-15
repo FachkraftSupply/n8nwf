@@ -4,6 +4,66 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔧 BUILD XONG, CHỜ USER ĐIỀN SECRET + TEST THẬT (15/09/2026, phiên tiếp 44) — Lệnh mới `/mokhoa` mở khóa cửa TTLock
+
+User yêu cầu: user được cấp quyền riêng gõ `/mokhoa` là mở được cửa thật (khóa TTLock) từ xa qua
+Telegram. Yêu cầu thêm giữa chừng: chỉ dùng được trong nhóm **"Mở khóa cửa"** (`chat_id:
+-5535257695`), chỉ khung giờ **T2–T6 8h30–9h30** giờ VN, ngoài giờ **không từ chối thẳng** mà gửi
+admin duyệt, và admin nhận thông báo mỗi lần cửa được mở. Quyền `lock_bot` là nút cấp quyền RIÊNG,
+không gộp vào nút "TẤT CẢ" hiện có (tránh cấp nhầm quyền vật lý).
+
+**Tra cứu API TTLock thật** (không đoán): tài liệu chính thức
+[euopen.ttlock.com/doc/api](https://euopen.ttlock.com/doc/api/) chỉ hiện domain ví dụ chung
+`api.sciener.com` — đối chiếu với 1 client mã nguồn mở thật đang chạy production (`hass-ttlock`)
+xác nhận domain API vùng EU thật là **`https://euapi.ttlock.com`**. Endpoint dùng:
+`POST /oauth2/token` (lấy/refresh access token, password grant + refresh_token grant),
+`POST /v3/lock/list`, `POST /v3/lock/unlock`, `POST /v3/lock/detail`.
+
+**Đã build + publish 3 workflow**:
+1. **`TTLock Token Helper`** (mới, id `hX4nU6buJNBQKRp8`) — sub-workflow dùng chung: đọc token đã lưu
+   trong Postgres, tự refresh nếu sắp hết hạn (<3 ngày) hoặc chưa có, trả về `{access_token,
+   client_id}`. Không dùng credential n8n (secrets lưu ở Postgres, build vào body request).
+2. **`Telebot Lock (TTLock)`** (mới, id `vGgJ0XfTR3ltohPB`, 42 node) — logic chính: chặn sai nhóm,
+   `/mokhoa` hiện danh sách khóa dạng deep-link text (RULES.md #3), chọn khóa → kiểm tra admin/khung
+   giờ → mở trực tiếp (kèm báo admin) hoặc tạo yêu cầu `gateway.lock_unlock_requests` + gửi admin 2
+   nút Duyệt/Từ chối (RULES.md #3 ngoại lệ — bộ nút cố định 2 nút) → xử lý callback duyệt/từ chối.
+3. **`GW Gateway - Telegram (DEV)`** (sửa): `⚙️ Config` thêm `mokhoa:'lock_bot'` +
+   `lock_bot` vào `AVAILABLE_BOTS` (KHÔNG thêm vào `gateway.config.available_bots` trong DB — để nút
+   "TẤT CẢ" không tự động gồm quyền này); `GW-03 Router` nhận diện `/start mokhoa_<id>` (deep-link
+   chọn khóa) và callback `lockap:`/`lockdn:` → route `lock_bot`; `Route bot?` thêm output thứ 7;
+   `Báo admin duyệt user` thêm nút riêng "🔓 lock_bot"; `Telebot ClickUp Reader` thêm mục `/mokhoa`
+   vào `/help`.
+
+**Tự phát hiện + sửa 1 lỗi thật khi audit lại**: 3 node Postgres SELECT (`Check Admin (Lock)`,
+`Lấy Yêu Cầu Khóa`, `Kiểm Tra Quyền Admin (User)`) cần `alwaysOutputData: true` để xử lý đúng
+trường hợp "0 dòng" (không phải admin / yêu cầu không tồn tại) — bị `addNode` bỏ qua âm thầm đúng
+Rule #18, đã sửa lại bằng `setNodeSettings` riêng và xác nhận đã lưu.
+
+**⚠️ CHƯA TEST THẬT được** (cần user điền secret trước): xem `RULES.md`/việc cần làm bên dưới.
+
+**Việc cần user làm trước khi dùng được**:
+1. Đăng ký app trên TTLock Open Platform (nếu chưa có) để lấy `client_id`/`client_secret`.
+2. Chạy SQL sau trên Postgres (tự điền 4 giá trị thật, KHÔNG gửi secret thật cho Claude):
+   ```sql
+   CREATE TABLE IF NOT EXISTS gateway.ttlock_auth (
+     id INT PRIMARY KEY DEFAULT 1, client_id TEXT, client_secret TEXT, username TEXT,
+     password_md5 TEXT, access_token TEXT, refresh_token TEXT, token_expires_at TIMESTAMPTZ,
+     updated_at TIMESTAMPTZ DEFAULT now()
+   );
+   INSERT INTO gateway.ttlock_auth (id, client_id, client_secret, username, password_md5)
+   VALUES (1, '<CLIENT_ID>', '<CLIENT_SECRET>', '<TTLOCK_USERNAME>', '<MD5_LOWERCASE_PASSWORD>')
+   ON CONFLICT (id) DO UPDATE SET client_id=EXCLUDED.client_id, client_secret=EXCLUDED.client_secret,
+     username=EXCLUDED.username, password_md5=EXCLUDED.password_md5, updated_at=now();
+   ```
+   `password_md5` = MD5 (32 ký tự chữ thường) của mật khẩu đăng nhập app TTLock — tự tính ở máy
+   mình (ví dụ `python3 -c "import hashlib;print(hashlib.md5(b'mat_khau').hexdigest())"`), không gõ
+   mật khẩu thật vào chat.
+3. Trong app TTLock: bật "Remote unlock" cho từng khóa muốn điều khiển qua bot + đảm bảo khóa có
+   Gateway kết nối wifi (bắt buộc để mở qua Internet).
+4. Duyệt quyền `lock_bot` cho từng user được phép (nút mới trong luồng duyệt admin).
+5. Test thật: `/mokhoa` trong nhóm "Mở khóa cửa" → chọn khóa → xác nhận mở được, admin nhận thông
+   báo; thử ngoài khung giờ → xác nhận luồng duyệt hoạt động.
+
 ## ✅ HOÀN TẤT, TEST THẬT OK (14/09/2026, phiên tiếp 43) — Gộp Crawl Bot vào Gateway + bỏ OCR.space
 
 **Bối cảnh**: `/tomtat` gõ trần (không `@Elite_clickup_bot`) trong nhóm "🏠 Elite Nhà cửa" không có

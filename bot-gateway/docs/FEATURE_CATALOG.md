@@ -51,7 +51,25 @@ lên OneDrive gắn với task.
 | `/xoanen` (caption kèm ảnh) — xóa nền ảnh | Nhận ảnh, xóa nền, trả lại file `.png` giữ trong suốt | Gọi API remove.bg (credential `REMOVE.BG`), gửi lại bằng Telegram document | 2026-09-08 (tối) — TEST THẬT OK |
 | `/tomtat` (caption kèm ảnh) — OCR + tóm tắt | Đọc chữ trong ảnh rồi tóm tắt nội dung bằng AI | OCR qua node gốc `mistralAi` (`extractText`, đọc `pages[0].markdown`) → tóm tắt bằng model `google/gemini-3.5-flash-lite` (qua node tên "Mistral (qua OpenRouter)" — TÊN NODE GÂY NHẦM LẪN, model thật là Gemini) | 2026-09-08 (tối) — build xong, cần 1 lượt test cuối xác nhận field OCR đúng |
 
-## 4. Telebot Admin System — @elite_n8n_system_bot (bot admin riêng, KHÔNG qua Gateway)
+## 4. Telebot Lock — mở khóa TTLock (bot_key: `lock_bot`) — chạy sau Gateway, KHÔNG có bot riêng
+
+**Vai trò**: cho user được cấp quyền riêng mở khóa cửa thật (TTLock) từ xa qua Telegram, giới hạn
+theo nhóm + khung giờ, ngoài giờ cần admin duyệt.
+**Workflow**: `Telebot Lock (TTLock)` (n8n ID `vGgJ0XfTR3ltohPB`) + sub-workflow dùng chung
+`TTLock Token Helper` (n8n ID `hX4nU6buJNBQKRp8`)
+
+| Tính năng | Mô tả | Cách hoạt động | Cập nhật |
+|---|---|---|---|
+| `/mokhoa` — xem danh sách khóa | Hiện danh sách khóa TTLock dạng deep-link text (kèm % pin) | Gọi `POST /v3/lock/list` (API TTLock, domain `euapi.ttlock.com`) qua token lấy từ `TTLock Token Helper` | 2026-09-15 |
+| Chọn khóa (`mokhoa_<lockId>`) — mở khóa | Mở khóa thật qua Internet | Gọi `POST /v3/lock/unlock`; chỉ chạy khi đúng nhóm "Mở khóa cửa" (`chat_id -5535257695`) + (là admin HOẶC trong khung giờ T2-T6 8h30-9h30 giờ VN) | 2026-09-15 |
+| Duyệt mở khóa ngoài giờ | Ngoài khung giờ cho phép, không từ chối thẳng — gửi admin 2 nút Duyệt/Từ chối, chỉ mở khi admin bấm Duyệt | Bảng `gateway.lock_unlock_requests` (trạng thái pending/approved/denied) + callback `lockap:`/`lockdn:` | 2026-09-15 |
+| Báo admin mỗi lần cửa mở | Admin luôn biết ai mở cửa, lúc nào (kể cả mở trực tiếp trong giờ) | Gửi tin Telegram riêng cho `ADMIN_CHAT_ID` sau mỗi lần unlock thành công | 2026-09-15 |
+| Quyền `lock_bot` cấp riêng | Không tự động có khi admin bấm "TẤT CẢ" ở luồng duyệt user chung | Nút "🔓 lock_bot" riêng trong `Báo admin duyệt user`; cố tình KHÔNG thêm `lock_bot` vào `gateway.config.available_bots` (giá trị mà nút "TẤT CẢ" tra) | 2026-09-15 |
+
+**⚠️ Chưa test thật** — đang chờ user điền secret TTLock (`client_id`/`client_secret`/`username`/
+`password_md5`) vào bảng `gateway.ttlock_auth`, xem `PROJECT_STATUS.md` để lấy SQL cần chạy.
+
+## 5. Telebot Admin System — @elite_n8n_system_bot (bot admin riêng, KHÔNG qua Gateway)
 
 **Vai trò**: mọi tính năng chỉ dành cho admin (chat_id `975005174`, hardcode, kiểm tra 2 nơi trong
 workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
@@ -84,7 +102,7 @@ workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
 | 🏷️ Nhóm mention (nút trong panel chi tiết user, `/user_list`) | Gán/gỡ 1 user cụ thể khỏi các nhóm mention đã tạo, dạng danh sách deep-link ✅/➕ theo từng nhóm | Callback `mmenu:<uid>`/deep-link `mmenu_<uid>` → danh sách nhóm dạng text link `mgt_<uid>_<groupId>` → bấm = toggle ngay + refresh | 2026-09-10, đổi từ inline keyboard sang deep-link text 2026-09-11 (nút không hiện được do số nút động) |
 | `@@<tên nhóm>` / `@@all` (gõ trong group Telegram thường) | User thường gõ trong 1 nhóm có Elite Crawl Bot → bot mention tất cả user trong nhóm mention đó (`@@all` = tất cả ai đã từng nhắn trong đúng group đó) | Hook trong `GW Crawl Bot - Group Capture` → gọi sub-workflow `GW Mention Resolver` (không qua Gateway/COMMAND_MAP) | 2026-09-10 |
 
-## 5. Workflow nền (không có lệnh Telegram trực tiếp, chạy tự động)
+## 6. Workflow nền (không có lệnh Telegram trực tiếp, chạy tự động)
 
 | Workflow | Vai trò | Bot dùng để thông báo | Cập nhật |
 |---|---|---|---|
@@ -99,7 +117,7 @@ workflow). Có Telegram Trigger RIÊNG, độc lập hoàn toàn với Gateway.
 | **`GW Crawl Bot - Group Capture`** (`SNNrXneenXVnLHh6`) | Bot riêng (`Elite Crawl Bot`) lắng nghe MỌI tin nhắn thường trong nhóm bot có mặt, ghi vào `gateway.group_chat_log` (giữ 14 ngày) — nền tảng cho `/lichsu`/`/timkiem`/`/sum` | Ghi log âm thầm, không phản hồi user | 2026-09-09 |
 | **`GW Daily Chat Summary`** (`ElSGQgdHPMtrzwME`) | Chạy 1h sáng mỗi ngày: tóm tắt `group_chat_log` của từng nhóm bằng AI (DeepSeek) → `gateway.daily_chat_summary` (giữ 365 ngày); kèm dọn dữ liệu cũ tự động | AI tóm tắt, không gửi Telegram trực tiếp (dữ liệu được `/lichsu`/`/sum` đọc lại) | 2026-09-09 build → 10/09 fix 2 bug thật (lệch múi giờ + queryBatching), xác nhận chạy thật ra kết quả đúng — CHƯA test đường đọc lại `/lichsu`/`/sum` qua Telegram |
 
-## 6. Bot/bot_key CHƯA hoàn thiện (placeholder, đã khai báo route nhưng chưa gắn workflow thật)
+## 7. Bot/bot_key CHƯA hoàn thiện (placeholder, đã khai báo route nhưng chưa gắn workflow thật)
 
 | bot_key | Lệnh dự kiến | Trạng thái | Ghi chú |
 |---|---|---|---|

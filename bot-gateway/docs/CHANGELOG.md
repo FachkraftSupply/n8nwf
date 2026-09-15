@@ -4,6 +4,55 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-15 (tiếp 44) — Lệnh mới `/mokhoa` mở khóa cửa TTLock qua Telegram
+
+User yêu cầu: user được cấp quyền riêng gõ `/mokhoa` mở được cửa thật (khóa TTLock) từ xa. Yêu cầu bổ
+sung giữa chừng qua các câu hỏi làm rõ: chỉ dùng được trong nhóm "Mở khóa cửa" (`chat_id:
+-5535257695`, xác nhận qua execution log thật khi user nhắn thử, không đoán); chỉ khung giờ T2-T6
+8h30-9h30 giờ VN; ngoài giờ không từ chối thẳng mà gửi admin duyệt (2 nút Duyệt/Từ chối); admin nhận
+thông báo mỗi lần cửa mở; quyền `lock_bot` là nút cấp riêng, không gộp vào "TẤT CẢ".
+
+**Nghiên cứu API TTLock trước khi build** (đúng kỷ luật "test thật, không đoán" đã áp dụng xuyên suốt
+dự án): tài liệu [euopen.ttlock.com/doc/api](https://euopen.ttlock.com/doc/api/) chỉ hiện domain ví
+dụ chung `api.sciener.com` trong mọi trang — không phải domain thật cần gọi cho vùng EU. Đối chiếu
+với 1 client mã nguồn mở thật đang chạy production (`hass-ttlock` trên GitHub) xác nhận domain đúng
+là `https://euapi.ttlock.com`. Endpoint xác nhận: `POST /oauth2/token` (password grant lần đầu +
+refresh_token grant sau đó, password phải MD5 32 ký tự thường), `POST /v3/lock/list`,
+`POST /v3/lock/unlock` (lỗi `-4043` = chưa bật Remote Unlock/thiếu Gateway), `POST /v3/lock/detail`.
+
+**Build 2 workflow mới bằng `create_workflow_from_code` (skeleton) + `update_workflow` (toàn bộ logic
+thật, addNode/addConnection raw JSON thay vì SDK hạn chế)**:
+1. `TTLock Token Helper` (id `hX4nU6buJNBQKRp8`, 10 node) — đọc/refresh access token TTLock, lưu lại
+   Postgres, trả `{access_token, client_id}`. Bảng `gateway.ttlock_auth` lưu `client_id/client_secret/
+   username/password_md5` — KHÔNG dùng credential n8n (OAuth password-grant 4 trường không khớp
+   khuôn credential chuẩn), tự build request body từ dữ liệu đọc ra từ Postgres.
+2. `Telebot Lock (TTLock)` (id `vGgJ0XfTR3ltohPB`, 42 node) — chặn sai nhóm ngay từ đầu; `/mokhoa`
+   hiện danh sách khóa dạng deep-link text (RULES.md #3, số lượng khóa động không dùng inline
+   keyboard); chọn khóa → check admin + khung giờ → mở trực tiếp (báo admin) hoặc tạo yêu cầu
+   `gateway.lock_unlock_requests` + gửi admin 2 nút cố định Duyệt/Từ chối (RULES.md #3 ngoại lệ) →
+   xử lý callback duyệt/từ chối (tự check admin riêng trong sub-workflow, không vòng qua Gateway).
+
+**Sửa Gateway** (`GW Gateway - Telegram (DEV)`): `⚙️ Config` thêm `mokhoa:'lock_bot'` +
+`lock_bot` vào `AVAILABLE_BOTS` (cố tình KHÔNG thêm vào `gateway.config.available_bots` trong DB để
+nút "TẤT CẢ" không tự động gồm quyền mở khóa); `GW-03 Router` mở rộng nhận diện `/start mokhoa_<id>`
+(đọc `env.text`, phải check TRƯỚC `COMMAND_MAP['start']` vì mặc định route `telebot_main`) và callback
+`lockap:`/`lockdn:` → `lock_bot`; `Route bot?` Switch thêm output thứ 7; `Báo admin duyệt user` thêm
+nút riêng "🔓 lock_bot" tách khỏi "TẤT CẢ"; `Telebot ClickUp Reader` thêm mục 6 giới thiệu `/mokhoa`
+vào `/help`. Toàn bộ sửa bằng `removeNode`+`addNode` giữ nguyên id (Rule #16), verify lại connections
+bằng script so khớp Python trước khi publish — không mất/lệch kết nối cũ nào (kể cả 4 output cũ +
+output mới thứ 7 của Route bot?).
+
+**Tự phát hiện + sửa 1 lỗi thật khi audit lại sau khi build xong**: 3 node Postgres SELECT (`Check
+Admin (Lock)`, `Lấy Yêu Cầu Khóa`, `Kiểm Tra Quyền Admin (User)`) đặt `alwaysOutputData: true` qua
+tham số top-level của `addNode` — bị bỏ qua ÂM THẦM đúng Rule #18 (đã biết từ trước nhưng vẫn quên áp
+dụng khi build node mới, không chỉ khi sửa node cũ). Nếu không phát hiện, khi query trả 0 dòng (đúng
+trường hợp "không phải admin"/"yêu cầu không tồn tại") thì TOÀN BỘ nhánh xử lý phía sau sẽ bị bỏ qua
+hoàn toàn (không báo gì cho user) thay vì hiện đúng thông báo lỗi — đã sửa bằng `setNodeSettings`
+riêng, xác nhận đã lưu qua fetch lại.
+
+**Chưa test được** (đang chờ user điền secret TTLock thật vào Postgres — xem PROJECT_STATUS.md để
+biết SQL cần chạy + các bước chuẩn bị phía TTLock app).
+
 ## 2026-09-14 (tiếp 43) — Điều tra "/tomtat không phản hồi" ở nhóm nhiều bot: KHÔNG phải bug, do Telegram bắt buộc @mention khi ≥2 bot chung nhóm + fix bug thật riêng ở `/xoanen`
 
 User báo `/tomtat` gõ trong nhóm "🏠 Elite Nhà cửa / Support / Lịch bay" lúc 15:16 giờ VN không có
