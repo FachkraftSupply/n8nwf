@@ -282,6 +282,17 @@ Mẫu đúng (viết trong 1 batch operations):
 ]
 ```
 
+**Tái diễn lần 4 (16/09/2026)**: gặp lại Y HỆT khi thêm `task_prefix` vào SELECT của node
+`GW-04 Check Pending Upload` (`GW Gateway - Telegram`) — dùng `removeNode`+`addNode` và đặt
+`"alwaysOutputData": true` NGAY TRONG object `node` của `addNode` (đúng lỗi mục này cảnh báo), KHÔNG
+tách `setNodeSettings` riêng. Hậu quả: khi SELECT không khớp dòng nào (trường hợp BÌNH THƯỜNG của
+mọi lệnh không phải upload, vd `/task`), node trả về 0 item → toàn bộ Router phía sau không chạy →
+user gõ `/task` im lặng hoàn toàn (2 user cùng gặp, cùng lúc), execution vẫn báo `success`. Gặp lại
+đúng dạng lỗi này lần thứ 4 dù RULES.md đã ghi rõ từ 08-09/09/2026 — chứng tỏ **CHỈ NHỚ quy tắc là
+không đủ**. Bước `get_workflow_details` xác nhận `alwaysOutputData`/`onError` đã có mặt thật sau
+`setNodeSettings` phải coi là BƯỚC BẮT BUỘC KHÔNG ĐƯỢC BỎ QUA cho MỌI `addNode`/`removeNode`+`addNode`
+đụng tới node có thể trả 0 dòng — không phải bước "nếu nhớ thì làm thêm".
+
 ## 19. 🔴 Thêm 1 cột dữ liệu mới "đi nhờ" qua NHIỀU workflow — PHẢI liệt kê ĐỦ mọi điểm ĐỌC lẫn GHI, không dựa vào trí nhớ
 
 Xảy ra thật 09/09/2026 khi thêm `student_name`/`task_url` cho tin nhắn forward Upload OneDrive: nhớ
@@ -307,6 +318,15 @@ khi mở rộng 1 cấu trúc dữ liệu đang "đi nhờ" qua nhiều workflow
    (Code/IF/Switch chạy thật, Postgres/HTTP/Telegram bị pin nên an toàn không gửi tin thật) khi
    không thể test qua Telegram thật ngay lúc đó.
 
+**Tái diễn lần 2 (16/09/2026)**: y hệt lỗi gốc của mục này — thêm cột `task_prefix` cho
+`clickup.pending_uploads` (ghi đúng ở `Upsert Pending Upload (Pick)`/`(Custom Prompt)` trong
+`Telebot ClickUp Reader`), nhưng quên đúng 1 điểm ĐỌC — `GW-04 Check Pending Upload` trong Gateway
+vẫn SELECT thiếu cột này. Hậu quả: `taskPrefix` luôn rỗng ở MỌI bước sau (tên file, tiêu đề thông
+báo forward, dòng "Học sinh:") dù cột tồn tại và được ghi đúng — không có lỗi/warning nào, chỉ âm
+thầm ra chuỗi rỗng. Bài học: quy tắc "liệt kê đủ điểm đọc + ghi" (bước 1 trên) PHẢI làm CHỦ ĐỘNG bằng
+`grep`/tìm kiếm thật trên toàn bộ workflow liên quan mỗi lần thêm cột mới — không dựa vào việc "nhớ
+đã sửa Gateway rồi" từ lần trước, kể cả khi thấy quen thuộc với luồng đó.
+
 ## 20. ⚙️ Quy trình bắt buộc build/sửa workflow (quyết định 09/09/2026 — xem đầy đủ ở `PROJECT_STATUS.md` mục "QUY TRÌNH BẮT BUỘC")
 
 Tóm tắt (bản đầy đủ + lý do ở PROJECT_STATUS.md, luôn đọc ở đó trước — file này chỉ trỏ lại):
@@ -316,7 +336,23 @@ Tóm tắt (bản đầy đủ + lý do ở PROJECT_STATUS.md, luôn đọc ở 
 3. Thêm cột dữ liệu mới/đụng ranh giới Gateway↔sub-workflow → liệt kê ĐỦ điểm đọc + ghi trước (#19).
 4. `addNode` cho node DDL/API ngoài → `setNodeSettings` NGAY TRONG CÙNG batch (#18).
 5. Sau khi sửa, `get_workflow_details` xác nhận đúng giá trị TRƯỚC khi publish — không tin
-   `appliedOperations` (#16). Sai → `removeNode`+`addNode` lại, không thử lại y hệt.
+   `appliedOperations` (#16). Sai → `removeNode`+`addNode` lại, không thử lại y hệt. **Đối chiếu
+   TỪNG MỤC trong danh sách lỗi đã biết dưới đây, không chỉ đọc lướt cho có** (mọi mục đều đã tái
+   diễn ≥2 lần dù đã ghi vào RULES.md, nên "nhớ" không đủ — phải chủ động kiểm tra bằng công cụ):
+   - **#18**: node vừa `addNode`/sửa có thể trả 0 dòng (Postgres không `RETURNING`, HTTP ngoài) mà
+     nằm trên đường 1 luồng đang sống → đã `setNodeSettings alwaysOutputData`/`onError` CÙNG batch
+     và đã xác nhận có mặt thật chưa?
+   - **#19**: vừa thêm/đổi 1 cột dữ liệu dùng chung nhiều bảng/workflow → đã `grep` ĐỦ mọi điểm ĐỌC
+     (SELECT) lẫn GHI (INSERT/UPDATE) trên TOÀN BỘ workflow liên quan chưa, không chỉ workflow đang
+     sửa?
+   - **#23**: node Telegram vừa thêm/sửa có `inlineKeyboard`/nút actionable → credential dùng có
+     đúng bot mà Trigger sẽ xử lý callback_data đó đang lắng nghe không (không suy luận theo "cho
+     gọn"/"đồng bộ với tin khác")?
+   - **#24**: Code node vừa thêm nằm GIỮA 1 node tạo `binary` (Telegram Get File...) và 1 node CẦN
+     `binary` (Upload OneDrive, sendDocument...) → đã forward `binary` tường minh trong object trả
+     về chưa?
+   - **#5/#10/#11**: có tham chiếu `.item`/`.first()` bắc qua ≥2 bước hoặc qua ranh giới
+     `executeWorkflow` không — nếu có, đã đổi sang mẫu "đi nhờ" hoặc `.first()` đúng ngữ cảnh chưa?
 6. Trigger không execute trực tiếp qua MCP được → `prepare_workflow_pin_data`+`test_workflow` mô
    phỏng trước khi để user tự test qua Telegram thật.
 7. `publish_workflow` ngay sau mỗi update trên workflow active (#12).
@@ -364,3 +400,53 @@ Từng cân nhắc 12/09/2026 (chi tiết xem `PROJECT_STATUS.md`, mục đã đ
 quyết định KHÔNG triển khai** sau khi thấy khối lượng việc thật (nhân bản tay ~181 node, rủi ro
 cutover user thật) không tương xứng lợi ích. Giữ nguyên kiến trúc 1 luồng hiện tại. Đừng đề xuất lại
 hướng này trừ khi user chủ động nhắc lại.
+
+## 23. 🔴 Nút bấm (callback) BẮT BUỘC gửi qua ĐÚNG bot có Trigger sẽ nhận lại callback đó — gửi nhầm bot khiến nút bấm không có tác dụng gì, KHÔNG BÁO LỖI
+
+Khi 1 workflow A (có Telegram Trigger riêng trên bot X, hoặc được Gateway route callback tới) gửi 1
+tin nhắn có inline keyboard mà `callback_data` của nút đó cần được CHÍNH workflow A (hoặc luồng
+Gateway đang lắng nghe trên bot X) xử lý — tin nhắn chứa nút đó BẮT BUỘC phải gửi bằng credential
+CỦA BOT X, không phải bot khác (kể cả khi dùng bot khác chỉ để "gộp thông báo admin vào 1 chỗ" cho
+gọn giao diện).
+
+**Lý do**: Telegram giao `callback_query` cho ĐÚNG bot đã gửi tin nhắn chứa nút đó — không quan tâm
+workflow nào "dự định" xử lý nó. Gửi nhầm bot khiến khi user bấm nút, callback rơi vào webhook của
+bot KHÁC hoàn toàn (có thể có Trigger/router riêng xử lý theo whitelist khác, âm thầm bỏ qua vì
+không khớp prefix nào, hoặc không có Trigger nào lắng nghe cả) — **không có lỗi/exception nào cả**,
+đơn giản là không có gì xảy ra khi bấm nút, giống hệt như nút "bị liệt".
+
+Xảy ra thật 15/09/2026: node `Gửi Admin Yêu Cầu Duyệt` (workflow `Telebot Lock (TTLock)`, nút
+"✅ Duyệt"/"⛔ Từ chối" cho yêu cầu mở khóa ngoài giờ, `callback_data` dạng `lockap:`/`lockdn:`) dùng
+credential **Telegram System Bot** thay vì **Elite Clickupbot** — trong khi callback `lockap:`/
+`lockdn:` chỉ được nhận diện bởi `resolveBotKeyForCallback` trong `GW-03 Router` của Gateway, vốn
+chạy trên Telegram Trigger của **Elite Clickupbot**. Hậu quả: admin bấm "Duyệt" nhiều lần, khóa
+không bao giờ mở, không nhận được thông báo lỗi gì — vì callback đi vào `Telebot Admin System`
+(workflow riêng của System Bot), nơi router của nó không có case nào khớp `lockap:`/`lockdn:` nên
+lặng lẽ bỏ qua.
+
+**Quy tắc bắt buộc**: trước khi thêm 1 node Telegram có `inlineKeyboard`/nút bấm actionable, xác
+định RÕ workflow/Trigger nào sẽ xử lý `callback_data` của nút đó (`resolveBotKeyForCallback` trong
+`GW-03 Router`, hoặc router riêng của 1 bot có Trigger độc lập) — rồi dùng ĐÚNG credential của bot
+mà Trigger đó đang lắng nghe, không suy luận theo "cho gọn"/"đồng bộ với các tin admin khác". Nếu 2
+loại tin admin cần đi qua 2 bot khác nhau vì lý do kiến trúc (vd tin KHÔNG có nút thì dùng System
+Bot cho gọn, tin CÓ nút thì bắt buộc đúng bot của Trigger xử lý) — đó là quyết định ĐÚNG, không phải
+bất nhất, cứ giữ nguyên khác bot cho 2 loại đó.
+
+## 24. ⚠️ Code node trả dữ liệu mới PHẢI tường minh giữ lại `binary` của input — nếu không, file/ảnh đính kèm bị rớt mất giữa pipeline
+
+Khi 1 Code node nhận input có kèm `binary` (ảnh/file đã tải về, vd từ node `Telegram Get File`) và
+cần thêm/tính toán vài field `json` mới rồi truyền tiếp cho 1 node xử lý file phía sau (vd
+`Upload To OneDrive` với `contentType: "binaryData"`) — chỉ `return [{ json: {...} }]` KHÔNG kèm
+`binary` sẽ làm MẤT HẲN phần binary đó, dù node vẫn chạy `success` và các field `json` đều đúng.
+
+Xảy ra thật 15/09/2026: thêm node `Xác Định Thư Mục Đích` (workflow `Telebot ClickUp Reader`, tính
+`targetDriveId`/`targetFolderId` để fix bug link OneDrive trỏ vào file thay vì folder) — chỉ
+`return [{ json: {...} }]`, quên `binary`. Hậu quả: `Upload To OneDrive` báo lỗi thật
+`"This operation expects the node's input data to contain a binary file 'data', but none was
+found"` — đây là lỗi CÓ thông báo rõ ràng (khác phần lớn lỗi im lặng ở các mục trên), nhưng vẫn đáng
+ghi vào đây vì dễ tái diễn với các Code node khác chen giữa pipeline xử lý file.
+
+**Quy tắc bắt buộc**: bất kỳ Code node nào đứng GIỮA 1 node tạo ra `binary` (Telegram Get File, HTTP
+Request tải file...) và 1 node CẦN `binary` đó (Upload OneDrive, sendDocument, sendPhoto...) — PHẢI
+thêm `binary: $input.item.binary` (hoặc `$input.first().binary` nếu chắc chắn chỉ 1 item) vào object
+trả về, dù Code node đó chỉ nhằm tính toán vài field `json` không liên quan gì tới file.
