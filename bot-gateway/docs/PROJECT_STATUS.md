@@ -4,6 +4,58 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔧 SỬA XONG NHIỀU BUG THẬT, CHỜ USER TEST LẠI (16/09/2026, phiên tiếp 45) — Upload OneDrive (prefix/tên file), `/task` im lặng, TTLock Duyệt nút chết, DM mention kèm link
+
+**Bối cảnh phiên này**: bắt đầu từ việc kiểm tra lại `/mokhoa` (mục ngay dưới) hoạt động OK, sau đó
+lần lượt: (1) mở rộng tính năng mention DM riêng thêm nút link nhảy nhanh tới tin nhắn gốc, (2) fix
+bug upload OneDrive báo lỗi (link ClickUp trỏ vào file thay vì folder), (3) chuẩn hóa lại prefix/tên
+file/thông báo upload theo yêu cầu mới, (4) fix bug nghiêm trọng `/task` im lặng hoàn toàn do CHÍNH
+lần sửa #3 gây ra, (5) cập nhật `RULES.md` với 4 bài học rút ra.
+
+**1. Mention DM — thêm nút "🔗 Xem tin nhắn gốc"** (`GW Mention Resolver`, `ESbedUROf4udAkY6`):
+khi `@@all`/`@@<nhóm>` gửi DM riêng cho người được nhắc (tính năng build ở phiên trước), giờ kèm
+thêm nút deep-link `t.me/c/<id>/<messageId>` nhảy thẳng tới tin nhắn gốc trong nhóm. CHỈ hoạt động
+với **supergroup** (`chat_id` bắt đầu `-100`) — Telegram không có deep-link này cho **basic group**
+(vd nhóm "Mở khóa cửa"), tự động fallback về tin không nút cho nhóm loại đó (không lỗi).
+
+**2. Fix bug thật: Upload OneDrive lỗi `404 itemNotFound`** (`Telebot ClickUp Reader`,
+`9JJRrh36H2rLwtnu`) — nguyên nhân: link OneDrive lưu trong ClickUp task đôi khi trỏ thẳng vào 1
+FILE cụ thể (do người tạo task copy nhầm link file thay vì link folder), Graph API không cho dùng
+id của file làm "thư mục đích". Đã thêm node `Xác Định Thư Mục Đích` tự nhận diện file/folder, tự
+fallback về `parentReference` (thư mục cha) khi gặp file. **Có 1 regression giữa chừng**: node mới
+chỉ `return {json}` làm mất `binary` (ảnh vừa tải) — sửa lại thêm `binary: $input.item.binary`.
+**Test thật OK** (execution `3123`): upload thành công thật, có `webUrl` trả về từ Graph API.
+
+**3. Chuẩn hóa prefix/tên file/thông báo theo yêu cầu mới** — task ClickUp đặt tên theo quy ước
+`<Prefix chương trình> - <Tên học sinh> - <Nghề> - <Khu vực> - <Điểm>` (vd `ELMC - Phan Thị Lài -
+ZFA...`). User yêu cầu: (a) tiêu đề thông báo forward = `#<loại giấy tờ> - <prefix> - <tên học
+sinh> -`, (b) tên file = `<loại file> - <prefix> - <tên học sinh> -`, (c) dòng "🎓 Học sinh:" hiện
+đầy đủ `<prefix> - <tên học sinh>`. Logic tách prefix (`Build Pending Filename`) đã có sẵn từ trước
+(comment trong code), nhưng **bị đứt ở 1 điểm ĐỌC**: `GW-04 Check Pending Upload` (Gateway) SELECT
+thiếu cột `task_prefix` → giá trị luôn rỗng dù ghi đúng ở nơi khác (đúng RULES.md #19, tái diễn lần
+2). Đã sửa cả 3 điểm: SELECT ở Gateway + template tên file + template dòng "Học sinh:".
+
+**4. 🔴 Bug nghiêm trọng do CHÍNH lần sửa #3 gây ra: `/task` im lặng hoàn toàn cho MỌI user** —
+sửa SELECT ở bước #3 dùng `removeNode`+`addNode`, đặt `alwaysOutputData: true` NGAY TRONG object
+`node` (đúng bẫy RULES.md #18, tái diễn lần 4) thay vì `setNodeSettings` riêng → khi SELECT không
+khớp dòng nào (trường hợp bình thường của MỌI lệnh không phải upload) trả về 0 item → toàn bộ
+Router phía sau không chạy, execution vẫn "success". Cả Hải Anh lẫn Emily gõ `/task` đều không
+nhận được gì, KHÔNG có lỗi hiện ra bất cứ đâu (không phải exception, error workflow không bắt được
+loại lỗi này). Đã sửa bằng `setNodeSettings` đúng cách, xác nhận `alwaysOutputData` có mặt thật.
+
+**5. Cập nhật `RULES.md`** — ghi nhận rule #18/#19 tái diễn (lần 4/lần 2) + thêm Rule #23 (nút bấm
+Telegram phải gửi đúng qua bot có Trigger xử lý callback, không phải bot "cho gọn" — case TTLock
+Duyệt/Từ chối 15/09 dùng nhầm System Bot khiến nút không hoạt động, không lỗi) + Rule #24 (Code
+node giữa pipeline file phải tường minh forward `binary`). Rule #20 bước 5 giờ có checklist cụ thể
+đối chiếu từng rule. Đã commit (`208f509`).
+
+**Việc cần user làm (test lại xác nhận)**:
+1. Gõ lại `/task Trần Diệu Linh` (hoặc bất kỳ lệnh nào) — xác nhận có kết quả bình thường trở lại.
+2. Upload 1 file mới cho 1 task bất kỳ — xác nhận tên file VÀ tiêu đề thông báo forward đều có
+   prefix (vd "GAC", "ELMC") đúng vị trí.
+3. Gõ `@@all` trong 1 nhóm supergroup — xác nhận DM riêng có nút "🔗 Xem tin nhắn gốc" bấm nhảy
+   đúng tin nhắn; thử ở nhóm basic group ("Mở khóa cửa") — xác nhận fallback không nút, không lỗi.
+
 ## 🔧 BUILD XONG, CHỜ USER ĐIỀN SECRET + TEST THẬT (15/09/2026, phiên tiếp 44) — Lệnh mới `/mokhoa` mở khóa cửa TTLock
 
 User yêu cầu: user được cấp quyền riêng gõ `/mokhoa` là mở được cửa thật (khóa TTLock) từ xa qua

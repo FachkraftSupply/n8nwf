@@ -4,6 +4,36 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-16 (tiếp 45) — Fix Upload OneDrive (prefix/tên file), `/task` im lặng, TTLock nút Duyệt chết, DM mention kèm link; cập nhật RULES.md
+
+**Mention DM**: thêm nút "🔗 Xem tin nhắn gốc" (deep-link `t.me/c/<id>/<messageId>`) vào DM riêng khi
+`@@all`/`@@<nhóm>` — chỉ hoạt động với supergroup, tự fallback không nút cho basic group.
+
+**Fix bug thật — Upload OneDrive `404 itemNotFound`**: link OneDrive trong ClickUp task đôi khi trỏ
+vào 1 FILE thay vì FOLDER (copy nhầm link) → thêm node `Xác Định Thư Mục Đích` tự fallback về
+`parentReference` khi gặp file. Regression giữa chừng: quên forward `binary` trong Code node mới →
+đã sửa. Test thật OK (execution `3123`, có `webUrl` Graph API trả về thật).
+
+**Chuẩn hóa prefix/tên file/thông báo**: user yêu cầu tiêu đề forward = `#<loại> - <prefix> - <tên>`,
+tên file = `<loại> - <prefix> - <tên>`, dòng "Học sinh:" hiện đầy đủ `<prefix> - <tên>`. Logic tách
+prefix đã có sẵn nhưng đứt ở 1 điểm ĐỌC: `GW-04 Check Pending Upload` (Gateway) SELECT thiếu cột
+`task_prefix` (đúng RULES.md #19, tái diễn lần 2) — đã sửa SELECT + 2 template liên quan.
+
+**🔴 Bug nghiêm trọng do chính lần sửa trên gây ra**: sửa SELECT trên dùng `removeNode`+`addNode`
+kèm `alwaysOutputData: true` SAI CHỖ (trong object `node` thay vì `setNodeSettings` riêng — đúng bẫy
+RULES.md #18, tái diễn lần 4) → SELECT 0 dòng (trường hợp bình thường của MỌI lệnh không phải
+upload) trả về 0 item → Router phía sau không chạy → `/task` im lặng hoàn toàn cho MỌI user (Hải
+Anh + Emily cùng gặp), execution vẫn "success", không có lỗi nào hiện ra. Đã sửa bằng
+`setNodeSettings` đúng cách.
+
+**Cập nhật `RULES.md`** (commit `208f509`): ghi nhận #18/#19 tái diễn + thêm Rule #23 (nút Telegram
+phải gửi đúng qua bot có Trigger xử lý callback — case TTLock Duyệt/Từ chối 15/09 dùng nhầm System
+Bot) + Rule #24 (Code node giữa pipeline file phải forward `binary` tường minh). Rule #20 bước 5 có
+checklist audit cụ thể theo từng rule.
+
+**Chưa test lại**: cả 3 fix trên (`/task`, upload prefix, DM mention link) đều mới publish, chưa có
+xác nhận test thật lần 2 từ user sau khi sửa xong.
+
 ## 2026-09-15 (tiếp 44) — Lệnh mới `/mokhoa` mở khóa cửa TTLock qua Telegram
 
 User yêu cầu: user được cấp quyền riêng gõ `/mokhoa` mở được cửa thật (khóa TTLock) từ xa. Yêu cầu bổ
