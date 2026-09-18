@@ -28,6 +28,12 @@
 | Elite Clickupbot | `BHVAx8GV38yQEn1I` | @Elite_clickup_bot (PROD) | Gateway + mọi tin nhắn cần callback quay lại được Gateway (nút actionable) — xem RULES.md #23 |
 | Telegram System Bot | `zSZ6vVapow5LNpFT` | @elite_n8n_system_bot | Telebot Admin System + tin admin KHÔNG có nút actionable (thông báo thuần) |
 
+## Data Table n8n (không phải Postgres)
+
+| Tên | ID | Vai trò |
+|---|---|---|
+| Gateway Security Settings | `VEnzx8flp68AoKjU` | Công tắc bảo mật link OneDrive: dòng `setting_key=onedrive_link_security`, `setting_value` = `high` (mặc định, chỉ người có quyền mở được) hoặc `low` (link công khai `1drv.ms`). Đọc bởi `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`), node `Đọc Công Tắc Bảo Mật`. Đổi trực tiếp trong n8n → Data Tables, không cần publish lại workflow. |
+
 ## Credential Postgres
 
 | Credential (n8n) | ID | Vai trò |

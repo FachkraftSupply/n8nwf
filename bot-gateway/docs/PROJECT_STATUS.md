@@ -4,6 +4,38 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔧 SỬA XONG, CHỜ USER TEST LẠI (18/09/2026, phiên tiếp 46b) — Công tắc bảo mật link OneDrive (Cao/Thấp)
+
+**Yêu cầu user**: sau khi nghĩ lại, thấy việc chỉ để link mở được cho người CÓ QUYỀN (`webUrl` gốc)
+an toàn hơn link công khai `1drv.ms` (mục ngay dưới) — muốn có **công tắc** chọn giữa 2 chế độ, lưu
+trong 1 bảng n8n (Data Table, không phải Postgres) để bật/tắt.
+
+**Đã làm** (`Telebot ClickUp Reader`, `9JJRrh36H2rLwtnu`):
+- Tạo Data Table `Gateway Security Settings` (id `VEnzx8flp68AoKjU`, project cá nhân Hai Anh Tran)
+  — cột `setting_key`/`setting_value`/`note`. 1 dòng: `setting_key = onedrive_link_security`,
+  **`setting_value = high` (mặc định)**.
+- Thêm node `Đọc Công Tắc Bảo Mật` (đọc dòng trên, `alwaysOutputData: true` — phòng trường hợp
+  dòng bị xoá thì vẫn không làm gãy cả luồng upload, đúng bài học Rule #18) → node IF `An Ninh
+  Cao?` (`setting_value == "low"` thì đi nhánh thấp, ngược lại — kể cả khi thiếu dòng — mặc định
+  đi nhánh CAO, an toàn hơn):
+  - **Nhánh CAO** (mặc định): bỏ qua hẳn việc gọi `createLink` — KHÔNG tạo link công khai nào cả
+    (không chỉ là không hiển thị, mà link public thật sự không được tạo ra).
+  - **Nhánh THẤP**: gọi `Tạo Link Chia Sẻ (createLink)` như cũ, ra link `1drv.ms` công khai.
+  - Cả 2 nhánh hội tụ ở node `Chuẩn Hoá Link` (Code) → field `final_web_url` dùng chung cho
+    `Queue Upload Notify` và `Send Upload Result` (tránh lỗi tham chiếu `$('createLink')` khi
+    nhánh đó không chạy).
+
+**Cách đổi công tắc**: vào n8n → Data Tables → mở bảng `Gateway Security Settings` → sửa trực tiếp
+`setting_value` của dòng `onedrive_link_security` thành `high` hoặc `low` (không cần publish lại
+workflow, đọc ngay ở lần upload tiếp theo).
+
+**Việc cần user làm (test lại xác nhận)**:
+1. Giữ nguyên `high` (mặc định) → upload 1 file → xác nhận link trả về là `webUrl` gốc dài như cũ
+   (không phải `1drv.ms`), và chỉ chủ tài khoản OneDrive mở được.
+2. Đổi `setting_value` sang `low` trong Data Table → upload 1 file khác → xác nhận link trả về là
+   `1drv.ms`, user khác mở được không cần đăng nhập.
+3. Đổi lại `high` để trở về mặc định an toàn nếu không cần link công khai thường xuyên.
+
 ## 🔧 SỬA XONG, CHỜ USER TEST LẠI (18/09/2026, phiên tiếp 46) — Link OneDrive trả về user khác không mở được → tạo link chia sẻ public thật
 
 **Vấn đề user báo**: sau khi upload file, tin nhắn thông báo trả về link OneDrive, nhưng USER KHÁC

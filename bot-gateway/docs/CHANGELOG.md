@@ -4,6 +4,15 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-18 (tiếp 46b) — Thêm công tắc bảo mật link OneDrive (Cao/Thấp) qua n8n Data Table
+
+Theo yêu cầu user (an toàn hơn khi mặc định chỉ người có quyền mở được link): tạo Data Table
+`Gateway Security Settings` (`VEnzx8flp68AoKjU`) lưu công tắc `onedrive_link_security` (mặc định
+`high`). Thêm node đọc công tắc + IF `An Ninh Cao?` trước `Tạo Link Chia Sẻ (createLink)` —
+chế độ CAO bỏ qua hẳn việc gọi API `createLink` (không tạo link public), chế độ THẤP gọi như bình
+thường ra link `1drv.ms`. Đổi công tắc trực tiếp trong Data Table trên n8n UI, không cần sửa
+workflow lại.
+
 ## 2026-09-18 (tiếp 46) — Fix link OneDrive user khác không mở được: tạo link chia sẻ public thật (`createLink`, `scope: anonymous`); cập nhật RULES.md #25
 
 Nguyên nhân (theo tài liệu Microsoft Graph chính thức): code cũ dùng `driveItem.webUrl` — chỉ là
