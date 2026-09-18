@@ -4,6 +4,17 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-18 (tiếp 46) — Fix link OneDrive user khác không mở được: tạo link chia sẻ public thật (`createLink`, `scope: anonymous`); cập nhật RULES.md #25
+
+Nguyên nhân (theo tài liệu Microsoft Graph chính thức): code cũ dùng `driveItem.webUrl` — chỉ là
+link mở TRONG TRÌNH DUYỆT cho người đã có quyền, không phải cơ chế chia sẻ. Đã thêm node `Tạo Link
+Chia Sẻ (createLink)` gọi `POST /drives/{driveId}/items/{itemId}/createLink` với
+`scope: "anonymous"` → link dạng `1drv.ms` ai cũng mở được không cần đăng nhập, có fallback về
+`webUrl` cũ nếu lỗi. Tự gây + tự sửa trong phiên: quên field `credentials` khi `removeNode`+
+`addNode` 2 node hiện có → n8n tự gán nhầm credential (phát hiện qua `autoAssignedCredentials`
+trong response); ghi thành Rule #25 (`RULES.md`) cho lớp lỗi "thiếu credentials + sai thứ tự
+operation trong batch `removeNode`+`addNode`+`addConnection`".
+
 ## 2026-09-16 (tiếp 45) — Fix Upload OneDrive (prefix/tên file), `/task` im lặng, TTLock nút Duyệt chết, DM mention kèm link; cập nhật RULES.md
 
 **Mention DM**: thêm nút "🔗 Xem tin nhắn gốc" (deep-link `t.me/c/<id>/<messageId>`) vào DM riêng khi

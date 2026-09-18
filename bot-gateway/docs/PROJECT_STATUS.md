@@ -4,6 +4,44 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔧 SỬA XONG, CHỜ USER TEST LẠI (18/09/2026, phiên tiếp 46) — Link OneDrive trả về user khác không mở được → tạo link chia sẻ public thật
+
+**Vấn đề user báo**: sau khi upload file, tin nhắn thông báo trả về link OneDrive, nhưng USER KHÁC
+(không phải chủ tài khoản OneDrive) bấm vào không mở được.
+
+**Nguyên nhân (đã tra tài liệu chính thức Microsoft Graph API, không đoán)**:
+- [`driveItem` resource](https://learn.microsoft.com/en-us/graph/api/resources/driveitem):
+  `webUrl` = *"URL that displays the resource in the browser. Read-only."* — đây CHỈ là link mở
+  file TRONG TRÌNH DUYỆT cho người ĐÃ CÓ QUYỀN truy cập (đăng nhập đúng tài khoản chủ hoặc đã được
+  cấp quyền từ trước), KHÔNG PHẢI cơ chế chia sẻ. Code cũ dùng thẳng `webUrl` từ response upload →
+  đúng nguyên nhân user gặp phải.
+- [`createLink` action](https://learn.microsoft.com/en-us/graph/api/driveitem-createlink):
+  `POST /drives/{driveId}/items/{itemId}/createLink` với body `{type: "view", scope: "anonymous"}`
+  → trả về `Permission` resource có `link.webUrl` đúng định dạng ngắn gọn `https://1drv.ms/...`,
+  **"Anyone with the link has access, without needing to sign in."** — CÓ THỂ tạo link `1drv.ms`
+  công khai thật, xác nhận qua tài liệu chính thức.
+
+**Đã sửa** (`Telebot ClickUp Reader`, `9JJRrh36H2rLwtnu`): thêm node mới `Tạo Link Chia Sẻ
+(createLink)` ngay sau `Upload OK?` (trước `Clear Pending Upload`/`Dùng Fallback Thư Mục?`), gọi
+`createLink` với `scope: anonymous` → cả `Queue Upload Notify` (lưu link vào DB) và `Send Upload
+Result` (gửi tin Telegram) đều dùng link mới này, có fallback về `webUrl` cũ nếu `createLink` lỗi
+(`onError: continueRegularOutput`) để không làm gãy luồng upload.
+
+**Lỗi tự gây ra + tự sửa trong cùng phiên** (đã ghi vào `RULES.md` #25): sửa 2 node hiện có
+(`Queue Upload Notify`, `Send Upload Result`) qua `removeNode`+`addNode` nhưng quên field
+`credentials` → n8n tự gán nhầm credential (Postgres → Supabase thay vì DB chính; Telegram → bot lạ
+thay vì Elite Clickupbot); đồng thời 1 connection bị mất do đặt `addConnection` sai thứ tự trong
+batch. Đã tự phát hiện qua field `autoAssignedCredentials` trong response, sửa lại đúng bằng
+`setNodeCredential` + `addConnection` bổ sung, audit lại toàn bộ wiring qua `get_workflow_details`
+trước khi publish — xác nhận không còn node mồ côi, credential đúng, connection đầy đủ.
+
+**Việc cần user làm (test lại xác nhận)**:
+1. Upload 1 file mới cho 1 task bất kỳ.
+2. Copy link trong tin nhắn thông báo trả về (phải có dạng `https://1drv.ms/...` thay vì link dài
+   `.sharepoint.com`/`onedrive.live.com` như trước).
+3. Nhờ 1 user KHÁC (không phải chủ tài khoản OneDrive upload lên) bấm thử link đó — xác nhận mở
+   được file, không cần đăng nhập.
+
 ## 🔧 SỬA XONG NHIỀU BUG THẬT, CHỜ USER TEST LẠI (16/09/2026, phiên tiếp 45) — Upload OneDrive (prefix/tên file), `/task` im lặng, TTLock Duyệt nút chết, DM mention kèm link
 
 **Bối cảnh phiên này**: bắt đầu từ việc kiểm tra lại `/mokhoa` (mục ngay dưới) hoạt động OK, sau đó

@@ -450,3 +450,30 @@ ghi vào đây vì dễ tái diễn với các Code node khác chen giữa pipel
 Request tải file...) và 1 node CẦN `binary` đó (Upload OneDrive, sendDocument, sendPhoto...) — PHẢI
 thêm `binary: $input.item.binary` (hoặc `$input.first().binary` nếu chắc chắn chỉ 1 item) vào object
 trả về, dù Code node đó chỉ nhằm tính toán vài field `json` không liên quan gì tới file.
+
+## 25. 🔴 `removeNode`+`addNode` cho NHIỀU node trong 1 batch: thiếu `credentials` → gán nhầm; sai THỨ TỰ → mất connection
+
+Xảy ra thật 17/09/2026 khi sửa `Queue Upload Notify` + `Send Upload Result` (workflow `Telebot
+ClickUp Reader`) để thêm node `Tạo Link Chia Sẻ (createLink)`. Hai lỗi riêng biệt, cùng 1 batch:
+
+**(a) Thiếu field `credentials` trên object `addNode`** → n8n TỰ GÁN 1 credential khác (không phải
+lỗi, không có warning) — chỉ thấy được qua field `autoAssignedCredentials` trong response của
+`update_workflow`, RẤT DỄ BỎ QUA nếu không chủ động đọc field này. Hậu quả thật: `Queue Upload
+Notify` (Postgres) bị gán nhầm sang "Supabase Postgres" (đúng phải là "Postgres account" — DB
+chính), `Send Upload Result` (Telegram) bị gán nhầm sang bot `@csfsintbot` không liên quan (đúng
+phải là "Elite Clickupbot" — bot có nút actionable, đúng Rule #23).
+
+**(b) Thứ tự operation trong batch sai** — `addConnection` nối tới 1 node ĐẶT TRƯỚC `removeNode`+
+`addNode` của chính node đó (trong cùng batch) sẽ bị XÓA MẤT khi node đó bị remove+re-add sau đó.
+Bài học "addNode hết tất cả trước, nối dây SAU CÙNG" đã rút ra 1 lần trước đó trong phiên này (ở 1
+workflow khác) nhưng vẫn tái diễn khi chuyển sang sửa workflow mới.
+
+**Quy tắc bắt buộc**:
+1. Mọi `addNode` thay thế 1 node đã tồn tại (kèm credential) — BẮT BUỘC copy nguyên field
+   `credentials` từ `get_workflow_details` (fetch MỚI, không dùng lại từ đầu phiên) vào object node
+   mới, dù chỉ sửa 1 tham số không liên quan gì tới credential.
+2. Trong 1 batch có NHIỀU `removeNode`+`addNode`: thứ tự BẮT BUỘC là tất cả `removeNode`+`addNode`
+   TRƯỚC, rồi mới tới TẤT CẢ `addConnection`/`removeConnection` liên quan sau cùng — không xen kẽ.
+3. Sau MỌI `update_workflow` có `addNode`, đọc field `autoAssignedCredentials` trong response —
+   khác mảng rỗng `[]` nghĩa là có node bị gán nhầm, phải sửa ngay bằng `setNodeCredential` với ID
+   credential đúng (tra ở `WORKFLOWS.md`).
