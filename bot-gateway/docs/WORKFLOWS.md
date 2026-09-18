@@ -32,7 +32,7 @@
 
 | Tên | ID | Vai trò |
 |---|---|---|
-| Gateway Security Settings | `VEnzx8flp68AoKjU` | Công tắc bảo mật link OneDrive: dòng `setting_key=onedrive_link_security`, `setting_value` = `high` (mặc định, chỉ người có quyền mở được) hoặc `low` (link công khai `1drv.ms`). Đọc bởi `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`), node `Đọc Công Tắc Bảo Mật`. Đổi trực tiếp trong n8n → Data Tables, không cần publish lại workflow. |
+| Gateway Security Settings | `VEnzx8flp68AoKjU` | Công tắc bảo mật link OneDrive: `setting_key=onedrive_link_security`, `setting_value` = `high` (mặc định, chỉ người có quyền mở được) hoặc `low` (link công khai `1drv.ms`). Đọc bởi `Telebot ClickUp Reader` (`9JJRrh36H2rLwtnu`), node `Đọc Công Tắc Bảo Mật` — **lấy dòng có `createdAt` MỚI NHẤT** (`orderBy: createdAt DESC, limit 1`), không phải dòng duy nhất. Đổi trực tiếp trong n8n UI (Data Tables → sửa ô `setting_value` của dòng hiện có) → không cần publish lại. Đổi qua MCP/Claude (vì MCP data-table tool hiện KHÔNG có update/delete row) → **thêm 1 dòng mới** cùng `setting_key`, dòng mới hơn luôn thắng — dòng cũ giữ lại làm lịch sử, không cần xoá. |
 
 ## Credential Postgres
 
