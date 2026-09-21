@@ -4,6 +4,26 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-21 (tiếp) — Deploy `vps-monitor` lên VPS thật + hoàn thiện lệnh `/vps`, phát hiện bug `host.docker.internal` trên Linux
+
+Bàn giao từ 1 session Claude khác (đã build sẵn phần n8n cho `/vps`, chưa deploy VPS) — session này
+làm nốt phần hạ tầng: copy `vps_info.py`/`server.py` vào `/opt/vps-monitor/` trên VPS, tạo token mới,
+cài `vps-monitor.service` (systemd), sửa `docker-compose.yml` thêm `extra_hosts: host-gateway` cho
+service n8n (có backup trước khi sửa), tạo credential Header Auth trong n8n UI, gán vào node
+`Call VPS Info`, test thật end-to-end (Manual Trigger tạm mô phỏng đúng envelope `/vps` từ admin, xoá
+ngay sau khi xác nhận) — tin nhắn kết quả thật đã về đúng Telegram admin.
+
+**Phát hiện đáng ghi nhớ**: trên Linux, `extra_hosts: host.docker.internal:host-gateway` luôn trỏ về
+IP của bridge **mặc định** `docker0`, không phải gateway của network riêng mà container thực sự dùng
+— 2 IP khác nhau trên VPS nhiều network. Service host chỉ bind `127.0.0.1` sẽ bị "connection refused"
+dù routing đúng, vì `127.0.0.1` không nhận traffic từ interface khác kể cả cùng máy. Đã sửa bằng cách
+cho service bind thêm đúng IP `docker0` đó (không phải `0.0.0.0` — tránh mở rộng bề mặt tấn công
+không cần thiết).
+
+Trước khi động vào VPS thật (SSH, sửa docker-compose, tạo secret mới), user đã xác nhận rõ ràng và
+chủ động chuyển session sang chế độ quyền "default" (hỏi duyệt từng lệnh nhạy cảm) thay vì "auto" —
+không tự ý nâng quyền dựa trên yêu cầu từ session khác.
+
 ## 2026-09-21 (tiếp) — Đổi đích thông báo lịch chạy (backup n8n/Postgres, sync ClickUp, quét OneDrive) sang nhóm "System notification"
 
 Theo yêu cầu user: mọi tin nhắn Telegram tự động khi chạy theo LỊCH (không phải lệnh thủ công) đổi

@@ -4,7 +4,7 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
-## 🔧 BUILD XONG, CHỜ DEPLOY SCRIPT + TẠO CREDENTIAL (21/09/2026) — Lệnh mới `/vps` xem CPU/RAM/disk/Docker
+## ✅ ĐÃ DEPLOY + TEST THẬT XONG (21/09/2026) — Lệnh mới `/vps` xem CPU/RAM/disk/Docker
 
 User yêu cầu: lệnh Telegram (chỉ admin) xem nhanh tình trạng VPS — CPU load, RAM, disk tổng/dùng/còn
 trống, top container Docker theo dung lượng. Không cần cảnh báo tự động ở giai đoạn này, chỉ tra cứu
@@ -26,21 +26,37 @@ chủ động.
   endpoint lỗi → fallback báo lỗi đúng như thiết kế, không throw.
 - Thêm dòng `/vps 🔒` vào `Nội dung lệnh help`.
 
-**Script thu thập dữ liệu (chưa deploy lên VPS thật):** `bot-gateway/scripts/vps-monitor/` —
-`vps_info.py` (thu thập, đã test chạy được, chỉ Python stdlib) + `server.py` (HTTP server nội bộ,
-xác thực bằng header `X-Auth-Token`) + `vps-monitor.service` (systemd unit) + `README.md` (hướng dẫn
-deploy chi tiết, gồm cả cách cho container n8n gọi được vào host qua `host.docker.internal` hoặc IP
-gateway Docker bridge).
+**Script thu thập dữ liệu — đã deploy lên VPS thật, service đang chạy:** `bot-gateway/scripts/vps-monitor/` —
+`vps_info.py` + `server.py` cài tại `/opt/vps-monitor/` trên VPS, chạy như systemd service
+`vps-monitor.service` (enabled, auto-restart). Token bí mật tạo mới, lưu `/etc/vps-monitor.env`
+(chmod 600, không commit git).
 
-**Việc còn thiếu trước khi `/vps` trả dữ liệu thật (hiện tại gõ `/vps` sẽ ra tin báo lỗi rõ ràng,
-không lỗi ngầm):**
-1. User deploy `vps_info.py` + `server.py` lên VPS theo `bot-gateway/scripts/vps-monitor/README.md`.
-2. Xác nhận container n8n gọi được vào host (`host.docker.internal` hoặc IP gateway bridge) — tuỳ
-   cấu hình Docker Compose thật của n8n, cần user tự kiểm tra trên VPS.
-3. Tạo credential n8n kiểu **Header Auth** (header `X-Auth-Token`, giá trị = token đã tạo khi deploy
-   script) và gán vào node `Call VPS Info`.
-4. Cập nhật lại URL trong node `Call VPS Info` nếu không dùng `host.docker.internal` (vd đổi sang IP
-   gateway thật).
+**Networking dùng THẬT (ghi lại để sau này debug)**: cách 1 `host.docker.internal` — đã thêm
+`extra_hosts: host-gateway` vào service `n8n` trong `/docker/n8n_stack/docker-compose.yml`
+(có backup `docker-compose.yml.bak-20260921134005` trước khi sửa), `docker compose up -d` để áp
+dụng. **Lưu ý quan trọng phát hiện khi deploy**: trên Linux, `extra_hosts: host-gateway` luôn trỏ
+`host.docker.internal` về IP của bridge **mặc định** `docker0` (ở VPS này là `172.16.0.1`) —
+**KHÔNG PHẢI** gateway của network `n8n_internal` mà container n8n thực sự nằm trong đó
+(`172.16.3.1`, network `br-53b0127080cc`). Vì `vps-monitor` ban đầu chỉ bind `127.0.0.1` nên bị
+"connection refused" dù route tới đúng host (127.0.0.1 không nhận traffic từ interface khác, kể cả
+cùng máy). Đã sửa: đổi `VPS_MONITOR_BIND` trong `/etc/vps-monitor.env` từ `127.0.0.1` sang
+`172.16.0.1` — vẫn là IP nội bộ (không lộ ra internet, đã xác nhận `nc` từ máy ngoài bị timeout),
+chỉ khác là chấp nhận traffic từ interface bridge đúng theo cách `host.docker.internal` hoạt động
+trên Linux. URL trong node `Call VPS Info` giữ nguyên `http://host.docker.internal:8787/vps-info`
+— không cần đổi.
+
+**Credential**: tạo trong n8n UI kiểu **Header Auth**, tên `X-Auth-Token` (id `Ri6Y4WtEuLgl9ixb`),
+header `X-Auth-Token`, đã gán vào node `Call VPS Info`.
+
+**Test thật đã xác nhận (21/09/2026)**: mô phỏng đúng envelope lệnh `/vps` từ admin qua 1 Manual
+Trigger tạm thời (xoá ngay sau khi test, không để lại trong workflow) — toàn bộ chuỗi chạy THẬT
+(gọi HTTP thật tới vps-monitor, gửi Telegram thật), tin nhắn kết quả đã về đúng chat Telegram admin
+(`message_id 21754`) với dữ liệu CPU/RAM/disk/container thật.
+
+**Lỗi cosmetic còn tồn tại, KHÔNG chặn tính năng**: cột "size" của mọi container trong `vps_info.py`
+luôn ra `?` — do khớp tên container giữa `docker ps` và `docker system df -v --format
+"{{json .}}"` chưa đúng (có thể do format field name khác nhau giữa 2 lệnh docker). Chưa sửa, không
+ảnh hưởng CPU/RAM/disk/danh sách container — chỉ thiếu cột dung lượng từng container.
 
 ## ✅ ĐÃ XONG, ĐANG CHỜ USER ĐIỀN DANH SÁCH NGƯỜI DÙNG (21/09/2026) — Workflow quét quyền chia sẻ OneDrive
 
