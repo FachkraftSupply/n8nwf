@@ -4,6 +4,24 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-21 (tiếp) — Đổi đích thông báo lịch chạy (backup n8n/Postgres, sync ClickUp, quét OneDrive) sang nhóm "System notification"
+
+Theo yêu cầu user: mọi tin nhắn Telegram tự động khi chạy theo LỊCH (không phải lệnh thủ công) đổi
+sang gửi vào nhóm `-1003647848349`, topic `10352`. Sửa 3 workflow: `SQL - Backup System (n8n +
+Postgres)` (đã có sẵn cơ chế phân biệt lịch/thủ công, chỉ đổi `notifyTopicId` từ `6` → `10352`);
+`SQL - ClickUp Full Reconcile (5 ngay)` (trước đây LUÔN gửi về DM cá nhân `ADMIN_CHAT_ID`, thêm cơ chế
+`hasExplicitChat` giống Backup System, mặc định đổi sang nhóm mới); `GW OneDrive Folder Permissions
+Audit` (đổi thẳng `chatId`/`message_thread_id` sang nhóm mới, không có traffic thủ công nên không cần
+cơ chế phân biệt). Đã audit lại từng node bằng `get_workflow_details` sau khi sửa — không dùng lại
+lỗi `setNodeParameter` path sai (RULES.md #26).
+
+**Cũng trong lần build OneDrive Audit này**: phát hiện thêm bug — code chuẩn hoá quyền ưu tiên nhầm
+"có link" thành link ẩn danh dù permission đó CÓ tên người cụ thể kèm theo (Graph API trả về cả
+`grantedToV2` LẪN `link` trong cùng 1 object cho các share "chia sẻ với người cụ thể qua link"). Đã
+sửa: ưu tiên identity trước link. Tận dụng luôn: thêm bước tự trích xuất danh sách người dùng có tên
+thật từ dữ liệu quét được, tự động điền vào tab "Danh sách người dùng" (upsert theo email, không ghi
+đè tên đã sửa tay) — không cần user tự gõ tay danh sách ~20 người.
+
 ## 2026-09-21 — Workflow mới: quét quyền chia sẻ folder OneDrive `03 Students Profile`, đồng bộ Postgres + Google Sheet; cập nhật RULES.md #26-#29
 
 Theo yêu cầu user: xây `GW OneDrive Folder Permissions Audit` (`xYwQHjCQpZrD4dBr`) — quét TOÀN BỘ

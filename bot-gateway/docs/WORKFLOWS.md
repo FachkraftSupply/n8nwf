@@ -29,6 +29,12 @@
 | Elite Clickupbot | `BHVAx8GV38yQEn1I` | @Elite_clickup_bot (PROD) | Gateway + mọi tin nhắn cần callback quay lại được Gateway (nút actionable) — xem RULES.md #23 |
 | Telegram System Bot | `zSZ6vVapow5LNpFT` | @elite_n8n_system_bot | Telebot Admin System + tin admin KHÔNG có nút actionable (thông báo thuần) |
 
+## Nhóm thông báo hệ thống (System notification)
+
+| Đích | chat_id | topic_id (message_thread_id) | Dùng cho |
+|---|---|---|---|
+| Nhóm **System notification** | `-1003647848349` | `10352` | Tin tự động khi chạy SCHEDULE (không phải lệnh thủ công): backup n8n + Postgres (`SQL - Backup System (n8n + Postgres)`, `iVtOA9LEtjpLDkln`), sync ClickUp↔Postgres (`SQL - ClickUp Full Reconcile (5 ngay)`, `G1R0okF0rUziySu9`), quét quyền OneDrive (`GW OneDrive Folder Permissions Audit`, `xYwQHjCQpZrD4dBr`). Cả 2 workflow đầu vẫn dùng pattern `hasExplicitChat` (nếu bị gọi kèm `notifyChatId` cụ thể từ lệnh thủ công thì trả lời thẳng vào đó, không qua nhóm này).
+
 ## Data Table n8n (không phải Postgres)
 
 | Tên | ID | Vai trò |
