@@ -4,6 +4,27 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ ĐÃ XONG, ĐANG CHỜ USER ĐIỀN DANH SÁCH NGƯỜI DÙNG (21/09/2026) — Workflow quét quyền chia sẻ OneDrive
+
+**Yêu cầu user**: kiểm tra folder `03 Students Profile` trên OneDrive cá nhân — ai đang xem được, xem
+được folder nào, lưu lại để dễ quản lý (Postgres song song Google Sheet).
+
+**Đã làm**: workflow mới `GW OneDrive Folder Permissions Audit` (`xYwQHjCQpZrD4dBr`, publish rồi) —
+quét đệ quy TOÀN BỘ folder cấp thấp nhất trong `03 Students Profile` (driveId `9c1e52abced5a0c6`,
+itemId `9C1E52ABCED5A0C6!219638`, 78 folder ở lần quét đầu), lấy quyền chia sẻ từng folder qua Graph
+API `/permissions`, lưu Postgres bảng `public.onedrive_folder_permissions` (ghi đè mỗi lần chạy) +
+đồng bộ Google Sheet (link `https://docs.google.com/spreadsheets/d/1-MVvkIF6ohC1kRwEdZUYuzm2ix20QAtes-v00KQjE_o/edit`)
+3 tab: **Tổng quan** (ma trận folder × người), **Chi tiết** (log phẳng), **Danh sách người dùng**
+(user tự điền ~20 người). Gửi tóm tắt Telegram admin sau mỗi lần chạy. Trigger thủ công hoặc lịch tuần
+(Thứ 2 8h VN).
+
+**Việc còn lại phía user**: tab "Danh sách người dùng" hiện TRỐNG (mới có header `Email | Tên hiển
+thị`) — cần tự điền ~20 người để cột người dùng hiện ra trong tab Tổng quan; điền xong chạy lại lệnh
+thủ công hoặc đợi lịch tuần tự chạy.
+
+**4 lớp lỗi mới tự gây + tự sửa trong phiên xây workflow này, đã ghi Rule #26-#29 vào `RULES.md`** —
+xem chi tiết `CHANGELOG.md` mục 21/09/2026.
+
 ## 🔧 SỬA XONG, CHỜ USER TEST LẠI (18/09/2026, phiên tiếp 46b) — Công tắc bảo mật link OneDrive (Cao/Thấp)
 
 **Yêu cầu user**: sau khi nghĩ lại, thấy việc chỉ để link mở được cho người CÓ QUYỀN (`webUrl` gốc)

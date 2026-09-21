@@ -477,3 +477,61 @@ workflow khác) nhưng vẫn tái diễn khi chuyển sang sửa workflow mới.
 3. Sau MỌI `update_workflow` có `addNode`, đọc field `autoAssignedCredentials` trong response —
    khác mảng rỗng `[]` nghĩa là có node bị gán nhầm, phải sửa ngay bằng `setNodeCredential` với ID
    credential đúng (tra ở `WORKFLOWS.md`).
+
+## 26. 🔴 `setNodeParameter`: `path` là JSON Pointer TƯƠNG ĐỐI so với `node.parameters`, KHÔNG bao gồm chữ `parameters` — dùng sai path tạo field lồng sai, giá trị cũ vẫn active, KHÔNG có lỗi/warning nào
+
+Xảy ra thật 21/09/2026 khi sửa text 1 node Telegram: gọi `setNodeParameter` với `path: "/parameters/text"`
+(tưởng path bắt đầu từ gốc node) → kết quả tạo ra field lồng sai `node.parameters.parameters.text`
+(param `text` gốc `node.parameters.text` không hề bị đổi). n8n vẫn đọc giá trị CŨ ở
+`node.parameters.text` để hiển thị/thực thi, nên node chạy với nội dung CŨ hoàn toàn — không có lỗi,
+không có warning nào từ `update_workflow` báo hiệu việc này, chỉ phát hiện được bằng cách đọc lại
+`get_workflow_details` và thấy field `parameters.parameters` lạ xuất hiện.
+
+**Quy tắc bắt buộc**: `path` của `setNodeParameter` LUÔN bắt đầu trực tiếp từ tên field bên trong
+`parameters` (vd `/text`, `/jsCode`, `/url`), KHÔNG thêm tiền tố `/parameters/`. Sau mỗi
+`setNodeParameter`, nếu nghi ngờ, đọc lại `get_workflow_details` để xác nhận field đúng vị trí, không
+chỉ tin vào `appliedOperations` trong response.
+
+## 27. 🔴 Postgres node mặc định `queryBatching: 'single'` GỘP nhiều input item thành 1 lần thực thi — phá vỡ số lượng item nếu node sau cần số item gốc (vd nối vào `Loop Over Items`)
+
+Xảy ra thật 21/09/2026: node Postgres `DELETE` nhận 78 item (78 folder) làm input, nhưng vì
+`queryBatching` mặc định là `'single'` (gộp tất cả input thành 1 lần gọi query), output CHỈ có 1 item
+duy nhất — không phải 78. Node `Loop Over Items` (SplitInBatches) nối ngay sau đó chỉ nhận được 1 item
+làm "tổng số cần lặp", nên vòng lặp kết thúc sau khi xử lý xong 1/78 folder, execution vẫn báo
+`success` không có lỗi gì.
+
+**Quy tắc bắt buộc**: KHÔNG nối trực tiếp 1 node Postgres (executeQuery/insert/update) làm bước TRUNG
+GIAN giữa 1 danh sách N item và bất kỳ node nào cần giữ nguyên số lượng N đó (đặc biệt `Loop Over
+Items`). Nếu bắt buộc phải chạy Postgres ở giữa (vd để dọn dữ liệu cũ trước khi lặp), thêm 1 Code node
+NGAY SAU đó để phát lại danh sách gốc bằng cách tham chiếu tường minh node trước Postgres (vd
+`return $('Tên Node Trước Postgres').all();`), không dùng lại output của chính node Postgres.
+
+## 28. 🔴 Nhiều nhánh cùng nối vào 1 node `Merge` qua `.input(n)` lồng sâu trong SDK code, kết hợp với khai báo `.add(mergeNode).to(...)` riêng ở cấp ngoài — có thể tạo ra CONNECTION GRAPH SAI kèm VÒNG LẶP ẨN
+
+Xảy ra thật 21/09/2026: dùng SDK pattern `combineBranches.input(0)`/`.input(1)` lồng sâu bên trong 2
+nhánh khác nhau của 1 chain dài, rồi khai báo thêm `.add(combineBranches).to(sendSummary)` riêng ở
+cuối file — kết quả build ra 1 connection SAI: output của `Merge` bị nối NGƯỢC vào 1 trong các node
+nguồn của chính nó (thay vì nối đúng như `.input(1)` yêu cầu), tạo thành vòng lặp
+`Append → Merge → Clear Sheet → ... → Append → Merge → ...` chạy lặp không kiểm soát cho đến khi bị
+chặn bởi rate-limit của dịch vụ ngoài (Google Sheets API, lỗi 429) — đây là dấu hiệu DUY NHẤT phát
+hiện ra bug, execution KHÔNG báo lỗi ở bản thân n8n.
+
+**Quy tắc bắt buộc**: sau khi tạo bất kỳ workflow nào có node `Merge`/`combine` được nối từ NHIỀU
+nhánh lồng sâu, BẮT BUỘC đọc lại `connections` object đầy đủ qua `get_workflow_details` và xác nhận
+bằng mắt từng cạnh nối tới/từ node Merge đúng như ý định — không tin tưởng code SDK sẽ luôn build
+đúng graph mong muốn. Cân nhắc TRÁNH dùng Merge hoàn toàn nếu không thực sự cần ngữ nghĩa "đợi đủ cả
+2 nhánh" — dùng fan-out song song trực tiếp từ 1 node chung phía trên đơn giản và an toàn hơn.
+
+## 29. 🔴 Tín hiệu "sang batch tiếp theo" của `Loop Over Items` PHẢI đến từ 1 node LUÔN xuất ra đúng 1 item mỗi lần lặp — không được đến từ 1 node xử lý dữ liệu có thể trả về 0 item
+
+Xảy ra thật 21/09/2026: nối `Insert Permission Rows` (Postgres, có thể nhận 0 item nếu 1 folder không
+có quyền chia sẻ nào) làm tín hiệu quay lại `Loop Over Items`. Khi folder ĐẦU TIÊN trong danh sách
+không có quyền chia sẻ nào (0 rows), node Postgres không chạy (0 input = skip), tín hiệu quay lại vòng
+lặp KHÔNG BAO GIỜ đến, vòng lặp lặng lẽ dừng ngay sau item đầu tiên, execution báo `success` dù mới xử
+lý được 1/78 item.
+
+**Quy tắc bắt buộc**: tín hiệu nối NGƯỢC vào `Loop Over Items` để sang batch kế tiếp phải xuất phát từ
+node LUÔN CÓ output (vd node HTTP Request gọi API cho MỖI item, kèm `onError: continueRegularOutput`
+để cả lỗi cũng tạo ra 1 item) — nối TRỰC TIẾP từ node đó về `Loop Over Items` (tách nhánh riêng, không
+đi qua node xử lý dữ liệu có thể lọc về 0 item như Code node filter hay Postgres insert có điều
+kiện).

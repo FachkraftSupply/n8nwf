@@ -4,6 +4,29 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-21 — Workflow mới: quét quyền chia sẻ folder OneDrive `03 Students Profile`, đồng bộ Postgres + Google Sheet; cập nhật RULES.md #26-#29
+
+Theo yêu cầu user: xây `GW OneDrive Folder Permissions Audit` (`xYwQHjCQpZrD4dBr`) — quét TOÀN BỘ
+folder cấp thấp nhất (đệ quy, dùng Graph API `delta` trên folder gốc `03 Students Profile`) trong
+OneDrive cá nhân đã gắn credential n8n, lấy quyền chia sẻ từng folder (`/permissions`), lưu vào bảng
+Postgres mới `public.onedrive_folder_permissions`, đồng bộ ra Google Sheet 3 tab: **Tổng quan** (ma
+trận folder × người dùng, đánh dấu link công khai), **Chi tiết** (log phẳng), **Danh sách người dùng**
+(user tự thêm/bớt ~20 người, workflow tự đọc lại). Gửi tóm tắt qua Telegram admin sau mỗi lần chạy.
+Trigger: thủ công hoặc lịch tuần (Thứ 2 8h VN). Kết quả thật lần chạy đầu: 78 folder, 158 link công
+khai (`anonymous`), 81 link giới hạn (`link_users`), 0 quyền gán trực tiếp cho user cụ thể.
+
+**4 lớp lỗi mới tự gây + tự sửa trong phiên, đã ghi thành Rule #26-#29 (`RULES.md`)**:
+- #26: `setNodeParameter` với `path` sai (thêm tiền tố `/parameters/` thừa) tạo field lồng sai, giá
+  trị cũ vẫn active, không lỗi/warning nào báo hiệu.
+- #27: Postgres node mặc định gộp N item input thành 1 lần thực thi (`queryBatching: 'single'`), phá
+  vỡ số lượng item nếu node sau cần giữ nguyên N (vd `Loop Over Items`).
+- #28: Nhiều nhánh cùng nối vào 1 node `Merge` qua `.input(n)` lồng sâu trong SDK code có thể tạo
+  connection graph sai kèm vòng lặp ẩn — phát hiện được nhờ Google Sheets trả lỗi 429 rate-limit (n8n
+  không tự báo lỗi gì).
+- #29: Tín hiệu "sang batch tiếp theo" của `Loop Over Items` phải đến từ node LUÔN có output — nối từ
+  node có thể trả 0 item (vd Postgres insert có điều kiện) làm vòng lặp dừng sớm lặng lẽ, execution
+  vẫn báo `success`.
+
 ## 2026-09-18 (tiếp 46b) — Thêm công tắc bảo mật link OneDrive (Cao/Thấp) qua n8n Data Table
 
 Theo yêu cầu user (an toàn hơn khi mặc định chỉ người có quyền mở được link): tạo Data Table
