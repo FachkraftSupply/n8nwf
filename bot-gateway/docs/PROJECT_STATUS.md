@@ -4,6 +4,44 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔧 BUILD XONG, CHỜ DEPLOY SCRIPT + TẠO CREDENTIAL (21/09/2026) — Lệnh mới `/vps` xem CPU/RAM/disk/Docker
+
+User yêu cầu: lệnh Telegram (chỉ admin) xem nhanh tình trạng VPS — CPU load, RAM, disk tổng/dùng/còn
+trống, top container Docker theo dung lượng. Không cần cảnh báo tự động ở giai đoạn này, chỉ tra cứu
+chủ động.
+
+**Đã build (workflow `Telebot Admin System`, id `eWtu7Qs85Hes0HuP`, đã publish, đúng theo pattern
+`/token` đã có sẵn):**
+- `Phân tích lệnh` (Code) thêm route `vps` cho command `/vps`.
+- `Switch` thêm output `vps` (rule thứ 23, trước fallback `extra`).
+- `Check Admin (VPS)` (IF) → so `chatId` với `ADMIN_CHAT_ID` giống hệt `Check Admin (Token)`.
+- `Call VPS Info` (HTTP Request) → gọi `http://host.docker.internal:8787/vps-info`, xác thực qua
+  credential kiểu **Header Auth** (chưa tạo — xem việc còn thiếu bên dưới), `onError:
+  continueRegularOutput` để không làm dừng workflow khi endpoint chưa sẵn sàng.
+- `Build VPS Stats` (Code) → format tin nhắn HTML, có fallback báo lỗi rõ ràng nếu không gọi được
+  endpoint (thay vì im lặng hoặc throw).
+- `Send VPS Stats` / `Reply Không Có Quyền (VPS)` (Telegram) → dùng chung credential bot System.
+- Đã test 3 nhánh bằng `test_workflow` (pin data, không gọi API/Telegram thật): admin + có dữ liệu
+  → tin nhắn đúng định dạng; không phải admin → bị chặn đúng, không gọi `Call VPS Info`; admin +
+  endpoint lỗi → fallback báo lỗi đúng như thiết kế, không throw.
+- Thêm dòng `/vps 🔒` vào `Nội dung lệnh help`.
+
+**Script thu thập dữ liệu (chưa deploy lên VPS thật):** `bot-gateway/scripts/vps-monitor/` —
+`vps_info.py` (thu thập, đã test chạy được, chỉ Python stdlib) + `server.py` (HTTP server nội bộ,
+xác thực bằng header `X-Auth-Token`) + `vps-monitor.service` (systemd unit) + `README.md` (hướng dẫn
+deploy chi tiết, gồm cả cách cho container n8n gọi được vào host qua `host.docker.internal` hoặc IP
+gateway Docker bridge).
+
+**Việc còn thiếu trước khi `/vps` trả dữ liệu thật (hiện tại gõ `/vps` sẽ ra tin báo lỗi rõ ràng,
+không lỗi ngầm):**
+1. User deploy `vps_info.py` + `server.py` lên VPS theo `bot-gateway/scripts/vps-monitor/README.md`.
+2. Xác nhận container n8n gọi được vào host (`host.docker.internal` hoặc IP gateway bridge) — tuỳ
+   cấu hình Docker Compose thật của n8n, cần user tự kiểm tra trên VPS.
+3. Tạo credential n8n kiểu **Header Auth** (header `X-Auth-Token`, giá trị = token đã tạo khi deploy
+   script) và gán vào node `Call VPS Info`.
+4. Cập nhật lại URL trong node `Call VPS Info` nếu không dùng `host.docker.internal` (vd đổi sang IP
+   gateway thật).
+
 ## ✅ ĐÃ XONG, ĐANG CHỜ USER ĐIỀN DANH SÁCH NGƯỜI DÙNG (21/09/2026) — Workflow quét quyền chia sẻ OneDrive
 
 **Yêu cầu user**: kiểm tra folder `03 Students Profile` trên OneDrive cá nhân — ai đang xem được, xem

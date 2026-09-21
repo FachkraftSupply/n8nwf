@@ -1,0 +1,16 @@
+[Unit]
+Description=VPS Monitor - HTTP endpoint noi bo cho lenh /vps (Telebot Admin System)
+After=network.target docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/vps-monitor.env
+ExecStart=/usr/bin/python3 /opt/vps-monitor/server.py
+Restart=on-failure
+RestartSec=5
+# Can quyen doc /proc, chay lenh docker (doc group docker hoac root) de lay
+# dung luong tung container.
+User=root
+
+[Install]
+WantedBy=multi-user.target
