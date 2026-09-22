@@ -253,9 +253,16 @@ này **public**. Quy tắc:
 
 ## 18. 🔴 `addNode` thêm node MỚI vào 1 chuỗi đang chạy sống — BẮT BUỘC kèm `setNodeSettings` TRONG CÙNG BATCH nếu node đó có thể trả 0 dòng/lỗi
 
-**Đã lặp lại lỗi này 3 LẦN trong dự án** (08/09 — Gateway pending-check làm sập TOÀN BỘ bot cho mọi
+**Đã lặp lại lỗi này 4 LẦN trong dự án** (08/09 — Gateway pending-check làm sập TOÀN BỘ bot cho mọi
 user; 08/09 cùng ngày — OD Task Lookup/Resolve/Upload HTTP; 09/09 — `Ensure Notify Queue Columns`
-làm gãy bước cuối Upload OneDrive, "xóa hết tin cũ nhưng không thấy tin mới"). Nguyên nhân LUÔN
+làm gãy bước cuối Upload OneDrive, "xóa hết tin cũ nhưng không thấy tin mới"; 22/09 — node
+`Call Qwen OCR` mới thêm vào `Bot Xử Lý Ảnh`, đặt `onError: "continueErrorOutput"` trực tiếp trong
+object `node` của `addNode`). **Điểm khác lần này**: `continueErrorOutput` (khác
+`continueRegularOutput`/`alwaysOutputData`) làm node có THÊM 1 output port — nên lần đầu tiên
+`update_workflow` chủ động trả `validationWarnings` báo rõ `"uses output index 1, but node only
+has 1 output(s)"` NGAY LẬP TỨC, không cần đợi audit riêng mới phát hiện. Vẫn phải sửa bằng
+`setNodeSettings` riêng như quy tắc dưới đây — chỉ là lần này n8n tự cảnh báo sớm hơn 3 lần trước.
+Nguyên nhân LUÔN
 GIỐNG NHAU: thao tác `addNode` của n8n MCP **KHÔNG nhận** `alwaysOutputData`/`onError` như field cấp
 1 của object `node` — dù không báo lỗi/warning gì, 2 field này bị ÂM THẦM BỎ QUA. Hậu quả: node DDL
 (`CREATE TABLE`/`ALTER TABLE`, không có `RETURNING`) hoặc gọi API ngoài có thể lỗi, khi trả về 0 kết

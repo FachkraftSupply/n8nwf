@@ -4,6 +4,25 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ ĐÃ XONG (22/09/2026) — `/tomtat` bỏ hẳn Mistral, chuyển sang Qwen3.7 Flash (OpenRouter)
+
+**Nguyên nhân**: Mistral Cloud OCR bị giới hạn `x-ratelimit-limit-req-minute: 0` — tài khoản hiện
+KHÔNG có quota OCR (không phải hết quota tạm thời, cần user tự kiểm tra billing/plan trên
+`console.mistral.ai` nếu sau này muốn dùng lại Mistral — hiện KHÔNG cần vì đã bỏ hẳn).
+
+**Đã làm** (`Bot Xử Lý Ảnh (xoanen + tomtat)`, `6I4MnJiJCiv2JOIr`, đã publish):
+- OCR giờ dùng `qwen/qwen3.7-flash` qua OpenRouter, tắt `reasoning` (giảm ~8-10s, ~$0.000076/ảnh,
+  rẻ hơn Gemini ~14 lần) — đã so sánh thực tế 3 model (xem `CHANGELOG.md` 22/09 để biết chi tiết
+  benchmark tốc độ/chi phí/chất lượng).
+- Có retry (3 lần) + báo lỗi thân thiện nếu vẫn thất bại (không còn im lặng).
+- Thêm tin nhắn "⏳ Đã nhận ảnh, đang xử lý..." gửi ngay khi nhận ảnh (trước khi OCR xong) — vì OCR
+  giờ mất vài giây, cần cho user biết bot không bị treo.
+- Đổi tên node `Mistral (qua OpenRouter)` → `Gemini (qua OpenRouter)` (tên cũ sai từ trước, node đó
+  chưa từng dùng Mistral).
+
+**Việc cần user làm**: gõ thử `/tomtat` kèm ảnh trong nhóm — xác nhận nhận được tin "⏳ đang xử lý"
+gần như ngay lập tức, rồi bản tóm tắt về sau ~8-15 giây.
+
 ## ✅ ĐÃ DEPLOY + TEST THẬT XONG (21/09/2026) — Lệnh mới `/vps` xem CPU/RAM/disk/Docker
 
 User yêu cầu: lệnh Telegram (chỉ admin) xem nhanh tình trạng VPS — CPU load, RAM, disk tổng/dùng/còn

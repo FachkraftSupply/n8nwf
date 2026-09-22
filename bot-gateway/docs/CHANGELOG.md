@@ -4,6 +4,38 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-22 — Bỏ hẳn Mistral khỏi `/tomtat`, chuyển toàn bộ OCR sang Qwen3.7 Flash qua OpenRouter; thêm tin nhắn xác nhận đang xử lý
+
+**Bối cảnh**: điều tra 1 tin `/tomtat` không trả kết quả (14:44) → phát hiện Mistral Cloud OCR bị
+giới hạn **`x-ratelimit-limit-req-minute: 0`** — không phải hết quota tạm thời mà tài khoản/API key
+hiện KHÔNG có quota OCR nào cả (cần billing/kiểm tra plan phía Mistral). Trước mắt đã thêm retry +
+fallback Gemini (qua OpenRouter) để vá tạm, real-test xác nhận fallback hoạt động đúng khi Mistral
+tiếp tục bị chặn.
+
+**Quyết định cuối**: user yêu cầu bỏ hẳn Mistral, chỉ dùng OpenRouter. Đã test so sánh 3 model OCR
+vision qua OpenRouter trên cùng 1 ảnh thật (đọc đúng, không sai lệch thông tin ở cả 3):
+- `qwen/qwen3.7-flash` (mặc định, có "thinking"): đọc đầy đủ nhất (giữ cả header/preview tin nhắn)
+  nhưng chậm (~77-80s) và tốn token do sinh ra hàng nghìn token reasoning ẩn không cần thiết.
+- `qwen/qwen3.7-flash` + `reasoning: { enabled: false }`: **chọn phương án này** — cùng chất lượng
+  đọc, giảm còn ~8-10s và ~$0.000076/ảnh (rẻ hơn Gemini 3.5 Flash Lite ~14 lần cho riêng bước OCR).
+- `qwen/qwen3-vl-8b-instruct`: nhanh nhất (~2.3s) nhưng tự lược bỏ phần header/preview tin nhắn (chỉ
+  lấy nội dung chính), đắt hơn Qwen3.7 Flash tắt reasoning ~3.5 lần. Không chọn.
+
+**Đã sửa** (`Bot Xử Lý Ảnh (xoanen + tomtat)`, `6I4MnJiJCiv2JOIr`):
+- Xoá hẳn `OCR Mistral (Native)` + toàn bộ nhánh fallback Gemini tạm thời (không cần đa nhà cung cấp
+  nữa vì chỉ còn 1 nguồn OpenRouter).
+- Thêm `Call Qwen OCR` (HTTP Request → OpenRouter `/chat/completions`, model `qwen/qwen3.7-flash`,
+  `reasoning: {enabled: false}`), có `retryOnFail` (3 lần, cách 2s) + `onError: continueErrorOutput`
+  kèm `Reply OCR Failed` báo lỗi thân thiện nếu vẫn thất bại sau retry (không im lặng).
+- Thêm `Send Processing Ack` — gửi ngay "⏳ Đã nhận ảnh, đang đọc chữ và tóm tắt..." reply đúng tin
+  nhắn gốc NGAY khi tải ảnh xong (chạy song song, không chặn OCR) — vì OCR giờ mất ~8-10s, cần tín
+  hiệu cho user biết bot đang xử lý chứ không phải bị treo.
+- Đổi tên node `Mistral (qua OpenRouter)` (tên cũ gây hiểu nhầm — thực chất luôn là model Gemini,
+  chưa từng là Mistral) → `Gemini (qua OpenRouter)`; cập nhật label/description không còn nhắc Mistral.
+- **Tái diễn Rule #18 lần 4** khi thêm `Call Qwen OCR`: đặt `onError: "continueErrorOutput"` trực
+  tiếp trong `addNode` bị bỏ qua (cần output thứ 2 cho nhánh lỗi) — lần này `update_workflow` tự báo
+  `validationWarnings` ngay, sửa bằng `setNodeSettings` riêng theo đúng quy tắc đã có.
+
 ## 2026-09-21 (tiếp) — Deploy `vps-monitor` lên VPS thật + hoàn thiện lệnh `/vps`, phát hiện bug `host.docker.internal` trên Linux
 
 Bàn giao từ 1 session Claude khác (đã build sẵn phần n8n cho `/vps`, chưa deploy VPS) — session này
