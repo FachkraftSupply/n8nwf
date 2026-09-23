@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 """Thu thap thong tin he thong (CPU load, RAM, disk, top container Docker theo
 dung luong) cho lenh /vps cua Telebot Admin System. Chi dung Python stdlib,
-khong can cai them thu vien. In JSON ra stdout."""
+khong can cai them thu vien. In JSON ra stdout.
+
+Che do CLI:
+  python3 vps_info.py                          -> tong quan he thong (mac dinh)
+  python3 vps_info.py container-info <id>      -> chi tiet 1 container
+  python3 vps_info.py container-restart <id>   -> restart 1 container
+<id> la Docker container ID (12-64 ky tu hex, lay tu output cua che do mac dinh)."""
 import json
 import os
+import re
 import shutil
 import subprocess
+import sys
+
+CONTAINER_ID_RE = re.compile(r"^[a-f0-9]{12,64}$")
 
 
 def get_load():
@@ -54,7 +64,7 @@ def get_docker_containers(limit=10):
 
     try:
         ps_out = subprocess.run(
-            ["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Image}}\t{{.Status}}"],
+            ["docker", "ps", "-a", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}"],
             capture_output=True, text=True, timeout=10, check=True,
         ).stdout.strip()
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
@@ -91,10 +101,11 @@ def get_docker_containers(limit=10):
     for line in ps_out.splitlines():
         if not line:
             continue
-        cols = (line.split("\t") + ["", "", ""])[:3]
-        name, image, status = cols
+        cols = (line.split("\t") + ["", "", "", ""])[:4]
+        container_id, name, image, status = cols
         size = sizes.get(name, "?")
         containers.append({
+            "id": container_id,
             "name": name,
             "image": image,
             "status": status,
@@ -109,7 +120,106 @@ def get_docker_containers(limit=10):
     return {"available": True, "containers": containers[:limit]}
 
 
+def get_container_detail(container_id):
+    """Tra ve thong tin chi tiet 1 container (docker inspect + docker stats tuc thoi).
+    Tra {"error": "..."} neu id sai dinh dang, docker CLI khong co, hoac container
+    khong ton tai."""
+    if not CONTAINER_ID_RE.match(container_id or ""):
+        return {"error": "invalid_id"}
+    if shutil.which("docker") is None:
+        return {"error": "docker_unavailable"}
+
+    try:
+        inspect_out = subprocess.run(
+            ["docker", "inspect", container_id],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return {"error": str(exc)}
+    if inspect_out.returncode != 0:
+        return {"error": "not_found"}
+    try:
+        info = json.loads(inspect_out.stdout)[0]
+    except (json.JSONDecodeError, IndexError, KeyError):
+        return {"error": "inspect_parse_failed"}
+
+    state = info.get("State", {})
+    ports_raw = (info.get("NetworkSettings") or {}).get("Ports") or {}
+    ports = []
+    for container_port, bindings in ports_raw.items():
+        if not bindings:
+            continue
+        for b in bindings:
+            ports.append(f"{b.get('HostIp', '')}:{b.get('HostPort', '')} -> {container_port}")
+
+    stats = {}
+    try:
+        stats_out = subprocess.run(
+            ["docker", "stats", container_id, "--no-stream", "--format", "{{json .}}"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if stats_out.returncode == 0 and stats_out.stdout.strip():
+            stats = json.loads(stats_out.stdout.strip().splitlines()[0])
+    except (subprocess.TimeoutExpired, OSError, json.JSONDecodeError, IndexError):
+        pass
+
+    return {
+        "id": container_id,
+        "name": (info.get("Name") or "").lstrip("/"),
+        "image": (info.get("Config") or {}).get("Image"),
+        "status": state.get("Status"),
+        "running": state.get("Running", False),
+        "started_at": state.get("StartedAt"),
+        "restart_count": info.get("RestartCount"),
+        "created": info.get("Created"),
+        "ports": ports,
+        "cpu_pct": stats.get("CPUPerc"),
+        "mem_usage": stats.get("MemUsage"),
+        "mem_pct": stats.get("MemPerc"),
+    }
+
+
+def restart_container(container_id):
+    """Restart 1 container qua `docker restart`. Tra {"success": bool, "name": ..., ...}.
+    Lay ten container qua docker inspect TRUOC khi restart (chi de hien thi ten dep
+    trong tin nhan ket qua - khong anh huong ket qua thanh cong/that bai)."""
+    if not CONTAINER_ID_RE.match(container_id or ""):
+        return {"success": False, "error": "invalid_id"}
+    if shutil.which("docker") is None:
+        return {"success": False, "error": "docker_unavailable"}
+
+    name = container_id
+    try:
+        name_out = subprocess.run(
+            ["docker", "inspect", "--format", "{{.Name}}", container_id],
+            capture_output=True, text=True, timeout=10,
+        )
+        if name_out.returncode == 0 and name_out.stdout.strip():
+            name = name_out.stdout.strip().lstrip("/")
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+
+    try:
+        result = subprocess.run(
+            ["docker", "restart", container_id],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return {"success": False, "name": name, "error": str(exc)}
+    if result.returncode != 0:
+        return {"success": False, "name": name, "error": result.stderr.strip() or "restart_failed"}
+    return {"success": True, "name": name}
+
+
 def main():
+    argv = sys.argv[1:]
+    if len(argv) >= 2 and argv[0] == "container-info":
+        print(json.dumps(get_container_detail(argv[1])))
+        return
+    if len(argv) >= 2 and argv[0] == "container-restart":
+        print(json.dumps(restart_container(argv[1])))
+        return
+
     payload = {
         "load": get_load(),
         "cpu_cores": os.cpu_count(),

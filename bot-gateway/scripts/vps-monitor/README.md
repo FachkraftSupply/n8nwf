@@ -5,6 +5,21 @@ dung lượng ổ đĩa (tổng/dùng/còn trống), và top container Docker th
 này qua HTTP Request node, format lại thành tin nhắn Telegram cho lệnh `/vps` (chỉ admin dùng được
 — xem `bot-gateway/docs/RULES.md` mục quyền admin).
 
+**Cập nhật 23/09/2026**: thêm 2 endpoint để xem chi tiết + khởi động lại 1 container cụ thể (bấm
+deep-link "chi tiết" trong tin nhắn `/vps`, admin-only, xem mục "Routes" bên dưới).
+
+## Routes
+
+- `GET /vps-info` — tổng quan hệ thống + top container theo dung lượng (không đổi, đã có từ đầu).
+- `GET /container-info?id=<id>` — chi tiết 1 container (image, trạng thái, uptime, số lần restart,
+  ports, CPU%/RAM tức thời qua `docker inspect` + `docker stats --no-stream`).
+- `POST /container-restart` (`{"id": "<id>"}`) — `docker restart <id>`, trả `{"success": bool, "name": ..., "error"?: ...}`.
+
+`<id>` là Docker container ID dạng short (12 ký tự hex trở lên, khớp regex `^[a-f0-9]{12,64}$`,
+validate ở cả `server.py` lẫn `vps_info.py` trước khi đưa vào `subprocess` — dùng list-form
+`subprocess.run([...])`, không `shell=True`, nên an toàn khỏi command injection ngay cả nếu bỏ qua
+bước validate, nhưng vẫn validate để chặn id sai định dạng/không tồn tại sớm, trả lỗi rõ ràng).
+
 **Vì sao chạy ngoài container n8n:** n8n tự host bằng Docker Hardened Image — image này không có
 sẵn `docker` CLI/shell đầy đủ bên trong để SSH-exec lệnh hệ thống host một cách an toàn. Chạy 1
 service Python thuần (stdlib, không cần cài thêm gì) trực tiếp trên host là cách chắc chắn nhất để

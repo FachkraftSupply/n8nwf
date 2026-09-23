@@ -4,6 +4,30 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ⏳ ĐÃ BUILD + PUBLISH, CHỜ USER TEST THẬT (23/09/2026) — `/vps` xem chi tiết container + nút khởi động lại
+
+**User yêu cầu**: bổ sung deep-link container trong `/vps` để xem chi tiết đầy đủ (image, uptime, số
+lần restart, ports, CPU/RAM) + nút "🔄 Khởi động lại" / "❌ Hủy" ngay trên panel chi tiết.
+
+**Đã làm** (`Telebot Admin System`, `eWtu7Qs85Hes0HuP`, đã publish; `vps-monitor` trên VPS
+`72.61.126.64` đã deploy + test GET qua curl thật):
+- Danh sách container trong `/vps` giờ có link "🔍 chi tiết" (deep-link text, không phải nút — đúng
+  RULES.md #3 vì số lượng container động).
+- Bấm vào → panel chi tiết 1 container + 2 nút cố định Khởi động lại/Hủy (inline keyboard, ngoại lệ
+  RULES.md #3 vì user yêu cầu rõ ràng + số lượng nút cố định).
+- `vps-monitor` (VPS) có thêm 2 endpoint: `GET /container-info?id=`, `POST /container-restart`.
+- Đã spawn 1 subagent độc lập audit lại toàn bộ (đúng RULES.md #20 bước 8) — xem kết quả audit trong
+  CHANGELOG.md 23/09/2026 nếu cần chi tiết.
+
+**Việc cần user làm (BẮT BUỘC trước khi coi là xong hẳn)**:
+1. Gõ `/vps`, bấm "🔍 chi tiết" ở 1 container — xác nhận panel hiện đúng thông tin.
+2. Bấm "❌ Hủy" — xác nhận panel bị xoá, nhận tin "✅ Đã hủy.", KHÔNG có gì bị restart.
+3. Bấm "🔄 Khởi động lại" — **CHƯA được test thật lần nào** (bị chặn bởi safety classifier khi tôi
+   thử qua SSH/curl) — đây là hành động THẬT làm container đó restart. Khuyến nghị test lần đầu với
+   1 container không quan trọng (vd `portainer-portainer-1`), KHÔNG test trực tiếp với
+   `n8n_stack-n8n-1` hay `n8n_stack-postgres-1` (sẽ gây gián đoạn thật cho chính hệ thống đang chạy
+   /vps này).
+
 ## ✅ ĐÃ XONG (23/09/2026) — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
 
 **Nguyên nhân**: `Tải Ảnh Về (Vision)` fan-out song song tới cả OCR và tin "⏳ đang xử lý" — không đảm

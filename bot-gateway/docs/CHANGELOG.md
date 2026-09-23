@@ -4,6 +4,55 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-23 (tiếp) — `/vps` bổ sung xem chi tiết container + nút khởi động lại
+
+**Bối cảnh**: user yêu cầu bổ sung deep-link container trong `/vps` để xem chi tiết + nút
+restart/cancel.
+
+**Đã làm**:
+- `bot-gateway/scripts/vps-monitor/vps_info.py` + `server.py` (VPS `72.61.126.64`,
+  `/opt/vps-monitor/`): thêm chế độ CLI `container-info <id>`/`container-restart <id>` và 2 route
+  HTTP mới `GET /container-info?id=`, `POST /container-restart` (`{"id":...}`). `id` là Docker
+  container ID short (12+ hex), validate bằng regex `^[a-f0-9]{12,64}$` ở cả 2 lớp (HTTP handler +
+  script) trước khi đưa vào `subprocess.run([...])` (list-form, không `shell=True` — an toàn khỏi
+  command injection ngay cả nếu bỏ qua validate). `docker ps` giờ lấy thêm cột `{{.ID}}` để mỗi
+  container trong `/vps-info` có `id` dùng cho deep-link. Restart lấy tên container qua
+  `docker inspect --format {{.Name}}` TRƯỚC khi restart để hiện tên đẹp trong tin kết quả. Đã deploy
+  qua SCP + SSH (backup file cũ trước khi ghi đè), restart `systemd` service, test GET qua curl thật
+  (200 cho id đúng, 400 cho id sai định dạng, 401 cho token sai) — KHÔNG test `POST
+  /container-restart` trực tiếp qua curl (bị chặn bởi safety classifier cục bộ khi thao tác ghi qua
+  SSH), để lại cho admin tự test qua nút Telegram thật (đó cũng là bài test end-to-end đầy đủ hơn).
+- Workflow `Telebot Admin System` (`eWtu7Qs85Hes0HuP`):
+  - `Build VPS Stats`: mỗi dòng container trong `/vps` giờ có deep-link text
+    `https://t.me/<bot>?start=vpsc_<id>` ("🔍 chi tiết") — đúng RULES.md #3 (số lượng container động,
+    không dùng inline keyboard cho danh sách).
+  - `Phân tích lệnh`: thêm 3 route mới qua prefix — `vpsc_<id>` → `vps_container` (deep-link `/start`),
+    `vpsrestart_<id>` → `vps_restart` (callback nút), `vpscancel` → `vps_cancel` (callback nút).
+  - `Switch` (router chính): thêm 3 output mới (`vps_container`/`vps_restart`/`vps_cancel`), fallback
+    `extra` dời từ index 23 sang 26 — đã `removeNode`+`addNode` với đúng `id` cũ + nối lại ĐỦ 23
+    connection gốc + 3 connection mới + fallback theo đúng Rule #16/#25.
+  - Node mới: `Check Admin (VPS Extra)` (gate chung cho `vps_container`/`vps_restart`) → `Route VPS
+    Extra` (switch 2 nhánh) → `Call Container Info`/`Call Container Restart` (HTTP, cùng credential
+    Header Auth `X-Auth-Token` với `Call VPS Info`) → `Container Info OK?`/`Build Restart Result` →
+    gửi kết quả. `vps_cancel` không cần gate (chỉ trả "✅ Đã hủy.", vô hại).
+  - Panel chi tiết container (`Send Container Detail`) dùng 2 nút inline CỐ ĐỊNH (🔄 Khởi động lại /
+    ❌ Hủy, đúng RULES.md #3 ngoại lệ cho user yêu cầu rõ ràng + số lượng nút cố định) —
+    `replyMarkup: "inlineKeyboard"` là chuỗi TĨNH, không phải expression (đúng RULES.md #21). Tin
+    nhắn panel cũ tự động bị xoá khi bấm nút nhờ cơ chế `Delete Old Panel Message` CÓ SẴN của
+    workflow (áp dụng cho MỌI callback, không cần code thêm).
+  - Cả 2 node HTTP mới đặt `onError: continueRegularOutput` qua `setNodeSettings` CÙNG batch với
+    `addNode` (đúng RULES.md #18).
+  - Tất cả node Telegram mới dùng credential `Telegram System Bot` — đúng RULES.md #23 (Trigger của
+    workflow này nghe trên chính bot đó, callback `vpsrestart_`/`vpscancel` phải cùng bot).
+  - Đã `get_workflow_details` audit lại đầy đủ (connections + `onError` + credentials) trước khi
+    `publish_workflow`, và spawn 1 subagent độc lập audit lại lần nữa theo checklist RULES.md sau khi
+    publish (đúng RULES.md #20 bước 8).
+
+**Việc cần user làm**: gõ `/vps`, bấm "🔍 chi tiết" ở 1 container để xem panel chi tiết, thử nút
+"❌ Hủy" (chỉ đóng, an toàn), rồi thử "🔄 Khởi động lại" (THẬT SỰ restart container đó — cân nhắc test
+với container không quan trọng như `portainer-portainer-1` trước, tránh restart `n8n_stack-n8n-1`
+hoặc `n8n_stack-postgres-1` trừ khi cố ý).
+
 ## 2026-09-23 — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
 
 **Bối cảnh**: user báo tin "⏳ đang xử lý..." đôi khi hiện ra SAU cả tin kết quả tóm tắt. Nguyên nhân:
