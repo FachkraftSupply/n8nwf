@@ -4,6 +4,20 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ ĐÃ XONG (23/09/2026) — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
+
+**Nguyên nhân**: `Tải Ảnh Về (Vision)` fan-out song song tới cả OCR và tin "⏳ đang xử lý" — không đảm
+bảo thứ tự, nên OCR xong nhanh có thể khiến tin kết quả đến trước tin "đang xử lý".
+
+**Đã làm** (`Bot Xử Lý Ảnh (xoanen + tomtat)`, `6I4MnJiJCiv2JOIr`, đã publish):
+- Đổi sang tuần tự: gửi tin "đang xử lý" xong mới bắt đầu OCR (không còn chạy song song).
+- Trước khi gửi kết quả (cả nhánh OCR thành công lẫn thất bại), xóa tin "đang xử lý" cũ trước —
+  2 node Telegram `deleteMessage` mới: `Delete Processing Ack (OK)` và `Delete Processing Ack (Failed)`.
+- Chi tiết kỹ thuật xem `CHANGELOG.md` 23/09/2026.
+
+**Việc cần user làm**: gõ thử `/tomtat` kèm ảnh — xác nhận tin "⏳ đang xử lý" luôn đến trước, và bị
+xóa đi ngay trước khi tin kết quả (hoặc tin báo lỗi) xuất hiện.
+
 ## ✅ ĐÃ XONG (22/09/2026) — Fix Supabase project "Telegram authentication DB" bị auto-pause
 
 **Nguyên nhân**: org Supabase đang ở gói Free — tự động pause project sau 7 ngày không hoạt động.

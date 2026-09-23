@@ -4,6 +4,25 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-23 — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
+
+**Bối cảnh**: user báo tin "⏳ đang xử lý..." đôi khi hiện ra SAU cả tin kết quả tóm tắt. Nguyên nhân:
+node `Tải Ảnh Về (Vision)` trong workflow `Bot Xử Lý Ảnh (xoanen + tomtat)` (`6I4MnJiJCiv2JOIr`) fan-out
+song song tới cả `To Base64 (OCR)` (bắt đầu OCR ngay) và `Send Processing Ack` (gửi tin chờ) — không có
+gì đảm bảo thứ tự giữa 2 nhánh, nên khi OCR xong quá nhanh, tin "đang xử lý" gửi trễ hơn tin kết quả.
+
+**Đã sửa**: đổi logic đúng thứ tự `OCR => thông báo đang chờ => xóa tin cũ => trả kết quả` mà user yêu cầu:
+- Nối lại tuần tự: `Tải Ảnh Về (Vision)` → `Send Processing Ack` (đợi gửi xong) → `To Base64 (OCR)` → ...
+  (bỏ fan-out song song).
+- Thêm 2 node Telegram `deleteMessage` mới (đọc `message_id` từ output của `Send Processing Ack`):
+  - `Delete Processing Ack (OK)` chèn giữa `Tóm Tắt Bằng AI` → `Gửi Bản Tóm Tắt` (nhánh OCR thành công).
+  - `Delete Processing Ack (Failed)` chèn giữa output lỗi của `Call Qwen OCR` → `Reply OCR Failed`
+    (nhánh OCR thất bại) — để tin "đang chờ" không bị treo lại khi OCR lỗi.
+  - Cả 2 node đặt `onError: continueRegularOutput` (nếu xóa thất bại, ví dụ tin đã bị xóa tay, vẫn tiếp
+    tục gửi kết quả bình thường, không chặn luồng).
+- Đã audit lại toàn bộ JSON qua `get_workflow_details` (không chỉ tin `appliedOperations`) trước khi
+  publish — xác nhận đúng connections + `onError` đã áp dụng.
+
 ## 2026-09-22 (tiếp) — Fix Supabase project "Telegram authentication DB" bị tự động pause (free tier)
 
 **Bối cảnh**: user hỏi cách chống Supabase tự pause project do ít hoạt động. Kiểm tra qua Supabase
