@@ -4,6 +4,32 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-22 (tiếp) — Fix Supabase project "Telegram authentication DB" bị tự động pause (free tier)
+
+**Bối cảnh**: user hỏi cách chống Supabase tự pause project do ít hoạt động. Kiểm tra qua Supabase
+Management API: org `FachkraftSupply's Org` đang ở gói **free** (auto-pause sau 7 ngày không hoạt
+động), project `nlgmkfqtmarsdcqismzz` ("Telegram authentication DB") đang ở trạng thái `INACTIVE`.
+
+**Đã làm**:
+- `restore_project` → project về `ACTIVE_HEALTHY` ngay lập tức.
+- Rà soát 29 workflow n8n (theo tên/mô tả + đối chiếu 2 credential Postgres duy nhất trong hệ
+  thống) → xác nhận **chưa có workflow production nào khác** dùng DB này ngoài workflow keep-alive
+  mới tạo (project Supabase này có vẻ được tạo sẵn cho tính năng chưa build vào workflow nào).
+- Tạo workflow **`Supabase Keep-Alive (Telegram Auth DB)`** (`BLl4GZ0CI5ZCvqy7`): Schedule Trigger
+  mỗi 3 ngày → Postgres node `SELECT 1;` dùng credential `Supabase Postgres` (`hO4yfw7ailV7jHAv`) —
+  đã publish.
+- Tạo folder **"Supabase - Telegram Auth DB"** + tag **"Supabase Auto-Pause"**, chuyển workflow
+  keep-alive vào đó để dễ nhận diện sau này nếu thêm workflow liên quan đến DB này.
+- Test lần 1 lỗi `Host not found` — credential `Supabase Postgres` trỏ direct connection host
+  (`db.nlgmkfqtmarsdcqismzz.supabase.co`, chỉ hỗ trợ IPv6) trong khi VPS n8n chỉ có IPv4. Đề xuất
+  user tự đổi sang Supavisor pooler (`aws-0-ap-southeast-1.pooler.supabase.com`, port 6543, user
+  `postgres.nlgmkfqtmarsdcqismzz`) — không tự sửa được vì cần nhập password DB (thuộc nhóm hành
+  động không được phép tự thực hiện). **User tự sửa xong, test lại thành công** (execution `5942`).
+
+**Việc cần user làm (nếu muốn triệt để hơn)**: cân nhắc nâng org lên gói Pro ($25/tháng/project) nếu
+không muốn phụ thuộc vào Cron keep-alive — cách hiện tại là "lách" free tier, không phải giải pháp
+chính thức, vẫn có rủi ro bị pause lại nếu Cron ngừng chạy quá 7 ngày.
+
 ## 2026-09-22 — Bỏ hẳn Mistral khỏi `/tomtat`, chuyển toàn bộ OCR sang Qwen3.7 Flash qua OpenRouter; thêm tin nhắn xác nhận đang xử lý
 
 **Bối cảnh**: điều tra 1 tin `/tomtat` không trả kết quả (14:44) → phát hiện Mistral Cloud OCR bị

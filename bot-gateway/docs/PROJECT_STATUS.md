@@ -4,6 +4,31 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## ✅ ĐÃ XONG (22/09/2026) — Fix Supabase project "Telegram authentication DB" bị auto-pause
+
+**Nguyên nhân**: org Supabase đang ở gói Free — tự động pause project sau 7 ngày không hoạt động.
+Project `nlgmkfqtmarsdcqismzz` ("Telegram authentication DB") đã bị pause khi kiểm tra.
+
+**Đã làm**:
+- Restore project ngay (`ACTIVE_HEALTHY`).
+- Rà soát toàn bộ 29 workflow trong n8n: **chưa có workflow production nào khác dùng DB này**
+  (chỉ có 2 credential Postgres trong hệ thống — `Supabase Postgres` cho DB này, và `Postgres
+  account` cho Postgres tự host trên VPS dùng bởi Gateway/ClickUp). Nếu sau này có workflow
+  authentication thật sự dùng DB này, nhớ chuyển vào folder `Supabase - Telegram Auth DB` +
+  gắn tag `Supabase Auto-Pause` cho dễ nhận diện.
+- Tạo workflow mới **`Supabase Keep-Alive (Telegram Auth DB)`** (`BLl4GZ0CI5ZCvqy7`, đã publish,
+  đặt trong folder `Supabase - Telegram Auth DB`) — Cron chạy mỗi 3 ngày, `SELECT 1` vào DB này để
+  chống bị pause lại. Ban đầu lỗi `Host not found` do credential `Supabase Postgres` trỏ vào host
+  direct connection (chỉ hỗ trợ IPv6, VPS n8n chỉ có IPv4) — **user đã tự sửa credential sang
+  Supavisor pooler** (`aws-0-ap-southeast-1.pooler.supabase.com`), test lại thành công
+  (execution `5942`, `SELECT 1` chạy OK).
+
+**Lưu ý cho sau này**: đây là giải pháp "lách" giới hạn free tier bằng cách giữ hoạt động định kỳ,
+không phải giải pháp chính thức của Supabase — nếu Cron n8n ngừng chạy quá 7 ngày liên tục (VPS
+down, workflow bị tắt...) project vẫn có thể bị pause lại, cần restore thủ công qua Supabase
+dashboard hoặc nhờ agent gọi `restore_project`. Muốn loại bỏ hẳn rủi ro này thì cần nâng gói Pro
+($25/tháng/project).
+
 ## ✅ ĐÃ XONG (22/09/2026) — `/tomtat` bỏ hẳn Mistral, chuyển sang Qwen3.7 Flash (OpenRouter)
 
 **Nguyên nhân**: Mistral Cloud OCR bị giới hạn `x-ratelimit-limit-req-minute: 0` — tài khoản hiện
