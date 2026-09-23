@@ -4,6 +4,29 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
+## 🔴 CẦN USER CHẠY 1 LỆNH ĐỂ HOÀN TẤT (23/09/2026) — Fix lỗi hàng loạt "Task runner unresponsive"
+
+**Nguyên nhân đã xác nhận thật** (đọc log + source n8n đang chạy, không đoán): VPS đặt
+`N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: "15"` trong `/docker/n8n_stack/docker-compose.yml` (mặc định n8n
+là `0` = không bao giờ tự tắt) — runner tự tắt sau 15s rảnh, khi burst webhook ClickUp/Telegram đến
+đúng lúc đó thì cold-start không kịp, bị coi "unresponsive", làm fail HÀNG LOẠT execution cùng lúc ở
+bất kỳ workflow nào đang chạy Code node. Chi tiết điều tra đầy đủ xem `CHANGELOG.md` 23/09/2026.
+
+**Đã làm**:
+- Đổi `docker-compose.yml` trên VPS: `N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT` `"15"` → `"0"` (đã backup
+  file cũ, đã diff xác nhận chỉ đổi đúng 1 dòng).
+- Thêm `retryOnFail` (5 lần, cách nhau 5s) cho 2 node `⚙️ Config`/`⚙️ Config (Admin Chat ID)` hay bị
+  ảnh hưởng nhất (`GW Gateway - Telegram (DEV)`, `SQL - ClickUp Live Update (Webhook)`) — đã publish.
+
+**⚠️ Việc BẮT BUỘC user tự làm để áp dụng fix gốc** (bị chặn bởi safety classifier khi tôi thử):
+```bash
+ssh root@72.61.126.64
+cd /docker/n8n_stack && docker compose up -d task-runners
+```
+Lệnh này chỉ recreate riêng container `task-runners` (không đụng n8n/postgres), để nó đọc biến môi
+trường mới. Trước khi file `docker-compose.yml` được áp dụng lại bằng lệnh này, VPS vẫn đang chạy
+với timeout 15s cũ (retry ở mục trên vẫn có tác dụng giảm nhẹ, nhưng chưa hết gốc).
+
 ## ⏳ ĐÃ BUILD + PUBLISH, CHỜ USER TEST THẬT (23/09/2026) — `/vps` xem chi tiết container + nút khởi động lại
 
 **User yêu cầu**: bổ sung deep-link container trong `/vps` để xem chi tiết đầy đủ (image, uptime, số

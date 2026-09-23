@@ -4,6 +4,52 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-23 (tiếp) — Điều tra + fix lỗi hàng loạt "Task execution aborted because runner became unresponsive"
+
+**Bối cảnh**: user forward ~10 tin lỗi từ bot admin, tất cả đều lỗi ở node `⚙️ Config`/`⚙️ Config (Admin
+Chat ID)` trong `GW Gateway - Telegram (DEV)` và `SQL - ClickUp Live Update (Webhook)`, nội dung
+"Task execution aborted because runner became unresponsive" / "Task request timed out".
+
+**Điều tra thật (SSH vào VPS, đọc log/source n8n đang chạy, không đoán)**:
+- `docker logs n8n_stack-task-runners-1` cho thấy JS Task Runner liên tục bị launcher coi
+  "unresponsive" (`Found runner unresponsive (1/6)...(6/6)` → `terminating runner` → respawn) — lặp
+  lại nhiều lần trong 45 phút quan sát (07:41, 07:46, 08:15).
+- Đối chiếu execution thật qua `search_workflow_executions`: các lỗi luôn xảy ra thành TỪNG CỤM —
+  vd 16 execution bắt đầu cùng 1 giây lúc `08:14:15` (12 ở SQL workflow + 4 ở Gateway), hay 36
+  execution trong 15 giây lúc `07:04:17-32`. Đây là burst nhiều webhook ClickUp/Telegram đến gần
+  như đồng thời (thường do 1 thao tác bulk-update task trên ClickUp).
+- **Không phải do thiếu tài nguyên** — `docker stats`/`free -h`/`dmesg` lúc kiểm tra đều bình thường
+  (task-runner chỉ dùng ~8.5MB RAM), không có OOM-kill nào.
+- **Root cause thật** (đọc thẳng source `@n8n/config`/`@n8n/task-runner` đang chạy trong container,
+  không tra docs vì có thể lệch version): `docker-compose.yml` của n8n stack đặt
+  `N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: "15"` (mặc định n8n là `0` = KHÔNG BAO GIỜ tự tắt) — runner tự
+  tắt sau 15 giây rảnh. Khi 1 burst webhook đến đúng lúc runner vừa tắt, nó phải cold-start giữa lúc
+  bị dồn nhiều task cùng lúc → không kịp phản hồi health-check của launcher trong 60s (6 lần check ×
+  10s) → bị coi "unresponsive" → kill + respawn → MỌI task đang xếp hàng ở đó fail hết cùng lúc.
+  `⚙️ Config` chỉ là "nạn nhân" (node Code đầu tiên trong chuỗi, 1 dòng code, không hề nặng) — không
+  phải nguyên nhân.
+
+**Đã fix (theo yêu cầu user "kết hợp 1 + 3")**:
+1. **Sửa cấu hình gốc**: `/docker/n8n_stack/docker-compose.yml` trên VPS `72.61.126.64` — đổi
+   `N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT` từ `"15"` → `"0"` (tắt hẳn auto-shutdown, quay về mặc định
+   n8n — runner idle chỉ tốn ~8.5MB RAM nên giữ luôn không đáng kể). File đã backup trước khi sửa
+   (`docker-compose.yml.bak-<timestamp>`), đã diff xác nhận CHỈ 1 dòng đổi trước khi ghi đè,
+   `docker compose config` xác nhận file hợp lệ. **CHƯA ÁP DỤNG ĐƯỢC** — lệnh `docker compose up -d
+   task-runners` (cần để container đọc lại biến môi trường mới) bị chặn bởi safety classifier cục bộ
+   (phân loại "Production Deploy") — cần user tự chạy lệnh này trên VPS hoặc cấp quyền.
+2. **Retry tự phục hồi**: thêm `retryOnFail: true, maxTries: 5, waitBetweenTries: 5000` cho node
+   `⚙️ Config (Admin Chat ID)` (`SQL - ClickUp Live Update (Webhook)`, `uqTqjtHYieotPZuc`) và
+   `⚙️ Config` (`GW Gateway - Telegram (DEV)`, `xmEKeIUnzxm2F7dF`) — cả 2 node đều thuần tính toán,
+   không side-effect, retry an toàn tuyệt đối. Đã `get_workflow_details` xác nhận field thật có mặt
+   trên node (đúng RULES.md #16, không tin `appliedOperations`), đã publish cả 2 workflow.
+
+**Việc cần user làm**: chạy trên VPS (hoặc cấp quyền cho tôi chạy):
+```bash
+cd /docker/n8n_stack && docker compose up -d task-runners
+```
+Sau đó theo dõi xem burst webhook có còn gây lỗi hàng loạt nữa không — nếu retry (mục 2) đã đủ tự
+phục hồi thì cũng không cần gấp, nhưng fix gốc (mục 1) mới là giải pháp triệt để.
+
 ## 2026-09-23 (tiếp) — `/vps` bổ sung xem chi tiết container + nút khởi động lại
 
 **Bối cảnh**: user yêu cầu bổ sung deep-link container trong `/vps` để xem chi tiết + nút
