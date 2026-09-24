@@ -615,3 +615,30 @@ hơn khi đang test/chạy lại thủ công (như trường hợp TEMP workflow
 workflow có node LangChain với ĐẦU VÀO NHIỀU ITEM, BẮT BUỘC đọc lại `runData` của chính node LangChain
 đó qua `get_workflow_execution` (`includeData: true`) và đếm số item output thực tế so với số item
 đầu vào — không tin `execution.status === "success"` là đã xử lý ĐỦ tất cả item.
+
+## 31. 🔴 Mỗi lần TẠO/SỬA workflow xong — BẮT BUỘC chạy unit test thật trước khi báo xong, không chỉ audit cấu trúc
+
+Quyết định 24/09/2026, rút ra sau 2 bug liên tiếp trong 1 ngày (RULES.md #2 "Tái diễn 24/09/2026" và
+#24 "Tái diễn 24/09/2026") — cả 2 lần đều audit `get_workflow_details` xong, thấy connections/params
+đúng, báo "xong" với user, rồi mới phát hiện lỗi thật khi user tự test. Audit cấu trúc KHÔNG PHÁT HIỆN
+được loại lỗi "đúng cú pháp, sai NGỮ CẢNH dữ liệu" (binary/field bị rớt giữa chừng khi 1 node mới chen
+vào) — loại lỗi này CHỈ lộ ra khi có dữ liệu thật chảy qua.
+
+**Quy tắc bắt buộc**: sau khi `addNode`/`removeNode`+`addNode`/`update_workflow` làm thay đổi ĐƯỜNG ĐI
+dữ liệu của 1 workflow (thêm/bớt/di chuyển node trên 1 chuỗi đang hoạt động — không áp dụng cho các
+thay đổi thuần túy như đổi text tĩnh, đổi màu/label không ảnh hưởng logic), PHẢI chạy 1 unit test THẬT
+trước khi `publish_workflow` và trước khi báo "xong" với user:
+- Dùng `prepare_workflow_pin_data` + `test_workflow` nếu workflow có thể mô phỏng đủ bằng pin data, HOẶC
+- Build 1 workflow TEMP tái hiện đúng đoạn logic vừa sửa với dữ liệu thật (file thật, message thật...),
+  `execute_workflow` thật, đọc `runData` xác nhận ĐÚNG field/binary cần thiết còn sống tới node cuối,
+  rồi `archive_workflow` ngay (đúng pattern đã dùng để test fix binary/text ngày 24/09/2026).
+- Sau khi publish, nếu có execution thật đầu tiên của user, ĐỌC LẠI `runData` của execution đó (không
+  chỉ nhìn `status`) để xác nhận không có lỗi ẩn (vd node cuối vẫn "success" nhưng field rỗng).
+
+Việc audit `get_workflow_details` (kiểm connections/`onError`/credentials) vẫn BẮT BUỘC như cũ (RULES.md
+#16, #18, #25...) nhưng KHÔNG ĐƯỢC coi là ĐỦ để báo "xong" — phải có thêm bằng chứng chạy THẬT.
+
+**Subagent chuyên trách**: dùng agent `n8n-workflow-tester` (chạy model Haiku, định nghĩa tại
+`.claude/agents/n8n-workflow-tester.md` trong repo) để thực hiện bước unit test này — giao cho nó
+đúng workflowId + phần logic vừa sửa, nó tự thiết kế + chạy + báo cáo pass/fail, không tự chấm điểm
+bởi chính phiên đã sửa code (giữ đúng tinh thần "audit độc lập" đã áp dụng ở RULES.md #20 bước 8).
