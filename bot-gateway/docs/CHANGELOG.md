@@ -4,6 +4,46 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-24 — `/tomtat` mất ảnh hoàn toàn (regression tự gây ra hôm 23/09) — đã fix + test thật
+
+**Bối cảnh**: user báo "2 tin nhắn OCR hôm nay bị tắc". Tra `search_workflow_executions` cho
+`Bot Xử Lý Ảnh (xoanen + tomtat)` (`6I4MnJiJCiv2JOIr`) từ lúc publish fix "thứ tự tin đang xử lý"
+(23/09/2026, versionId `60d778a6`) tới hiện tại: đúng **2/2 execution** có ảnh (`7540`, `7931`) đều
+lỗi, cùng 1 nguyên nhân y hệt tại node `To Base64 (OCR)`:
+`"This operation expects the node's input data to contain a binary file 'data', but none was found"`.
+
+**Root cause (tự gây ra)**: fix hôm 23/09 nối `Send Processing Ack` (Telegram sendMessage) →
+`To Base64 (OCR)` trực tiếp để đảm bảo thứ tự (ack gửi trước OCR). Nhưng output của 1 node Telegram
+là JSON response của Telegram API (`{ok, result: {message_id,...}}`) — KHÔNG mang theo `binary` của
+input. Ảnh gốc (`binary.data`) tải về ở node `Tải Ảnh Về (Vision)` bị "rớt mất" hoàn toàn khi đi qua
+`Send Processing Ack`. Đây là 100% lỗi tái diễn (không phải burst/race), y hệt loại lỗi RULES.md #24
+đã cảnh báo ("Code node đứng giữa 1 node tạo binary và 1 node cần binary phải forward binary tường
+minh") — chỉ khác lần này thủ phạm là 1 node TELEGRAM (không phải Code) chen giữa, nên rule cũ không
+trực tiếp cảnh báo được trường hợp "node không phải Code cũng làm rớt binary" này.
+
+**Đã fix**: thêm 1 Code node mới `Đính Kèm Lại Ảnh (Sau Ack)` giữa `Send Processing Ack` và
+`To Base64 (OCR)`:
+```js
+const img = $('Tải Ảnh Về (Vision)').first();
+return [{ json: img.json, binary: img.binary }];
+```
+Giữ nguyên chuỗi tuần tự (ack luôn gửi xong mới tới OCR — hành vi đúng của fix 23/09 vẫn giữ), chỉ
+thêm bước "đi nhờ lại" binary từ node gốc trước khi vào `To Base64 (OCR)`.
+
+**Đã test thật bằng execution thật trước khi báo xong** (rút kinh nghiệm — lần fix 23/09 CHỈ audit
+qua `get_workflow_details`/subagent, KHÔNG chạy thử thật với ảnh thật, nên không phát hiện được bug
+này cho tới khi user report): build 1 workflow TEMP (`ZNt7i7oiyfJHqd12`, Manual Trigger → Telegram
+Get File dùng lại `file_id` ảnh thật từ execution `7931` → đúng logic Code node mới → extractFromFile
+→ Set báo `hasData`/`dataLength`) → chạy thật qua `execute_workflow` → xác nhận `hasData: true`,
+`dataLength: 100840` (ảnh thật, không rỗng) → `archive_workflow` ngay sau khi xác nhận.
+
+**Bài học ghi thêm vào RULES.md #24**: không chỉ Code node — BẤT KỲ node nào (Telegram, HTTP Request,
+Postgres...) chen vào giữa 1 chuỗi đang mang `binary` và không tự forward `binary` trong output của
+nó đều có thể làm rớt mất binary. Khi sửa 1 luồng đang có `binary` chảy qua để thêm 1 bước MỚI (dù
+chỉ để gửi 1 tin nhắn phụ, không liên quan gì tới ảnh), luôn tự hỏi: "output của node mới này có giữ
+`binary` không?" — nếu không (hầu hết node action như Telegram/HTTP/Postgres đều KHÔNG), phải tách
+nhánh song song HOẶC thêm bước "đính kèm lại binary" ngay sau, không nối thẳng vào node cần binary.
+
 ## 2026-09-23 (tiếp) — Điều tra + fix lỗi hàng loạt "Task execution aborted because runner became unresponsive"
 
 **Bối cảnh**: user forward ~10 tin lỗi từ bot admin, tất cả đều lỗi ở node `⚙️ Config`/`⚙️ Config (Admin

@@ -51,7 +51,30 @@ lần restart, ports, CPU/RAM) + nút "🔄 Khởi động lại" / "❌ Hủy" 
    `n8n_stack-n8n-1` hay `n8n_stack-postgres-1` (sẽ gây gián đoạn thật cho chính hệ thống đang chạy
    /vps này).
 
-## ✅ ĐÃ XONG (23/09/2026) — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
+## ✅ ĐÃ XONG THẬT (24/09/2026) — `/tomtat` mất ảnh hoàn toàn (regression từ fix 23/09) → đã fix + test thật
+
+**Nguyên nhân**: fix "thứ tự tin đang xử lý" ngày 23/09 (mục lịch sử ngay dưới) nối
+`Send Processing Ack` (node Telegram) → `To Base64 (OCR)` trực tiếp. Output của node Telegram
+KHÔNG mang theo binary input (nó là JSON response của Telegram API, không phải ảnh) — nên binary ảnh
+gốc bị rớt mất hoàn toàn. Hậu quả: **100% lần gõ `/tomtat` từ lúc publish fix đó đều lỗi**
+`"input data does not contain binary file 'data'"` — không phải lỗi ngẫu nhiên, xác nhận qua 2
+execution lỗi thật (`7540`, `7931`, cùng 1 nguyên nhân y hệt).
+
+**Đã fix** (`Bot Xử Lý Ảnh (xoanen + tomtat)`, `6I4MnJiJCiv2JOIr`, đã publish): thêm 1 Code node
+`Đính Kèm Lại Ảnh (Sau Ack)` giữa `Send Processing Ack` và `To Base64 (OCR)`, đọc lại binary từ
+`Tải Ảnh Về (Vision)` (`$('Tải Ảnh Về (Vision)').first().binary`, đúng pattern RULES.md #24) và gắn
+lại vào item — giữ nguyên thứ tự tuần tự (ack luôn gửi trước OCR) mà không làm mất ảnh nữa.
+
+**Đã test thật trước khi báo xong** (không chỉ tin cấu trúc connection, rút kinh nghiệm từ lần trước):
+build 1 workflow TEMP dùng lại file_id ảnh thật từ execution lỗi `7931`, chạy qua đúng logic
+Code node mới → xác nhận `hasData: true`, base64 dài 100,840 ký tự (ảnh thật, không rỗng) → archive
+workflow TEMP ngay sau đó.
+
+**Việc cần user làm**: gõ thử `/tomtat` kèm ảnh — xác nhận ra kết quả OCR bình thường (không còn lỗi
+mất ảnh), và tin "⏳ đang xử lý" vẫn đến trước + bị xoá trước khi có kết quả (hành vi mục dưới vẫn giữ
+nguyên, chỉ sửa phần bị vỡ).
+
+## ⚠️ (ĐÃ VỠ, XEM MỤC TRÊN) 23/09/2026 — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
 
 **Nguyên nhân**: `Tải Ảnh Về (Vision)` fan-out song song tới cả OCR và tin "⏳ đang xử lý" — không đảm
 bảo thứ tự, nên OCR xong nhanh có thể khiến tin kết quả đến trước tin "đang xử lý".
@@ -61,9 +84,8 @@ bảo thứ tự, nên OCR xong nhanh có thể khiến tin kết quả đến t
 - Trước khi gửi kết quả (cả nhánh OCR thành công lẫn thất bại), xóa tin "đang xử lý" cũ trước —
   2 node Telegram `deleteMessage` mới: `Delete Processing Ack (OK)` và `Delete Processing Ack (Failed)`.
 - Chi tiết kỹ thuật xem `CHANGELOG.md` 23/09/2026.
-
-**Việc cần user làm**: gõ thử `/tomtat` kèm ảnh — xác nhận tin "⏳ đang xử lý" luôn đến trước, và bị
-xóa đi ngay trước khi tin kết quả (hoặc tin báo lỗi) xuất hiện.
+- **⚠️ Bug thật phát sinh từ chính fix này**: làm mất binary ảnh, gãy hẳn `/tomtat` — xem mục
+  "ĐÃ XONG THẬT (24/09/2026)" ở trên để biết đã sửa lại thế nào.
 
 ## ✅ ĐÃ XONG (22/09/2026) — Fix Supabase project "Telegram authentication DB" bị auto-pause
 

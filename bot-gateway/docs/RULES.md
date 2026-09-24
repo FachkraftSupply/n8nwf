@@ -458,6 +458,36 @@ Request tải file...) và 1 node CẦN `binary` đó (Upload OneDrive, sendDocu
 thêm `binary: $input.item.binary` (hoặc `$input.first().binary` nếu chắc chắn chỉ 1 item) vào object
 trả về, dù Code node đó chỉ nhằm tính toán vài field `json` không liên quan gì tới file.
 
+**Tái diễn 24/09/2026 — KHÔNG CHỈ Code node, BẤT KỲ loại node nào cũng có thể làm rớt `binary`**:
+sửa `Bot Xử Lý Ảnh (xoanen + tomtat)` (23/09/2026) để đảm bảo thứ tự "gửi tin chờ trước khi OCR",
+nối `Send Processing Ack` (node **Telegram sendMessage**, không phải Code) → `To Base64 (OCR)` trực
+tiếp. Output của 1 node Telegram (hay HTTP Request, Postgres...) là dữ liệu RIÊNG của chính nó (JSON
+response của API đó) — không tự động mang theo `binary` của input, y hệt vấn đề Code node ở trên
+nhưng KHÔNG có cách nào "thêm field binary vào return" vì đây không phải Code node, không sửa được
+tham số để forward binary. Hậu quả: **100% lần gõ `/tomtat` đều lỗi** kể từ khi publish (2/2 execution
+thật `7540`, `7931`, cùng lỗi y hệt mục này) — không phát hiện ra vì lần đó CHỈ audit qua
+`get_workflow_details` (xem đúng connections) mà KHÔNG chạy thử thật với 1 ảnh thật.
+
+**Quy tắc bắt buộc, mở rộng**: trước khi chèn BẤT KỲ node mới nào (Telegram/HTTP/Postgres/Set...) vào
+GIỮA 1 chuỗi đang có `binary` chảy qua — dù node mới đó chỉ để gửi 1 tin nhắn phụ, ghi log, hay bất cứ
+việc gì KHÔNG liên quan tới file — luôn tự hỏi "output của node này có giữ nguyên `binary` của input
+không?". Nếu node đó KHÔNG PHẢI Code node (nên không thể tự thêm `binary: ...` vào return), 2 lựa
+chọn đúng:
+1. **Tách nhánh song song** (node mới nhận 1 bản sao dữ liệu, chạy độc lập, KHÔNG nằm trên đường
+   binary đi tiếp) — cách này từng gây bug khác (race condition thứ tự, xem CHANGELOG 23/09), nên chỉ
+   dùng khi thứ tự thực sự không quan trọng.
+2. **Thêm 1 Code node "đính kèm lại binary"** NGAY SAU node mới đó, đọc `binary` từ node TẠO RA
+   binary ban đầu (`$('Tên Node Gốc').first().binary`) và gắn lại vào item trước khi đi tiếp — đây là
+   cách ĐÚNG khi vừa cần giữ thứ tự tuần tự vừa cần giữ binary (đã áp dụng để fix bug này, node
+   `Đính Kèm Lại Ảnh (Sau Ack)`).
+
+**Bắt buộc test thật bằng dữ liệu thật (không chỉ audit connections) cho MỌI thay đổi đụng tới 1
+luồng đang có `binary`** — dùng workflow TEMP với 1 file/ảnh thật (vd tái sử dụng `file_id` từ 1
+execution cũ) để chạy `execute_workflow` thật, xác nhận binary còn sống tới đúng node cần nó, rồi mới
+`archive_workflow`. Chỉ audit `get_workflow_details` (đúng connections/`onError`/credentials) là ĐỦ
+cho phần lớn lỗi khác trong RULES.md này, nhưng KHÔNG ĐỦ để phát hiện lỗi rớt `binary` — loại lỗi này
+chỉ lộ ra khi có DỮ LIỆU THẬT chảy qua.
+
 ## 25. 🔴 `removeNode`+`addNode` cho NHIỀU node trong 1 batch: thiếu `credentials` → gán nhầm; sai THỨ TỰ → mất connection
 
 Xảy ra thật 17/09/2026 khi sửa `Queue Upload Notify` + `Send Upload Result` (workflow `Telebot
