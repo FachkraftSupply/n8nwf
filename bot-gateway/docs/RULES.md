@@ -34,6 +34,22 @@ message_id...) có mặt. LUÔN tham chiếu tường minh qua tên node:
 Áp dụng cho CẢ `chatId` LẪN `reply_to_message_id` (để bot trả lời đúng group/topic khi được thêm vào
 group — không dùng field `chatId` trần bao giờ).
 
+**Tái diễn 24/09/2026 — chèn 1 node MỚI vào giữa 1 kết nối đang dùng `$json` trần làm hỏng luôn node
+PHÍA SAU**: node `Gửi Bản Tóm Tắt` (`Bot Xử Lý Ảnh`) dùng `text: "={{ $json.text }}"` — AN TOÀN khi nó
+nối trực tiếp sau `Tóm Tắt Bằng AI` (node tạo ra field `text`). Khi thêm `Delete Processing Ack (OK)`
+(Telegram deleteMessage) chen vào giữa (fix ngày 23/09, xem CHANGELOG) để xóa tin "đang chờ" trước khi
+gửi kết quả, `$json` của `Gửi Bản Tóm Tắt` giờ trỏ vào output của `Delete Processing Ack (OK)`
+(`{ok, result:true}`, KHÔNG có field `text`) thay vì `Tóm Tắt Bằng AI` — Telegram API trả lỗi thật
+`400 Bad Request: message text is empty` ở MỌI lần OCR thành công kể từ đó (2 execution lỗi thật:
+`8000`, `8016`) — không phát hiện ra khi audit lần đầu vì audit chỉ soi cấu trúc connection lẫn field
+`$json` KHÔNG bị coi là "sai cú pháp" gì cả, chỉ trỏ sai node do context thay đổi.
+
+**Quy tắc bắt buộc, mở rộng**: mỗi khi chèn 1 node MỚI vào GIỮA 1 kết nối đã có sẵn (dù chỉ để thêm 1
+bước phụ như xóa tin, ghi log...) — PHẢI rà lại TẤT CẢ node PHÍA SAU điểm chèn xem có đang dùng `$json`
+trần (không tường minh qua tên node) hay không. Nếu có, node đó giờ sẽ đọc nhầm dữ liệu từ node MỚI
+chèn vào (thường thiếu field cần dùng) thay vì node gốc — phải sửa lại thành tham chiếu tường minh
+`$('Tên Node Gốc').item.json...` trước khi node mới được coi là an toàn để chèn.
+
 ## 3. ⚠️ KHÔNG dùng inline keyboard — mặc định LUÔN dùng deep-link dạng text
 Deep-link: `https://t.me/<bot>?start=<param>` (giống `chitiet_<id>` đã chạy ổn định từ đầu dự án).
 - Deep-link Telegram CHỈ cho phép ký tự `[A-Za-z0-9_-]` — dùng `_` làm dấu phân cách, KHÔNG dùng `:`.

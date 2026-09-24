@@ -51,7 +51,18 @@ lần restart, ports, CPU/RAM) + nút "🔄 Khởi động lại" / "❌ Hủy" 
    `n8n_stack-n8n-1` hay `n8n_stack-postgres-1` (sẽ gây gián đoạn thật cho chính hệ thống đang chạy
    /vps này).
 
-## ✅ ĐÃ XONG THẬT (24/09/2026) — `/tomtat` mất ảnh hoàn toàn (regression từ fix 23/09) → đã fix + test thật
+## ✅ ĐÃ XONG THẬT (24/09/2026) — `/tomtat` LIÊN TIẾP 2 bug regression từ đợt fix 23/09 → cả 2 đã fix + test thật
+
+**Bug 1 (mất ảnh)** + **Bug 2 (mất text tóm tắt, phát hiện SAU khi báo bug 1 đã xong)** — cả 2 đều do
+chèn node `Send Processing Ack`/`Delete Processing Ack (OK)` vào giữa 1 chuỗi đang dùng dữ liệu
+(binary/`$json` trần) của node TRƯỚC đó. Chi tiết đầy đủ + bài học tổng kết xem `CHANGELOG.md`
+24/09/2026 (2 mục) và `RULES.md` #2 + #24 (mục "Tái diễn 24/09/2026" ở cả 2 rule) + #30 (mới, về
+LangChain chỉ xử lý 1 item).
+
+**Đã redeliver thật cho TẤT CẢ 4 tin `/tomtat` bị ảnh hưởng** (2 tin do bug 1, 2 tin do bug 2) — xác
+nhận cả 4 đã gửi thành công tới đúng chat/đúng topic/đúng reply.
+
+### Lịch sử chi tiết bug 1 (mất ảnh) — mục cũ giữ nguyên tham khảo
 
 **Nguyên nhân**: fix "thứ tự tin đang xử lý" ngày 23/09 (mục lịch sử ngay dưới) nối
 `Send Processing Ack` (node Telegram) → `To Base64 (OCR)` trực tiếp. Output của node Telegram

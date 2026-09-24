@@ -4,6 +4,38 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-24 (tiếp x2) — Bug THỨ 2 từ đợt fix 23/09: mất text tóm tắt (không phải chỉ mất ảnh)
+
+**Bối cảnh**: user báo "vẫn chưa thấy gửi" sau khi tôi báo đã fix + redeliver xong (mục dưới). Kiểm
+tra lại thì phát hiện: fix bug mất ảnh xong, publish, User TỰ gõ `/tomtat` thật lại 2 lần (execution
+`8000`, `8016`) — OCR + tóm tắt AI chạy ĐÚNG cả 2 lần, nhưng bước gửi kết quả cuối cùng lại lỗi
+`400 Bad Request: message text is empty`.
+
+**Root cause (tự gây ra, CÙNG đợt sửa 23/09, khác node)**: `Gửi Bản Tóm Tắt` dùng `{{ $json.text }}`
+(bare `$json`, vi phạm Rule #2) — trước đây AN TOÀN vì nối trực tiếp sau `Tóm Tắt Bằng AI`. Fix 23/09
+chèn `Delete Processing Ack (OK)` (Telegram deleteMessage) vào GIỮA 2 node đó để xóa tin "đang chờ"
+trước khi gửi kết quả — nhưng deleteMessage output chỉ `{ok, result:true}`, không có `text`, nên
+`$json.text` giờ luôn rỗng. Đây là lỗi Rule #2 kinh điển, chỉ là bị che khuất vì code không sai cú
+pháp gì — chỉ trỏ SAI NODE sau khi cấu trúc đổi. Xem RULES.md #2 (mục "Tái diễn 24/09/2026") để biết
+chi tiết + quy tắc mới rút ra.
+
+**Đã fix**: `setNodeParameter` đổi `text` của `Gửi Bản Tóm Tắt` thành
+`={{ $('Tóm Tắt Bằng AI').item.json.text }}` (tham chiếu tường minh, đúng Rule #2) — xác nhận field
+nằm đúng vị trí qua `get_workflow_details` trước khi publish (đúng Rule #26, tránh lặp lỗi `path`
+lồng sai).
+
+**Đã redeliver 2 tin bị mất lần này KHÔNG CẦN chạy lại OCR** — vì `Tóm Tắt Bằng AI` đã tạo ra đúng
+text tóm tắt (chỉ bước gửi cuối lỗi), lấy thẳng text đó từ `runData` của 2 execution lỗi (`8000`,
+`8016`), build 1 workflow TEMP nhỏ (`682OFbDel4v9IOtk`, chỉ 1 node Code + 1 node Telegram sendMessage)
+gửi thẳng 2 tin đó với đúng `reply_to_message_id`/`message_thread_id` gốc → xác nhận cả 2 gửi thành
+công (`message_id` thật: `22803`, `22804`) → `archive_workflow` ngay sau.
+
+**Bài học tổng kết cả 2 lần sửa lỗi trong ngày 24/09/2026 (mất ảnh + mất text)**: BẤT KỲ khi nào chèn
+1 node MỚI vào GIỮA 1 chuỗi đang hoạt động — kể cả chỉ để thêm 1 bước "phụ" tưởng như vô hại (gửi tin
+chờ, xóa tin cũ...) — bắt buộc rà lại CẢ 2 chiều: (a) node phía sau có cần `binary` không (RULES.md
+#24), (b) node phía sau có dùng `$json` trần không (RULES.md #2) — cả 2 đều là loại lỗi ÂM THẦM,
+không có warning nào từ `update_workflow`, chỉ lộ ra khi chạy thật.
+
 ## 2026-09-24 (tiếp) — Chạy lại + gửi thật kết quả cho 2 tin `/tomtat` đã bị mất do bug 23/09
 
 **Bối cảnh**: sau khi fix bug mất ảnh (mục dưới), user yêu cầu chạy lại và trả kết quả thật cho 2 tin
