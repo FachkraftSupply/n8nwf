@@ -450,9 +450,19 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
 3. Quyết định sau cutover (không làm trong cuối tuần này): F7 (DEFAULT_BOT), F8 (Supabase mirror),
    F13 (dọn node chết + help text), F16 (không lưu execution thành công cho workflow poll).
 
-## 11. Lệnh khởi động lượt chạy 2h sáng
+## 11. Lịch tự động (Claude desktop → Scheduled)
 
-Dán vào phiên Claude Code mở trong repo `n8nwf`:
+| Task ID | Chạy lúc (giờ VN) | Việc |
+|---|---|---|
+| `refactor-w39-night-build` | T6 25/09 02:05 | Đêm 1: WP0 → REG → WP2 → WP1 → WP3 → WP4, chỉ staging |
+| `refactor-w39-night-continue` | T7 26/09 02:05 | Đêm 2: kiểm production có đổi không, làm nốt WP dở, test lại toàn bộ |
+| `refactor-w39-cutover-prep` | CN 27/09 18:00 | Go/No-go + checklist cutover điền sẵn ID (chỉ đọc, không cutover) |
+
+Điều kiện để lịch chạy được: app Claude desktop đang mở, máy không ngủ, và quyền của task đã được cấp
+sẵn (nếu không, lượt chạy sẽ dừng chờ duyệt). Trả lời câu hỏi ⛔ ở mục 9 bằng cách ghi ngay dưới câu hỏi
+(`> Trả lời: ...`) rồi commit — lượt đêm 2 sẽ đọc và làm tiếp.
+
+Lệnh khởi động thủ công (nếu cần chạy lại ngoài lịch), dán vào phiên Claude Code mở trong repo `n8nwf`:
 
 ```
 Bạn là Workflow Architect. Đọc bot-gateway/docs/refactor-2026w39/PLAN.md và bot-gateway/docs/RULES.md.
