@@ -572,3 +572,30 @@ node LUÔN CÓ output (vd node HTTP Request gọi API cho MỖI item, kèm `onEr
 để cả lỗi cũng tạo ra 1 item) — nối TRỰC TIẾP từ node đó về `Loop Over Items` (tách nhánh riêng, không
 đi qua node xử lý dữ liệu có thể lọc về 0 item như Code node filter hay Postgres insert có điều
 kiện).
+
+## 30. 🔴 Node LangChain (`chainLlm`, có thể cả `agent`/các node LangChain khác) CHỈ xử lý ĐÚNG 1 item mỗi lần chạy — nhiều item vào thì các item sau bị ÂM THẦM BỎ QUA, không lỗi, không cảnh báo
+
+Xảy ra thật 24/09/2026 khi build 1 workflow TEMP để "chạy lại và trả kết quả" cho 2 tin `/tomtat` bị
+lỗi cùng lúc (xem CHANGELOG 24/09/2026): đưa 2 item (2 tin nhắn khác nhau, khác chat) vào cùng 1 lần
+chạy, đi qua `HTTP Request` (Call Qwen OCR) — chạy đúng cho CẢ 2 item (pairedItem 0 và 1 đều ra kết
+quả OCR đúng). Nhưng ngay sau đó, node `Tóm Tắt Bằng AI` (`@n8n/n8n-nodes-langchain.chainLlm`) chỉ
+tạo ra **1 item output** (chỉ xử lý item đầu tiên) — item thứ 2 biến mất hoàn toàn khỏi luồng, không
+có lỗi/warning nào, execution vẫn báo `success`. Hậu quả: chỉ 1/2 tin nhắn kết quả được gửi thật, tin
+thứ 2 lặng lẽ không có gì xảy ra — phát hiện ra CHỈ vì chủ động đọc lại `runData` của từng node trung
+gian (`Call Qwen OCR` ra đúng 2 item, `Tóm Tắt Bằng AI` chỉ ra 1 item) thay vì chỉ tin `status: success`
+của execution.
+
+**Nguyên nhân**: các node LangChain (`chainLlm`, khả năng cả `agent` và node LangChain khác) không
+tự động lặp qua nhiều item đầu vào theo kiểu node thường (HTTP Request, Code, Telegram... đều tự xử
+lý N item → N item output) — chúng có xu hướng chỉ chạy 1 lần cho item đầu tiên trừ khi được thiết kế/
+cấu hình rõ ràng để lặp qua từng item (vd đặt trong `Loop Over Items`/`splitInBatches`, xử lý từng
+item MỘT LẦN MỘT, thay vì đẩy cả N item vào 1 lần chạy chung).
+
+**Quy tắc bắt buộc**: KHÔNG BAO GIỜ đẩy nhiều hơn 1 item vào một node LangChain (`chainLlm`, `agent`,
+...) trong CÙNG 1 lần chạy nếu cần kết quả riêng cho TỪNG item — hoặc (a) bọc trong
+`splitInBatches`/`Loop Over Items` với batch size 1 để nó chạy N lần riêng biệt, hoặc (b) đơn giản
+hơn khi đang test/chạy lại thủ công (như trường hợp TEMP workflow trên): chạy riêng TỪNG item một lần
+(sửa dữ liệu đầu vào chỉ còn 1 item, chạy, xác nhận xong, rồi mới chạy tiếp item kế). Sau khi chạy 1
+workflow có node LangChain với ĐẦU VÀO NHIỀU ITEM, BẮT BUỘC đọc lại `runData` của chính node LangChain
+đó qua `get_workflow_execution` (`includeData: true`) và đếm số item output thực tế so với số item
+đầu vào — không tin `execution.status === "success"` là đã xử lý ĐỦ tất cả item.

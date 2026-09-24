@@ -4,6 +4,26 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-24 (tiếp) — Chạy lại + gửi thật kết quả cho 2 tin `/tomtat` đã bị mất do bug 23/09
+
+**Bối cảnh**: sau khi fix bug mất ảnh (mục dưới), user yêu cầu chạy lại và trả kết quả thật cho 2 tin
+đã bị lỗi (execution `7540`, `7931`) — không chỉ sửa code cho tương lai.
+
+**Đã làm**: build 1 workflow TEMP (`CjbXpGfScr41kH8X`, Manual Trigger → Code liệt kê 2 tin cần xử lý
+lại (chatId/messageId/fileId lấy từ đúng dữ liệu thật của 2 execution lỗi) → Telegram Get File → To
+Base64 → Call Qwen OCR → Format OCR Result → Tóm Tắt Bằng AI (Gemini qua OpenRouter) → Telegram gửi
+kết quả, `reply_to_message_id` = đúng tin gốc) — dùng đúng credential/logic production.
+
+**Phát hiện bug MỚI khi chạy thật** (xem RULES.md #30 mới thêm): đưa cả 2 item vào 1 lần chạy, node
+`Tóm Tắt Bằng AI` (`@n8n/n8n-nodes-langchain.chainLlm`) chỉ xử lý item đầu tiên, item thứ 2 bị bỏ qua
+lặng lẽ dù `Call Qwen OCR` (HTTP Request) đã ra đúng OCR cho cả 2 — phát hiện được nhờ chủ động đọc
+`runData` của từng node thay vì chỉ tin `status: success`. Sửa bằng cách chạy lại riêng cho item còn
+thiếu (sửa Code node chỉ còn 1 item, chạy lần 2).
+
+**Kết quả**: cả 2 tin nhắn đã nhận được bản tóm tắt thật, đúng chat, đúng reply — xác nhận qua
+`runData` của node gửi (message_id thật, chat/reply_to_message_id khớp tin gốc). Đã `archive_workflow`
+ngay sau khi xác nhận cả 2 gửi thành công.
+
 ## 2026-09-24 — `/tomtat` mất ảnh hoàn toàn (regression tự gây ra hôm 23/09) — đã fix + test thật
 
 **Bối cảnh**: user báo "2 tin nhắn OCR hôm nay bị tắc". Tra `search_workflow_executions` cho

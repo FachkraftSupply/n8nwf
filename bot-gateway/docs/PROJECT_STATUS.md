@@ -74,6 +74,11 @@ workflow TEMP ngay sau đó.
 mất ảnh), và tin "⏳ đang xử lý" vẫn đến trước + bị xoá trước khi có kết quả (hành vi mục dưới vẫn giữ
 nguyên, chỉ sửa phần bị vỡ).
 
+**Cập nhật ngay sau đó**: đã chạy lại + gửi THẬT kết quả cho cả 2 tin bị mất (execution `7540`,
+`7931`) qua 1 workflow TEMP, xác nhận cả 2 đã nhận được tin trả lời đúng — không cần user tự gửi lại
+ảnh. Chi tiết + 1 bug phụ phát sinh khi làm việc này (LangChain node chỉ xử lý 1/2 item) xem
+`CHANGELOG.md` 24/09/2026 và `RULES.md` #30 (bài học mới).
+
 ## ⚠️ (ĐÃ VỠ, XEM MỤC TRÊN) 23/09/2026 — Fix thứ tự tin nhắn "đang xử lý" của `/tomtat` (race condition)
 
 **Nguyên nhân**: `Tải Ảnh Về (Vision)` fan-out song song tới cả OCR và tin "⏳ đang xử lý" — không đảm
