@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Refactor test corpus: real Telegram updates with user names/IDs — never commit (public repo)
+bot-gateway/docs/refactor-2026w39/corpus/

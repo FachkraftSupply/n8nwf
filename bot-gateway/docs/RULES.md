@@ -638,7 +638,12 @@ trước khi `publish_workflow` và trước khi báo "xong" với user:
 Việc audit `get_workflow_details` (kiểm connections/`onError`/credentials) vẫn BẮT BUỘC như cũ (RULES.md
 #16, #18, #25...) nhưng KHÔNG ĐƯỢC coi là ĐỦ để báo "xong" — phải có thêm bằng chứng chạy THẬT.
 
-**Subagent chuyên trách**: dùng agent `n8n-workflow-tester` (chạy model Haiku, định nghĩa tại
-`.claude/agents/n8n-workflow-tester.md` trong repo) để thực hiện bước unit test này — giao cho nó
-đúng workflowId + phần logic vừa sửa, nó tự thiết kế + chạy + báo cáo pass/fail, không tự chấm điểm
-bởi chính phiên đã sửa code (giữ đúng tinh thần "audit độc lập" đã áp dụng ở RULES.md #20 bước 8).
+**Pipeline 4 vai trò (từ 24/09/2026)** — định nghĩa trong `.claude/agents/` của repo:
+- **Workflow Architect** (phiên chính): lên kế hoạch + đặc tả, chốt quyết định, điều phối.
+- **`builder`** (Sonnet): build đúng đặc tả trong STAGING, ghi `BUILD_LOG.md`, không tự tuyên bố đạt.
+- **`auditor`** (Opus, dùng các skill n8n): audit tĩnh độc lập theo RULES.md, ghi `AUDIT_REPORT.md`.
+- **`tester`** (Haiku): chạy test thật (pin data / TEMP harness), ghi bảng `TEST_REPORT.md` với cách
+  test, kết quả mong muốn, kết quả thực tế trích từ runData.
+Thứ tự: Architect → builder → auditor → tester; FAIL → quay lại builder, tối đa 2 vòng. Mẫu áp dụng
+đầy đủ: `bot-gateway/docs/refactor-2026w39/PLAN.md`. Các sự cố đã gặp được giữ làm bộ test hồi quy
+(PLAN mục 7.2) — mỗi lần sửa workflow liên quan phải chạy lại.
