@@ -11,8 +11,8 @@
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⛔ | ⛔ | chạy lúc 2h (chỉ additive) |
-| WP3 | GW Gateway v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
-| WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ | tuần sau |
+| WP3 | GW Gateway v2 | ✅ | ✅ | 🟨 (19/20 + GW-13 chạy lại) | 🟨 | CN 27/09 |
+| WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ (quá time-box, dời đêm 2) | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⬜ | 🟨 | CN 27/09 |
 | REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ | ✅ | — |
 
@@ -495,6 +495,19 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   trong AUDIT_REPORT để so khi cutover. Handler v2 phải publish trước khi trỏ errorWorkflow. Lưu ý:
   `setWorkflowSettings` tạo version mới → phải publish lại từng workflow (đăng ký lại trigger). ERR-05
   chưa test (chờ WP2).
+
+- **~13:45 WP3 test** — DIFF v1↔v2: 0 FAIL, không khác biệt ngoài C1–C4 (TEST_REPORT section WP3
+  06:30Z). GW-P1 (9 lần/bản, PIN chỉ đo logic): p50 v1 101ms → v2 81ms. GW-S1 khớp audit.
+  ⚠️ **GW-13 chưa đạt mục đích**: corpus dùng tin NHÓM không lệnh → bị chặn ở `Cần Auth/Routing?` trước
+  Router ở cả v1 và v2 (parity OK nhưng không kiểm được `pendingUpload.task_prefix` — đúng đường C4 sửa).
+  Đêm 2 phải chạy lại GW-13 với tin text thường ở CHAT RIÊNG + GW-04 pin 1 dòng có `task_prefix`.
+  WP3 **chưa READY** cho tới khi GW-13 PASS.
+- **Tổng kết đêm 1 (Architect phiên 7fd3b1):** WP0 ✅, REG ✅ (12/12), WP1 audit ✅ + test 5 PASS / còn
+  PENDING chờ WP2, WP2 ⛔ (chạy migration bị classifier chặn — chờ user), WP3 audit ✅ + test 0 FAIL / còn
+  GW-13, WP4 không làm (quá 06:00). ⚠️ Ghi chú vận hành: từ ~13:23 có **một phiên Architect khác ghi song
+  song** vào PLAN.md và commit (240e820, b7707ce, 90f5d5b — không phải phiên này), gây trùng mục nhật ký
+  và chạy test WP1 hai lần. Phiên này dừng giao việc mới từ 13:27 để tránh xung đột. User nên kiểm tra
+  Scheduled tasks xem task có chạy 2 lần không.
 
 ## 10. Việc user cần làm trước cutover
 
