@@ -491,15 +491,6 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
 - **~13:30 WP1 test phần 1** — 5 PASS / 0 FAIL: ERR-03, ERR-04 (tĩnh), ERR-06 (exec 9507 — DB lỗi vẫn
   báo), ERR-06b/06c (gộp đúng). 5 PENDING chờ WP2: ERR-01, ERR-02, ERR-04 runtime, ERR-05, ERR-07.
   WP1 **chưa** READY FOR CUTOVER.
-- **09:30–13:20 tạm dừng** — hết hạn mức phiên Claude (rate limit); tester WP3 lượt 1 bị ngắt giữa chừng,
-  chưa ghi báo cáo → chạy lại từ đầu lúc 13:21.
-- **13:22 WP2 test ⛔ BLOCKED** — lệnh giao tester chạy migration (MIG-02/03) bị **safety classifier của
-  Claude Code chặn** ("Production Deploy"). Architect không tìm cách vòng qua. Hệ quả: bảng
-  `gateway.error_alert_throttle` chưa có → các test PROD-FAIL của WP1 (ERR-01/02/05/07) cũng PENDING.
-  ❓ **Câu hỏi cho user (cần trước CN):** chọn 1 —
-  (a) tự bấm "Execute workflow" trên `DB Migrations (chạy tay) (STAGING)` `8XLg2q34VQq6IDx7` (bản đã
-  audit `76f2cb7e-…`) 2 lần, ngoài giờ cao điểm; hoặc (b) thêm quyền cho phép agent chạy
-  `execute_workflow` trên đúng workflow này ở lượt đêm 2. Sau đó đêm 2 chạy MIG-04 + test WP1 còn lại.
 
 ## 10. Việc user cần làm trước cutover
 
