@@ -39,3 +39,77 @@ Risk notes:
 2. **Phụ thuộc bảng có sẵn:** `gateway.notify_targets` và `clickup.upload_notify_queue` chỉ bị ALTER, không được CREATE ở đâu trong migration; schema `gateway`/`clickup` cũng không được tạo. Trên DB production hiện tại chúng chắc chắn tồn tại (Reader đang chạy các ALTER này thành công), nên OK cho MIG-02; nhưng workflow này KHÔNG phải "nơi duy nhất chứa DDL" đầy đủ để dựng DB mới từ đầu. MIG-04 nên kiểm cả 2 bảng này.
 3. **Seed `gateway.ttlock_auth(id=1)`:** đã bỏ khỏi migration theo quyết định Architect. Hiện TTLock `Ensure Schema (Lock)` vẫn tự seed mỗi request nên không mất gì; nhưng khi sau này bỏ node `Ensure Schema (Lock)` trong bản v2 của TTLock, phải chuyển câu INSERT seed sang 1 nơi khác (không phải workflow WP2), nếu không DB mới sẽ thiếu dòng id=1.
 4. Workflow đặt `availableInMCP: true` — cần cho `execute_workflow`; không có trigger ngoài nên không có bề mặt tấn công. Không có `errorWorkflow`: lỗi khi chạy tay sẽ chỉ thấy trong execution (chấp nhận được vì người chạy/agent đọc kết quả ngay).
+
+## WP1 — GW Error Handler v2 — audit #1 — 2026-09-25T02:20:00Z
+VERDICT: FAIL
+Staging `MaoEB8w8Un6UA01n` versionId `c4f05b7d-0a9c-48c1-b832-25e3637ea69e` (khớp; history chỉ có 2 bản: `72e4efff…` Initial build → `c4f05b7d…` Fix credentials), `active:false`, `activeVersionId:null`. So với v1 `34ccboHpyoY2r691` (chỉ đọc).
+
+| Check | Result | Evidence (quoted from workflow JSON / tool output) |
+|---|---|---|
+| S1a Set `Chuẩn Hoá Lỗi` 6 trường | ✅ | set v3.4, `"includeOtherFields":false`, `mode:manual`; `workflowName`=`={{ $json.workflow?.name \|\| 'unknown' }}`, `workflowId`=`={{ $json.workflow?.id \|\| '' }}`, `nodeName`=`={{ $json.execution?.lastNodeExecuted \|\| $json.trigger?.error?.node?.name \|\| '?' }}`, `errorMessage`=`={{ String(...).slice(0, 2000) }}`, `executionId`, `executionUrl` — nguyên văn PLAN WP1 bước 2; logic trùng jsCode v1 (`wf/wfId/node/msg/url/execId`, `String(msg).slice(0, 2000)`). |
+| S1b `text` tái tạo định dạng v1 | ✅ | `"=🚨 LỖI WORKFLOW\n📋 {{ …workflow?.name \|\| 'unknown' }}\n📍 Node: {{ … \|\| '?' }}\n❌ {{ String(…'unknown error').slice(0, 500) }}\n🔗 {{ $json.execution?.url \|\| '' }}"` = template v1 `🚨 LỖI WORKFLOW\n📋 ${wf}\n📍 Node: ${node}\n❌ ${String(msg).slice(0, 500)}\n🔗 ${url}`. Cắt 500 cho text / 2000 cho errorMessage giữ đúng; thiếu url → dòng `🔗 ` rỗng như v1; `\n` là newline thật (giống v1, output v1 exec 7145). |
+| S1c SQL CTE nguyên văn spec | ✅ | So từng dòng với PLAN mục 6 WP1 bước 3: `WITH ins_log AS (INSERT INTO gateway.error_logs (...) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id), thr AS (INSERT INTO gateway.error_alert_throttle (bucket_key) VALUES ($2 \|\| '\|' \|\| $3 \|\| '\|' \|\| to_char(date_trunc('minute', now()), 'YYYYMMDDHH24MI')) ON CONFLICT (bucket_key) DO UPDATE SET suppressed_count = … + 1 RETURNING (xmax = 0) AS is_first) SELECT (SELECT id FROM ins_log) AS log_id, (SELECT is_first FROM thr) AS should_alert;` — khớp. Không có SQL phá huỷ. |
+| S1d queryReplacement 6 phần tử đúng thứ tự | ✅ | `"={{ [ $json.workflowName, $json.workflowId, $json.nodeName, $json.errorMessage, $json.executionId, $json.executionUrl ] }}"` — giống hệt v1 `Log Error To DB` và thứ tự cột INSERT. |
+| S1e Rủi ro tách dấu phẩy | ✅ (có điều kiện test) | Postgres v2.7 executeQuery: nhánh tách chuỗi theo dấu phẩy chỉ chạy khi giá trị resolve là **string**; expression `={{ [ … ] }}` resolve ra **mảng** → dùng thẳng làm mảng values (pg-promise tự escape từng phần tử) → dấu phẩy/nháy trong errorMessage không lệch tham số. Đây cũng là dạng bắt buộc theo RULES #7 ("`queryReplacement` LUÔN dùng mảng"), đang chạy ở v1 và ~10 node production (vd `Ghi Task Links Mới` truyền `$2::jsonb`). get_node_types chỉ khai báo `queryReplacement?: string` nên không tự chứng minh runtime; chưa tìm được execution v1 có message chứa dấu phẩy (các message gần nhất: "Task request timed out", "The service is receiving too many requests from you"). **Bắt buộc tester:** ERR-01 dùng message có dấu phẩy + nháy đơn (vd `throw new Error("TEST WP1, a, 'b', " + n)`) và xác nhận đúng 6 cột trong `gateway.error_logs`. |
+| S1f IF `Cần Gửi Cảnh Báo?` kiểu so sánh | ✅ | if v2.3, `typeValidation:"strict"`, `leftValue:"={{ $json.should_alert }}"`, `operator:{type:"boolean",operation:"equals"}`, `rightValue:true`. `(xmax = 0)` là cột `boolean` Postgres → node-pg trả JS `true/false` thật → strict hợp lệ. Khi Postgres lỗi, item là `{error:…}` → `should_alert` undefined → IF filter coi null/undefined là hợp lệ về kiểu, kết quả false (không throw) — nhưng xem blocking #1. |
+| S1g Node settings trên JSON live | ✅ | Postgres: `"retryOnFail":true,"maxTries":3,"waitBetweenTries":2000,"alwaysOutputData":true,"onError":"continueRegularOutput"`; Telegram: `"retryOnFail":true,"maxTries":3,"waitBetweenTries":5000,"onError":"continueRegularOutput"` — đúng spec. |
+| S1h Telegram node | ✅ | telegram v1.2 sendMessage, `chatId:"-1003647848349"`, `additionalFields:{"appendAttribution":false,"message_thread_id":4}` (= v1), `text:"={{ $('Chuẩn Hoá Lỗi').first().json.text }}"` (tường minh, RULES #2). Không có replyMarkup (R21 N/A). |
+| S1i Connections | ✅ | `Error Trigger→Chuẩn Hoá Lỗi→Ghi Lỗi + Kiểm Tra Gộp→Cần Gửi Cảnh Báo?`; `"Cần Gửi Cảnh Báo?":{"main":[[{"node":"Báo admin Telegram"…}]]}` — chỉ output 0 (true); output 1 không nối. |
+| S1j Workflow settings | ✅ | `{"executionOrder":"v1","availableInMCP":true}` — không `errorWorkflow`. |
+| S1k 0 Code node (ERR-03) | ✅ | 5 node: errorTrigger, set, postgres, if, telegram. |
+| S2 Production không đổi | ✅ | get_workflow_details: xmEK `180005b7…`, eWtu `53d44baa…`, 6I4M `435af575…`, uqTq `42cfa99b…`, 9JJR `4437fece…`, 34cc `1a6b1d2a…`, G1R0 `92611b33…`, oF4I `7199e254…` — tất cả `versionId == activeVersionId` và khớp BUILD_LOG WP0. |
+| R2 | ✅ | IF đọc `$json.should_alert` ngay sau Postgres (đúng spec); Telegram tham chiếu tên node. |
+| R13 | ✅ | IF main[0]=true → Telegram. |
+| R16/R26 | ✅ | Không có `parameters.parameters.*`; `queryReplacement` nằm đúng `parameters.options`. |
+| R18 | ✅ | Postgres có `alwaysOutputData`+`onError`; Telegram có `onError` (live JSON). |
+| R23 | N/A | Không có nút bấm. |
+| R25 Credentials | ✅ | Postgres `{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}`, Telegram `{"id":"zSZ6vVapow5LNpFT","name":"Telegram System Bot"}` — khớp PLAN mục 3 và v1; lỗi auto-assign (Supabase/@csfsintbot) đã hết ở `c4f05b7d`. |
+| R14/R21/R24/R30 | N/A | Không có delete/replyMarkup/binary/LangChain. |
+| V1 Validate | ✅ | Không có validate theo workflowId; kiểm tĩnh: mọi type/typeVersion tồn tại, tham số Postgres khớp get_node_types v2.7; builder: SDK `validate_workflow` `{"valid":true,"nodeCount":5}`, update cuối `validationWarnings: []`. |
+| V2 | ✅ | Không node disabled, không `REPLACE_*`. |
+| Bảng `gateway.error_alert_throttle` | — | Chưa tồn tại (WP2 chưa chạy) — không tính lỗi WP1; tester phải chạy sau WP2. |
+| R-DB Postgres lỗi → không cảnh báo | ❌ | Xem blocking #1. |
+
+**Khác biệt v2 so với v1 (đầy đủ):**
+1. `Format lỗi` (Code v2) → `Chuẩn Hoá Lỗi` (Set v3.4), cùng 7 field, cùng logic (cho phép — spec).
+2. Thứ tự: v1 fan-out song song Telegram (index 0, chạy trước) + DB; v2 tuần tự DB → IF → Telegram (spec, ERR-04).
+3. Throttle: ≤1 tin / (workflowId+nodeName) / phút (khác biệt cho phép duy nhất).
+4. Retry/onError/alwaysOutputData mới trên Postgres + Telegram (spec).
+5. Telegram text `$json.text` → `$('Chuẩn Hoá Lỗi').first().json.text` (spec).
+6. v1 settings có `binaryMode:"separate"`, v2 không có — vô hại (không binary).
+7. **Không liệt kê trong spec:** (a) DB lỗi → v2 không gửi Telegram (v1 vẫn gửi); (b) Telegram hoặc DB lỗi → execution v2 vẫn `success` (continueRegularOutput) — v1 thì `error` (vd exec 7130 lỗi 429). (c) Bucket theo `workflowId` rỗng khi `workflow.id` thiếu → mọi lỗi "unknown" cùng node gộp chung.
+
+Blocking issues:
+1. `Cần Gửi Cảnh Báo?` — khi `Ghi Lỗi + Kiểm Tra Gộp` lỗi (DB sập / mất kết nối / bảng throttle thiếu), item ra là `{error:…}`, `should_alert` undefined → IF false → **không có tin Telegram, không có dòng DB, execution vẫn `success`** = im lặng hoàn toàn đúng lúc sự cố hạ tầng lớn nhất. v1 trong tình huống này vẫn gửi Telegram. Đây là regression của mục tiêu WP1 ("quan sát lỗi trước") và không nằm trong "khác biệt cho phép" → chặn. **Fix tối thiểu (không Code node):** đổi leftValue IF thành `={{ $json.should_alert === true || !$json.log_id }}` (giữ operator boolean equals `true`, strict vẫn đúng vì luôn ra boolean) — DB OK: hành vi throttle y spec; DB lỗi: fail-open, mọi lỗi đều báo (có retry 3×5s của Telegram, không làm hỏng execution). Cập nhật PLAN WP1 bước 4 + thêm test ERR-06 (pin Postgres trả `{error:"connection refused"}` → phải có 1 lần gọi Telegram). Sửa bằng `removeNode`+`addNode` hoặc cập nhật cả node (RULES #16), re-read live JSON xác nhận.
+
+Risk notes:
+- Execution status luôn `success` kể cả Telegram 429/DB lỗi → không còn tín hiệu "handler lỗi" trong danh sách executions; ERR-02 "0 execution handler lỗi" sẽ đạt kể cả khi tin bị rớt → tester phải kiểm runData của `Báo admin Telegram` (`ok:true`) chứ không chỉ status.
+- Khi DB lỗi + fix #1: burst N lỗi → N tin Telegram → có thể 429 như v1 (chấp nhận được, chế độ suy giảm).
+- `suppressed_count` chỉ đếm, không có tin tổng kết "đã gộp X lỗi" — admin không biết số lỗi bị gộp trừ khi xem DB (đúng spec, ghi nhận).
+- Error workflow inactive vẫn được n8n gọi qua `settings.errorWorkflow` — cần xác nhận trong ERR-01 (WP5 phụ thuộc).
+
+## WP1 — GW Error Handler v2 — audit #2 — 2026-09-25T02:10:00Z
+VERDICT: PASS
+Staging `MaoEB8w8Un6UA01n` live: `versionId:"4f7d5a4b-c6e3-436a-be87-b85793b039bf"`, `active:false`, `activeVersionId:null`. History: `72e4efff…` → `c4f05b7d…` → `4f7d5a4b…` ("WP1 fix #1 - fail-open IF condition").
+
+| Check | Result | Evidence (quoted from workflow JSON / tool output) |
+|---|---|---|
+| Diff c4f05b7d → 4f7d5a4b | ✅ | `get_workflow_versions_diff`: `nodesAdded:[]`, `nodesRemoved:[]`, `connectionsAdded:[]`, `connectionsRemoved:[]`, `nodesModified` chỉ có `Cần Gửi Cảnh Báo?`: `leftValue {"__old":"={{ $json.should_alert }}","__new":"={{ $json.should_alert === true \|\| !$json.log_id }}"}`. 4 node còn lại không đổi so với audit #1 (đã đọc lại JSON live: Set 7 assignment, SQL CTE, queryReplacement, settings, credentials giống hệt). |
+| Blocking #1 audit #1 (fail-open) | ✅ | IF live: `"leftValue":"={{ $json.should_alert === true \|\| !$json.log_id }}"`, `operator:{type:"boolean",operation:"equals"}`, `rightValue:true`, `typeValidation:"strict"`. Khớp PLAN mục 6 WP1 bước 4 (dòng 195). |
+| Biểu thức luôn ra boolean (strict) | ✅ | `===` luôn trả boolean; `A \|\| B` trả A nếu A true, ngược lại trả `!$json.log_id` (boolean). Bảng: DB OK lần đầu `{log_id:N,should_alert:true}` → true; DB OK bị gộp `{log_id:N,should_alert:false}` → `false \|\| !N` = false (id serial ≥1; bigint dạng text `"N"` cũng truthy); DB lỗi `{error:"…"}` → `false \|\| !undefined` = true; `$json` rỗng `{}` → true; `should_alert:null` → `!log_id`. Không có nhánh trả non-boolean → strict không throw. |
+| S1 phần còn lại | ✅ | Như audit #1 (Set/SQL/queryReplacement/text/Telegram/connections output 0 → Telegram, output 1 không nối). |
+| Node settings (live) | ✅ | Postgres `retryOnFail:true,maxTries:3,waitBetweenTries:2000,alwaysOutputData:true,onError:"continueRegularOutput"`; Telegram `retryOnFail:true,maxTries:3,waitBetweenTries:5000,onError:"continueRegularOutput"`. |
+| R25 Credentials | ✅ | `{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}`, `{"id":"zSZ6vVapow5LNpFT","name":"Telegram System Bot"}`. |
+| 0 Code node / settings workflow | ✅ | 5 node errorTrigger/set/postgres/if/telegram; `settings:{"executionOrder":"v1","availableInMCP":true}` — không errorWorkflow. |
+| S2 Production | ✅ | Đọc lại lúc audit #2: 34cc `1a6b1d2a…`, xmEK `180005b7…`, eWtu `53d44baa…`, 6I4M `435af575…`, uqTq `42cfa99b…`, 9JJR `4437fece…`, G1R0 `92611b33…`, oF4I `7199e254…` — `versionId == activeVersionId`, khớp WP0. |
+| R16/R26 | ✅ | leftValue ở đúng `parameters.conditions.conditions[0].leftValue`, không có `parameters.parameters`. |
+| V1/V2 | ✅ | Tham số hợp lệ theo type if v2.3; không disabled node, không `REPLACE_*`. |
+| PLAN 7.4 | ✅ | Đã có ERR-06 (pin Postgres `{"error":"connection refused"}` → IF true, Telegram có trong runData) và ERR-07 (message `a, b 'c' "d"` → 6 cột đúng). |
+
+Blocking issues: không có.
+
+Risk notes (còn hiệu lực từ audit #1, không chặn):
+- Execution handler luôn `success` kể cả Telegram 429/DB lỗi → tester kiểm `ok:true` trong runData `Báo admin Telegram`, không chỉ status.
+- DB lỗi + burst → mỗi lỗi 1 tin (fail-open, không throttle) → có thể 429 như v1; chấp nhận là chế độ suy giảm.
+- Dấu phẩy trong `queryReplacement` mảng: đúng về code path nhưng chỉ được xác nhận thực nghiệm qua ERR-07 — WP1 chưa được READY FOR CUTOVER nếu ERR-07 chưa PASS.
+- ERR-01..07 cần bảng `gateway.error_alert_throttle` (WP2) tồn tại trước.

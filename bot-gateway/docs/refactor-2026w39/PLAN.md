@@ -9,7 +9,7 @@
 | WP | Nội dung | Build | Audit | Test | Trạng thái | Cutover |
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
-| WP1 | GW Error Handler v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
+| WP1 | GW Error Handler v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⬜ | 🟨 | chạy lúc 2h (chỉ additive) |
 | WP3 | GW Gateway v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ | tuần sau |
@@ -192,7 +192,9 @@ hỏng execution.
    waitBetweenTries: 2000, alwaysOutputData: true, onError: continueRegularOutput`.
    Lý do dùng `ON CONFLICT`: chỉ 1 execution trong số N execution đồng thời thắng được `INSERT` → chỉ 1
    cảnh báo/phút cho cùng (workflow, node). Các lần sau đếm vào `suppressed_count`.
-4. `Cần Gửi Cảnh Báo?` — IF: `{{ $json.should_alert }}` is true (boolean).
+4. `Cần Gửi Cảnh Báo?` — IF: `{{ $json.should_alert === true || !$json.log_id }}` is true (boolean).
+   _(Sửa 25/09 theo audit WP1 #1: nếu node Postgres lỗi — DB sập/thiếu bảng — thì không có `log_id`
+   → vẫn gửi cảnh báo như v1, không bị gộp. Nếu không, DB lỗi = mất sạch cảnh báo, là regression.)_
 5. `Báo admin Telegram` — Telegram sendMessage (credential `Telegram System Bot`), chat
    `-1003647848349`, `message_thread_id: 4`, `text` = `={{ $('Chuẩn Hoá Lỗi').first().json.text }}`
    (tham chiếu tường minh — RULES #2). Settings: `retryOnFail: true, maxTries: 3, waitBetweenTries: 5000,
@@ -377,6 +379,8 @@ settings `errorWorkflow = <id Error Handler v2>`, publish, gọi bằng `execute
 | ERR-02 | 20 lần gọi liên tiếp nhanh nhất có thể (burst) | 20 dòng `error_logs`; ≤1 tin Telegram mỗi phút; 0 execution handler lỗi; `suppressed_count` = số lần bị gộp |
 | ERR-03 | Handler không có Code node | STATIC: không có node `n8n-nodes-base.code` |
 | ERR-04 | Thứ tự | Trong runData: node Postgres chạy trước node Telegram |
+| ERR-06 | DB lỗi vẫn báo (thêm 25/09) | PIN trên handler v2: pin `Ghi Lỗi + Kiểm Tra Gộp` = `{"error":"connection refused"}` (không có `log_id`), pin `Báo admin Telegram` | IF ra nhánh true; `Báo admin Telegram` có trong runData với text đúng từ `Chuẩn Hoá Lỗi` |
+| ERR-07 | Message có dấu phẩy/nháy (thêm 25/09) | Trong ERR-01, gọi với `n` = `a, b 'c' "d"` | Dòng `error_logs` có `error_message` nguyên vẹn, 6 cột đúng vị trí |
 | ERR-05 | Sub-workflow lỗi có kích hoạt error workflow không (giả định của WP5) | Harness thứ 2: Webhook → Execute Workflow (wait=false) → sub TEMP có `errorWorkflow = v2` và cố ý lỗi | Handler v2 nhận lỗi của sub (ghi rõ CÓ/KHÔNG — nếu KHÔNG, WP5 phải điều chỉnh) |
 
 Dọn dẹp: sau test, unpublish + archive harness; xoá dòng test khỏi `error_logs`? **Không** (cấm DELETE —
@@ -462,6 +466,12 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   100.840 ký tự (exec 9248). 3 TEMP đã archive. Production không đổi. Bài học cho các test sau:
   **pin data không chọn được output index** của node nhiều output → nhánh lỗi phải test bằng TEMP tái
   hiện connection (như REG-OCR-04). Chi tiết: [TEST_REPORT.md](./TEST_REPORT.md).
+- **~09:05 WP1 build + audit ✅ (sau 1 vòng sửa)** — `GW Error Handler v2 (STAGING)` `MaoEB8w8Un6UA01n`
+  (versionId `4f7d5a4b-c6e3-436a-be87-b85793b039bf`). Audit #1 FAIL: DB lỗi → IF false → mất cảnh báo
+  (regression so với v1). Architect sửa spec bước 4 (điều kiện `should_alert === true || !log_id`), thêm
+  ERR-06 (DB lỗi vẫn báo) + ERR-07 (message có dấu phẩy/nháy). Audit #2 PASS. Lưu ý: builder gặp
+  auto-assign credential sai khi tạo (Postgres→Supabase, Telegram→bot khác) — đã sửa và xác nhận lại.
+  Test chờ WP2 tạo bảng throttle.
 
 ## 10. Việc user cần làm trước cutover
 

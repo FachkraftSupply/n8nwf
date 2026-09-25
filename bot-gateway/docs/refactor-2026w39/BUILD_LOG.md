@@ -375,3 +375,34 @@ sau fix xác nhận cả 2 credential đúng ID/tên yêu cầu.
   giao việc" ở trên (Postgres lỗi → should_alert vắng mặt → không có tin Telegram cho execution đó) — nên bổ
   sung 1 test case (đề xuất mã `ERR-06`) pin node Postgres ra lỗi và xác nhận hành vi này là chủ đích trước
   khi WP1 được đánh READY FOR CUTOVER.
+
+## WP1 fix #1 — fail-open IF khi Postgres lỗi — 2026-09-25T02:02:16Z
+
+Theo AUDIT_REPORT.md audit #1 (FAIL, blocking #1) + PLAN mục 6 WP1 bước 4 đã cập nhật. Sửa DUY NHẤT trên
+`MaoEB8w8Un6UA01n`, node `Cần Gửi Cảnh Báo?`.
+
+- **Cách áp dụng:** `update_workflow` với `setNodeParameter` (path `/conditions/conditions/0/leftValue`) —
+  **ăn ngay lần đầu**, không cần fallback `removeNode`+`addNode`. `appliedOperations: 1`,
+  `autoAssignedCredentials: []`, `validationWarnings: []`.
+- **leftValue mới:** `={{ $json.should_alert === true || !$json.log_id }}` — giữ nguyên `operator:
+  {"type":"boolean","operation":"equals"}`, `rightValue: true`, `options.typeValidation: "strict"` (biểu
+  thức luôn trả boolean nên strict vẫn hợp lệ).
+- **versionId mới:** `4f7d5a4b-c6e3-436a-be87-b85793b039bf` (`active:false`, `activeVersionId:null`).
+- **Re-read `get_workflow_details` xác nhận:**
+  - `leftValue` đúng vị trí `parameters.conditions.conditions[0].leftValue` trên node `Cần Gửi Cảnh Báo?`.
+  - Connections không đổi: `Error Trigger→Chuẩn Hoá Lỗi→Ghi Lỗi + Kiểm Tra Gộp→Cần Gửi Cảnh Báo?
+    →Báo admin Telegram` (output 0), output 1 vẫn không nối.
+  - Settings 4 node còn lại không đổi: Postgres `retryOnFail:true,maxTries:3,waitBetweenTries:2000,
+    alwaysOutputData:true,onError:continueRegularOutput`; Telegram `retryOnFail:true,maxTries:3,
+    waitBetweenTries:5000,onError:continueRegularOutput`; workflow settings vẫn
+    `{"executionOrder":"v1","availableInMCP":true}` (không `errorWorkflow`).
+  - Credentials không đổi: Postgres `{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}`, Telegram
+    `{"id":"zSZ6vVapow5LNpFT","name":"Telegram System Bot"}`. `autoAssignedCredentials: []`.
+  - Vẫn 0 node `n8n-nodes-base.code` (5 node như cũ, chỉ đổi 1 field).
+
+**Không** `publish_workflow`/`execute_workflow` ở bước fix này. Không đụng production.
+
+### Open questions for architect
+
+Không có câu hỏi mở mới. Đề nghị tester thêm ERR-06 (pin Postgres trả lỗi → xác nhận có 1 lần gọi Telegram)
+như audit #1 đã ghi.
