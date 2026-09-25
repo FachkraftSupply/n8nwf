@@ -192,3 +192,43 @@ Sau cutover: `settings.errorWorkflow = "MaoEB8w8Un6UA01n"` (chỉ SAU khi publis
 4. Full Reconcile `G1R0okF0rUziySu9` active nhưng `triggerCount: 0`, `triggerInfo` rỗng — kiểm lại nó được kích hoạt thế nào (có thể chỉ được gọi như sub-workflow); không chặn WP5.
 5. WP1 chưa READY FOR CUTOVER (ERR-01/02/04/05/07 PENDING) → WP5 chỉ được thực hiện khi WP1 đạt; nếu không, giữ nguyên `34ccboHpyoY2r691`.
 6. Interview Evaluation/Admin/Reader/Ảnh: xác nhận `MaoEB8w8Un6UA01n` dùng credential Telegram hợp lệ cho topic lỗi (`-1003647848349`/thread 4) — đã PASS ở audit WP1 #2, không đọc lại ở đây.
+
+## WP4 — Admin v2 pilot — audit #1 — 2026-09-25T19:35:58Z
+VERDICT: PASS
+
+Đối tượng: `Admin v2 - Hệ thống (STAGING)` `bauK573MU18oRzKP` @ `4851cb58-ede4-4fb8-b323-3dadad9d2b82`. Nguồn so sánh (chỉ đọc): `eWtu7Qs85Hes0HuP` @ `53d44baa-8e4b-4dd4-8f78-fbcd970fe46f`. Phương pháp: `get_workflow_details` cả 2 workflow + script Python riêng của auditor (BFS đồ thị v1 từ 5 cổng `Check Admin (...)` + output `vps_cancel` của `Switch`; áp đúng phép thay chuỗi `$('Phân tích lệnh')`→`$('Execute Workflow Trigger')`, `$('⚙️ Config').first().json.botUsername`→`...config.botUsername` lên v1 rồi so với v2). Kiểu dữ liệu lấy từ execution thật `9198` (webhook, 25/09 01:23Z). Không gọi thao tác ghi nào.
+
+| Check | Result | Evidence |
+|---|---|---|
+| S1a Đủ node 8 route | ✅ | BFS v1 cho 36 node trên đường đi (gồm nhánh lỗi `Reply Container Info Failed` [`Container Info OK?` output 1], 4 nhánh không quyền, `Reply VPS Cancelled`). Loại có chủ đích 8: 5× `Check Admin (...)` (→ `Là Admin?`), `Route VPS Extra` (→ `Route`), `Reply Không Có Quyền (Token)`/`(Version)` (→ `(VPS)`). 28 node còn lại có đủ trong v2 cùng `id` (vd `err-switch-001`, `6f8c912d-…`, `beecf946-…`); v2 = 28 + 5 mới = 33 (`"nodeCount":33`). |
+| S1b Params = v1 + chỉ 15 phép thay | ✅ | Node không phải Code: so từng trường sau khi thay (vd `Call Container Info.url` = `"={{ 'http://host.docker.internal:8787/container-info?id=' + $('Execute Workflow Trigger').first().json.params }}"`, text/`additionalFields` của mọi Telegram, SQL của 3 Postgres, `Container Info OK?` cio1/cio2, `Merge` `append/2`) — khớp. Code node: `Build Restart Result`/`Build Container Detail`/`Build Version Text`/`Build Token Stats`/`Build VPS Stats` khớp nguyên văn (`True 513 513`, `True 1149 1149`, `True 1034 1034`, `True 1635 1635`, `VPS True`); `Errors: Build Report (Logs)`/`(Now)` khớp phần đầu (khai báo `chatId`…`rows.length === 0`) và phần cuối (`MAX_LEN`/`return`), phần giữa là prompt văn bản. |
+| S1c Connections nội bộ | ✅ | 19 cạnh giữa 28 node giống v1, gồm `Call DeepSeek Balance→Merge Token Results index 1`, `Call OpenRouter Key Info→… index 0`, `Container Info OK?` `[[Build Container Detail],[Reply Container Info Failed]]`, `Switch (Error Actions)` 0→`Errors: Query Recent`, 1→`Errors: Mark Reported`. |
+| S1d Khác biệt ngoài spec | ✅ (không chặn) | `webhookId` của node Telegram gửi khác v1 (vd `Lichsu: Send` v1 `5f6f38a2-…` / v2 `09f7648a-…`) — chỉ có ý nghĩa với trigger, vô hại. `settings` v2 thiếu `binaryMode:"separate"` so với v1 — không có binary trong domain này. |
+| ADM-08 Tham chiếu `$('X')` | ✅ | Tham chiếu trong v2: `Execute Workflow Trigger`, `Build Container Detail`, `Build Restart Result`, `Build Token Stats`, `Build VPS Stats`, `Call Container Info`, `Call Container Restart` + `safeGet('Call OpenRouter Key Info'/'Call DeepSeek Balance'/'Call VPS Info')` — đều tồn tại. 0 lần xuất hiện `Phân tích lệnh` / `⚙️ Config`. |
+| Trường + kiểu sau khi đổi | ✅ | v1 `Phân tích lệnh` trả `route, params, taskId, chatId: env.chat_id, messageId, isCallback, originalData` (+`command`, không node nào trong domain dùng); `Build Envelope (System Bot)`: `chat_id: String(msg?.chat?.id)`; exec 9198: `"chat_id":"975005174"` (string). `⚙️ Config`: `ADMIN_CHAT_ID: '975005174'` (string), `botUsername: 'elite_n8n_system_bot'`. Tham chiếu trong v2 chỉ dùng `route`, `params`, `chatId`, `config.ADMIN_CHAT_ID`, `config.botUsername` — cùng tên + cùng nghĩa với contract. |
+| Cổng admin `Là Admin?` | ✅ | `leftValue "={{ $('Execute Workflow Trigger').first().json.chatId }}"`, `rightValue "={{ …config.ADMIN_CHAT_ID }}"`, `string/equals`, `typeValidation strict` — giống hệt 5 cổng v1 (`$('Phân tích lệnh').first().json.chatId` vs `$('⚙️ Config').first().json.ADMIN_CHAT_ID`, string/equals, strict). |
+| REG-VPS-05 bỏ qua cổng | ✅ | v1: `Switch` output 25 (`vps_cancel`) → `Reply VPS Cancelled` trực tiếp. v2: `Là vps_cancel?` `[[Reply VPS Cancelled],[Là Admin?]]`, nằm trước `Là Admin?`. |
+| Text nhánh không quyền | ✅ | v1 `(Errors)` = `"⚠️ Bạn không có quyền thực hiện lệnh này."`; `(Version)`, `(Token)`, `(VPS)` đều = `"🚫 Bạn không có quyền dùng lệnh này."` + cùng `chatId`/`appendAttribution:false`/credential. v2 `Là Lỗi Route?` (`error_logs` OR `error_log_now`) `[[Reply Không Có Quyền (Errors)],[Reply Không Có Quyền (VPS)]]` → mỗi route ra đúng text như v1. |
+| R13 Switch `Route` | ✅ | Thứ tự rule 0..6 = `error_logs, error_log_now, version, token, vps, vps_container, vps_restart`; outputs `[[Switch (Error Actions)],[Switch (Error Actions)],[Query Changelog],[Call DeepSeek Balance, Call OpenRouter Key Info],[Call VPS Info],[Call Container Info],[Call Container Restart]]` — giống cạnh đi ra từ nhánh true của cổng v1 + `Route VPS Extra` (0→Info, 1→Restart). `fallbackOutput:"none"`; `vps_cancel` không bao giờ vào `Route`. Bỏ `Route VPS Extra` không làm mất hành vi (chỉ lọc lại cùng `route`). |
+| R2 `$json` trần | ✅ | Node có upstream mới: `Switch (Error Actions)` dùng `$('Execute Workflow Trigger')…route`; HTTP/Postgres đầu nhánh không dùng `$json`. `$json` còn lại (`Lichsu: Send`, `Send Version Text`, `Container Info OK?`) có upstream giữ nguyên như v1. |
+| R14 | — | Không có deleteMessage / `reply_to_message_id` trong sub-workflow. |
+| R16/R26 | ✅ | Không có `parameters.parameters` trên 33 node. |
+| R18 / settings node | ✅ | Giống v1: `Errors: Query Recent`, `Errors: Mark Reported` `alwaysOutputData:true`; `Call DeepSeek Balance`, `Call OpenRouter Key Info`, `Call VPS Info`, `Call Container Info`, `Call Container Restart` `onError:"continueRegularOutput"`; v1 không node nào có retry → v2 cũng không. |
+| R21 | ✅ | `Send Container Detail.replyMarkup = "inlineKeyboard"` (chuỗi cố định); chỉ `callback_data` là expression (`'vpsrestart_' + …containerId`, `"vpscancel"`). |
+| R23 | ✅ | 10/10 node Telegram = `{"id":"zSZ6vVapow5LNpFT","name":"Telegram System Bot"}` (BUILD_LOG ghi “12” là số của v1, v2 có 10 vì đã gộp 2 node reply). |
+| R25 credentials | ✅ | Postgres ×3 `GwUFREmcXzXXj5mZ`; X-Auth-Token `Ri6Y4WtEuLgl9ixb` ×3; OpenRouter `BOzvluQs5DGXl9Yr`; `Call DeepSeek Balance` = `deepSeekApi F7tLItIIVtzpZGqS "DeepSeek account"` — khớp v1 node-by-node; `list_credentials` xác nhận là credential có sẵn (`homeProject 5cL5BKorhKAQ2ONI`), không phải gán tự động. |
+| R24/R30/SQL | — / ✅ | Không có binary, không LangChain; SQL giữ nguyên v1 (có 1 `UPDATE … status='reported'` sẵn từ v1, không phải SQL mới). |
+| Workflow settings | ✅ | `"active":false`, `"activeVersionId":null`, `settings {"executionOrder":"v1","availableInMCP":true}`, không có `errorWorkflow`. |
+| V1 validate | ✅ (tĩnh) | `validate_workflow` chỉ nhận SDK code, không nhận ID → thay bằng kiểm tĩnh: mọi đích connection đều tồn tại, mọi `$('X')` đều trỏ tới node có thật, typeVersion giữ nguyên v1. |
+| V2 | ✅ | Không có node disabled, không có `REPLACE_*`. |
+| S2 production | ✅ | `versionId==activeVersionId` và khớp WP0: Gateway `180005b7…`, Admin `53d44baa…` (updatedAt `2026-09-23T04:50:57.468Z`), Ảnh `435af575…`, Live Update `42cfa99b…`, Reader `4437fece…`, Error Handler `1a6b1d2a…`, Reconcile `92611b33…`, Interview `7199e254…`. |
+
+Blocking issues: không có.
+
+Risk notes:
+1. **Kiểu của `chatId`/`ADMIN_CHAT_ID` trong contract.** `Là Admin?` so sánh string với `typeValidation: strict`. v1 đạt vì cả 2 phía đều là string (`String(msg.chat.id)`, `'975005174'`). Router v2 sau này (và pin data của tester) BẮT BUỘC truyền cả 2 dạng string. Nếu truyền number, IF sẽ lỗi sai kiểu (không đơn giản rơi vào nhánh false). Nên ghi rõ kiểu trong contract (PLAN §6 WP4.2).
+2. Hành vi phía trước `Phân tích lệnh` trong v1 (nhánh callback: `Is Callback?`… `Restore Envelope After Delete`) không thuộc sub-workflow. Router v2 phải tự giữ các bước này cho `vps_restart`/`vps_cancel` khi làm sau.
+3. `Query Changelog` không có `alwaysOutputData` (giống v1): nếu changelog rỗng thì `/version` im lặng. Giống v1 nên không chặn.
+4. `settings.binaryMode` thiếu và `webhookId` Telegram khác v1: đều vô hại, chỉ để biết.
+5. `/vps_restart` gọi thật `docker restart`. Tester phải pin `Call Container Restart` (PLAN §5.3/5.4).
+6. Kiểm của audit này chỉ là kiểm tĩnh. ADM-01..07 vẫn cần tester chạy PIN.

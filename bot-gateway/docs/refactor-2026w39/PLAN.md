@@ -9,12 +9,12 @@
 | WP | Nội dung | Build | Audit | Test | Trạng thái | Cutover |
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
-| WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 (5 chờ WP2) | 🟨 | CN 27/09 |
-| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | 🟨 MIG-02 ✅ MIG-03 ✅ (user chạy tay), MIG-04 đêm 2 | 🟨 | đã chạy 25/09 16:32 + 17:34 |
-| WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 | ✅ READY FOR CUTOVER | CN 27/09 |
-| WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⏭ dời đêm 2 (quá time-box 06:00) | tuần sau |
-| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⬜ | 🟨 | CN 27/09 |
-| REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ | ✅ | — |
+| WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 PASS; ERR-01/02/04rt/05/07 ⛔ (classifier chặn PROD-FAIL, đêm 2) | ⛔ chờ user (mục 9 đêm 2) | CN 27/09 (nếu user chọn) |
+| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ✅ MIG-01..04 (MIG-04 đêm 2: 26/26 object) | ✅ | đã chạy 25/09 16:32 + 17:34 |
+| WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 (đêm 2 test lại: 47/47) | ✅ READY FOR CUTOVER | CN 27/09 |
+| WP4 | Admin System v2 — pilot 1 domain | ✅ | ✅ | ✅ 23/23 (ADM-01..09) | ✅ pilot đạt (chỉ staging, không cutover) | tuần sau |
+| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⛔ ERR-05 (như WP1) | ⛔ phụ thuộc WP1 | CN 27/09 (nếu WP1 đạt) |
+| REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ (đêm 2: 11/11, VPS-06 MANUAL) | ✅ | — |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ PASS · ❌ FAIL · ⛔ BLOCKED (ghi lý do ở mục 9).
 
@@ -570,6 +570,55 @@ Gateway v2 trong UI giống v1.
    của n8n, không có ô chỉnh trong UI) và `timeSavedMode:"fixed"` (chỉ dùng cho thống kê Insights "thời
    gian tiết kiệm"). Gateway không có node binary → không ảnh hưởng gì. Không cần user làm.
 5. Cutover để CN làm, đúng mục 8.
+
+### Đêm 2 — T7 26/09/2026 (task `refactor-w39-night-continue`, bắt đầu 02:05 đúng lịch)
+
+- **02:10 Bước 1 — production không đổi.** `get_workflow_details` 8 workflow mục 3: tất cả
+  `versionId == activeVersionId` và khớp mốc WP0 (Gateway `180005b7…`, Admin `53d44baa…`, Ảnh `435af575…`,
+  Live Update `42cfa99b…`, Reader `4437fece…`, Error Handler `1a6b1d2a…`, Reconcile `92611b33…`, Interview
+  `7199e254…`). → Không cần clone lại v2 nào.
+- **02:1x WP1 PROD-FAIL ⛔ BLOCKED.** Lệnh giao tester chạy ERR-01/02/04 runtime/05/07 (publish harness TEMP
+  có webhook, ghi `gateway.error_logs` thật, gửi ≤2 tin vào topic lỗi admin, publish tạm handler v2 nếu cần)
+  bị safety classifier của Claude Code chặn — lý do "Modify Shared Resources". Không lách. WP1 giữ 5/10 PASS
+  (STATIC + PIN), WP5 (ERR-05) cũng bị chặn theo.
+  ❓ **Câu hỏi cho user (cần trước CN 19:00):** chọn 1 —
+  (a) **Khuyến nghị:** chạy ERR-01/02/05/07 trong khung cutover CN có người trực, NGAY SAU bước 8.1.1
+      (publish handler v2) và TRƯỚC khi trỏ errorWorkflow của 7 workflow. Nếu ERR nào FAIL → dừng WP1/WP5,
+      giữ `34ccboHpyoY2r691`, chỉ cutover WP3. Câu hỏi "handler chưa publish có chạy không" không còn quan
+      trọng vì runbook publish trước.
+  (b) Thêm rule cho phép trong settings Claude Code để task `refactor-w39-cutover-prep` (CN 18:00) chạy
+      PROD-FAIL trước giờ cutover.
+  (c) Không cutover WP1/WP5 tuần này; chỉ cutover WP3.
+  > Trả lời:
+- **02:17 WP2 ✅** — MIG-04 PASS: 26/26 object tồn tại (7 bảng, 17 cột, index throttle; bảng throttle
+  đúng 3 cột). TEMP `0eLYv0f67eziX8R7` đã archive. WP2 hoàn tất.
+- **02:30 WP4 build ✅** — `Admin v2 - Hệ thống (STAGING)` `bauK573MU18oRzKP` (versionId
+  `4851cb58-ede4-4fb8-b323-3dadad9d2b82`, inactive). 33 node: 28 copy nguyên văn + 5 mới (trigger
+  passthrough, `Là vps_cancel?` trước cổng admin để giữ parity REG-VPS-05, 1 cổng `Là Admin?` thay 5
+  `Check Admin (...)`, Switch `Route` 7 nhánh thay luôn `Route VPS Extra`, `Là Lỗi Route?` chọn text không
+  quyền). 15 tham chiếu `Phân tích lệnh`/`⚙️ Config` → `Execute Workflow Trigger`, 0 tham chiếu treo.
+- **02:36 WP4 audit #1 PASS** (0 blocking). Risk notes: contract phải ghi `chatId`/`ADMIN_CHAT_ID` là
+  **string** (IF strict — truyền number sẽ lỗi thay vì ra false); router v2 sau này phải tự giữ phần xử lý
+  callback đứng trước `Phân tích lệnh` của v1.
+- **02:47 WP4 test ✅ 23/23** (ADM-01..09; `Call Container Restart` pinned, 0 docker restart thật). Text/nút v2
+  khớp v1 từng ký tự. 0 TEMP. → **Pilot đạt**, contract router↔sub-workflow được chứng minh. Chưa làm router v2,
+  không cutover (đúng D6).
+- **02:4x Bước 3 — test lại toàn bộ ✅** — WP3 47/47 PASS (GW-13 theo kỳ vọng mới của user, GW-13b pending
+  upload OK; GW-P1 p50 v1 107ms / v2 74ms, PIN chỉ đo logic), REG 11/11 PASS + VPS-06 MANUAL. 0 test PASS→FAIL.
+  TEMP `ECH0aKo9CXgCD5UE`, `80821vva7xGpyd6l` đã archive. Production + v1/v2 không đổi version cuối bài.
+- Ghi chú: 2 tester ghi nhầm ngày UTC trong tiêu đề TEST_REPORT (26/09 thay vì 25/09) — Architect đã sửa.
+  Bài học lặp lại: tạo TEMP có node Telegram bị auto-assign nhầm `@csfsintbot` — tester đã sửa trước khi chạy.
+
+#### Tóm tắt đêm 2
+
+| WP | Kết quả | Cutover CN 27/09 |
+|---|---|---|
+| WP2 | ✅ xong (MIG-01..04) | — (đã chạy) |
+| WP3 | ✅ READY FOR CUTOVER (test lại 47/47) | ✅ theo mục 8.2 |
+| WP4 | ✅ pilot đạt 23/23 (staging) | Không (tuần sau: router v2) |
+| WP1 | ⛔ 5/10, PROD-FAIL bị classifier chặn | Chỉ nếu user chọn (a)/(b) và ERR PASS |
+| WP5 | ⛔ phụ thuộc WP1 + ERR-05 | như WP1 |
+| REG | ✅ 11/11 + VPS-06 MANUAL (CN) | smoke VPS-06 nếu muốn |
 
 ## 10. Việc user cần làm trước cutover
 
