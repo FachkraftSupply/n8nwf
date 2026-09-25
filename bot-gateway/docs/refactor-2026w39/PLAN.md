@@ -472,7 +472,7 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   ERR-06 (DB lỗi vẫn báo) + ERR-07 (message có dấu phẩy/nháy). Audit #2 PASS. Lưu ý: builder gặp
   auto-assign credential sai khi tạo (Postgres→Supabase, Telegram→bot khác) — đã sửa và xác nhận lại.
   Test chờ WP2 tạo bảng throttle.
-- **~09:40 WP3 build + audit ✅** — `GW Gateway - Telegram v2 (STAGING)` `hn0YZ85sXtfGACJ4` (versionId
+- **~09:19 WP3 build + audit ✅** — `GW Gateway - Telegram v2 (STAGING)` `hn0YZ85sXtfGACJ4` (versionId
   `dbc644d4-7c8a-44e5-90dd-ec18b9aab157`). Clone khớp 100% 48 node trước C1–C4; diff cuối chỉ đúng C1–C4.
   Audit #1 PASS (mô phỏng Router cũ/mới 25 case giống hệt). Việc cho user trước cutover: vào UI đặt
   `binaryMode`/`timeSavedMode` của v2 giống v1 (MCP không set được; không ảnh hưởng hành vi Gateway).
