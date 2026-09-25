@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
-| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⬜ | 🟨 | chạy lúc 2h (chỉ additive) |
+| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⛔ | ⛔ | chạy lúc 2h (chỉ additive) |
 | WP3 | GW Gateway v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ⬜ | ⬜ | ⬜ | CN 27/09 |
@@ -477,6 +477,15 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   Audit #1 PASS (mô phỏng Router cũ/mới 25 case giống hệt). Việc cho user trước cutover: vào UI đặt
   `binaryMode`/`timeSavedMode` của v2 giống v1 (MCP không set được; không ảnh hưởng hành vi Gateway).
   Test DIFF đang chạy.
+- **09:30–13:20 tạm dừng** — hết hạn mức phiên Claude (rate limit); tester WP3 lượt 1 bị ngắt giữa chừng,
+  chưa ghi báo cáo → chạy lại từ đầu lúc 13:21.
+- **13:22 WP2 test ⛔ BLOCKED** — lệnh giao tester chạy migration (MIG-02/03) bị **safety classifier của
+  Claude Code chặn** ("Production Deploy"). Architect không tìm cách vòng qua. Hệ quả: bảng
+  `gateway.error_alert_throttle` chưa có → các test PROD-FAIL của WP1 (ERR-01/02/05/07) cũng PENDING.
+  ❓ **Câu hỏi cho user (cần trước CN):** chọn 1 —
+  (a) tự bấm "Execute workflow" trên `DB Migrations (chạy tay) (STAGING)` `8XLg2q34VQq6IDx7` (bản đã
+  audit `76f2cb7e-…`) 2 lần, ngoài giờ cao điểm; hoặc (b) thêm quyền cho phép agent chạy
+  `execute_workflow` trên đúng workflow này ở lượt đêm 2. Sau đó đêm 2 chạy MIG-04 + test WP1 còn lại.
 
 ## 10. Việc user cần làm trước cutover
 
