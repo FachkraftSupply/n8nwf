@@ -13,7 +13,7 @@
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⛔ | ⛔ | chạy lúc 2h (chỉ additive) |
 | WP3 | GW Gateway v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ | tuần sau |
-| WP5 | Gắn error workflow cho workflow còn thiếu | — | ⬜ | ⬜ | ⬜ | CN 27/09 |
+| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⬜ | 🟨 | CN 27/09 |
 | REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ | ✅ | — |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ PASS · ❌ FAIL · ⛔ BLOCKED (ghi lý do ở mục 9).
@@ -491,6 +491,10 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
 - **~13:30 WP1 test phần 1** — 5 PASS / 0 FAIL: ERR-03, ERR-04 (tĩnh), ERR-06 (exec 9507 — DB lỗi vẫn
   báo), ERR-06b/06c (gộp đúng). 5 PENDING chờ WP2: ERR-01, ERR-02, ERR-04 runtime, ERR-05, ERR-07.
   WP1 **chưa** READY FOR CUTOVER.
+- **~13:40 WP5 danh sách ✅ (READY-LIST)** — 7 workflow đích không có bản nháp; settings hiện tại ghi đủ
+  trong AUDIT_REPORT để so khi cutover. Handler v2 phải publish trước khi trỏ errorWorkflow. Lưu ý:
+  `setWorkflowSettings` tạo version mới → phải publish lại từng workflow (đăng ký lại trigger). ERR-05
+  chưa test (chờ WP2).
 
 ## 10. Việc user cần làm trước cutover
 

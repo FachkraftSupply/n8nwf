@@ -146,3 +146,49 @@ Risk notes:
 3. `GW-04` không có `onError` (giống v1): DB lỗi → execution fail → errorWorkflow; parity, không đổi.
 4. Sticky note `📘 Ghi chú kiến trúc` vẫn nhắc `Audit Log (Supabase)` — cosmetic, cập nhật sau cutover.
 5. Tester vẫn phải chạy DIFF GW-01…GW-19 bằng pin data; audit này chỉ chứng minh tĩnh + mô phỏng logic Code.
+
+## WP5 — danh sách cutover — 2026-09-25T06:28:45Z
+VERDICT: READY-LIST
+Nguồn: `get_workflow_details(detailLevel: execution)` gọi lúc 2026-09-25T06:28:45Z cho 12 workflow (chỉ đọc; không update/publish nào).
+
+### Bảng cutover (7 workflow WP5)
+Sau cutover: `settings.errorWorkflow = "MaoEB8w8Un6UA01n"` (chỉ SAU khi publish v2). Rollback: `34ccboHpyoY2r691` (4 workflow đang có) / `"DEFAULT"` = xoá (3 workflow thêm mới).
+
+| # | ID | Tên | active | versionId | activeVersionId | Bản nháp? | errorWorkflow hiện tại | Settings hiện tại (toàn bộ — phải giữ nguyên, chỉ đổi errorWorkflow) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `xmEKeIUnzxm2F7dF` | GW Gateway - Telegram (DEV) | true | `180005b7-a44a-4c95-ace6-24529ae46566` | `180005b7-…6566` | Không | `34ccboHpyoY2r691` | `{"executionOrder":"v1","binaryMode":"separate","timeSavedMode":"fixed","errorWorkflow":"34ccboHpyoY2r691","callerPolicy":"workflowsFromSameOwner","availableInMCP":true}` |
+| 2 | `uqTqjtHYieotPZuc` | SQL - ClickUp Live Update (Webhook) | true | `42cfa99b-6659-47dd-8a84-f9fa4e977739` | `42cfa99b-…7739` | Không | `34ccboHpyoY2r691` | `{"executionOrder":"v1","binaryMode":"separate","timeSavedMode":"fixed","errorWorkflow":"34ccboHpyoY2r691","callerPolicy":"workflowsFromSameOwner","availableInMCP":true}` |
+| 3 | `G1R0okF0rUziySu9` | SQL - ClickUp Full Reconcile (5 ngay) | true | `92611b33-57df-463c-910e-b00c24144dd9` | `92611b33-…9dd9` | Không | `34ccboHpyoY2r691` | `{"executionOrder":"v1","binaryMode":"separate","timeSavedMode":"fixed","errorWorkflow":"34ccboHpyoY2r691","callerPolicy":"workflowsFromSameOwner","availableInMCP":true}` |
+| 4 | `oF4IWJf6Yad2wF5G` | Interview Evaluation - Elite Education (Supabase) | true | `7199e254-a3ab-4b8a-a523-768a7b51e468` | `7199e254-…e468` | Không | `34ccboHpyoY2r691` | `{"executionOrder":"v1","binaryMode":"separate","timeSavedMode":"fixed","errorWorkflow":"34ccboHpyoY2r691","callerPolicy":"workflowsFromSameOwner","availableInMCP":true}` |
+| 5 | `eWtu7Qs85Hes0HuP` | Telebot Admin System (System Bot dedicated) | true | `53d44baa-8e4b-4dd4-8f78-fbcd970fe46f` | `53d44baa-…e46f` | Không | *(không có)* | `{"executionOrder":"v1","binaryMode":"separate","availableInMCP":true}` |
+| 6 | `9JJRrh36H2rLwtnu` | Telebot ClickUp Reader (sub-workflow) | true | `4437fece-36da-4ccc-82fa-16e5330c7960` | `4437fece-…7960` | Không | *(không có)* | `{"executionOrder":"v1","binaryMode":"separate","availableInMCP":true}` |
+| 7 | `6I4MnJiJCiv2JOIr` | Bot Xử Lý Ảnh (xoanen + tomtat) (sub-workflow) | true | `435af575-e17f-488e-b616-20798790bbdf` | `435af575-…bdf` | Không | *(không có)* | `{"executionOrder":"v1","availableInMCP":true,"binaryMode":"separate"}` |
+
+### D3 — bỏ qua, chỉ ghi trạng thái
+| ID | Tên | versionId | activeVersionId | Bản nháp? | errorWorkflow |
+|---|---|---|---|---|---|
+| `jPaCu9Yv6fgnsKsi` | Blacklist Bot (/dspv) | `72efa72b-…4659` | `72efa72b-…4659` | Không (updatedAt 2026-09-24T15:35:44Z nhưng versionId = mốc WP0) | *(không có)* |
+| `vGgJ0XfTR3ltohPB` | Telebot Lock (TTLock) | `84e951d2-bb41-43a9-a67e-3b0b0f42c38b` | `f3062458-d905-421b-bf1b-82f4caab3255` | **Có** (như WP0) | *(không có)* |
+| `ow1fAaAYwxaZjyD4` | Interview Rule Engine - Rule 1,2,4 | `9905e164-…f453` | `9905e164-…f453` | Không | `1KBpJaseeCU13Jtw` (handler khác, không đụng) |
+
+### Handler
+| ID | Tên | active | versionId | activeVersionId | settings |
+|---|---|---|---|---|---|
+| `34ccboHpyoY2r691` | GW Error Handler (v1) | true | `1a6b1d2a-…a183` | `1a6b1d2a-…a183` | `{"executionOrder":"v1","binaryMode":"separate","availableInMCP":true}` |
+| `MaoEB8w8Un6UA01n` | GW Error Handler v2 (STAGING) | **false** | `4f7d5a4b-c6e3-436a-be87-b85793b039bf` | **null** | `{"executionOrder":"v1","availableInMCP":true}` |
+
+### Checks
+| Check | Result | Evidence |
+|---|---|---|
+| S2 production untouched | ✅ | 8/8 workflow mục 3 có activeVersionId đúng BUILD_LOG WP0: Gateway `180005b7…`, Admin `53d44baa…`, Ảnh `435af575…`, Live Update `42cfa99b…`, Reader `4437fece…`, Error Handler v1 `1a6b1d2a…`, Full Reconcile `92611b33…`, Interview Eval `7199e254…`; tất cả versionId == activeVersionId. |
+| Tiền điều kiện WP5 "versionId == activeVersionId" | ✅ (tại 2026-09-25T06:28:45Z) | 7/7 workflow WP5 không có bản nháp. **Phải kiểm lại ngay trước từng setWorkflowSettings lúc cutover.** |
+| callerPolicy cho handler v2 | ✅ không cần | `callerPolicy` chỉ áp dụng cho gọi qua Execute Sub-workflow (mô tả tool `update_workflow`: "Which workflows may call this one via the Execute Sub-workflow node"). Handler v1 `34ccbo…` đang chạy tốt mà KHÔNG có callerPolicy → bằng chứng thực tế. Điều kiện duy nhất tài liệu nêu: "The referenced workflow must contain an Error Trigger node" — v2 có (triggerInfo: "Error Trigger"). |
+| Handler có cần publish/active? | ⚠️ publish trước (theo runbook) | Tài liệu n8n (Error Trigger node) nói workflow dùng Error Trigger không cần activate. Nhưng instance này dùng mô hình draft/publish (activeVersionId), v2 hiện `activeVersionId: null`; chưa kiểm chứng được n8n chạy bản nào (draft hay published) khi error workflow chưa từng publish → **unverifiable**, nên giữ đúng runbook 8.1.1: publish v2 TRƯỚC, xác nhận `activeVersionId == 4f7d5a4b…` rồi mới trỏ errorWorkflow. Ngoài ra "Failure handling fires for production executions only, not manual/test runs" (mô tả tool) → smoke ERR-01 phải là production execution. |
+
+### Rủi ro / ghi chú cho người cutover
+1. **setWorkflowSettings tạo version mới** → versionId ≠ activeVersionId cho tới khi `publish_workflow`. Publish lại Gateway (Telegram trigger) / Admin (Telegram trigger) / Live Update (ClickUp trigger) / Interview Eval (webhook) sẽ đăng ký lại trigger → khoảng trống ngắn; làm từng workflow, ghi activeVersionId mới vào BUILD_LOG làm mốc rollback thứ 2 (rollback bằng đổi errorWorkflow về giá trị cũ + publish, hoặc publish lại version cũ).
+2. **Merge hay replace settings?** Chưa kiểm chứng `setWorkflowSettings` merge hay thay toàn bộ object. Chỉ truyền `{"errorWorkflow":"MaoEB8w8Un6UA01n"}`, rồi đọc lại và so với cột settings ở trên — đặc biệt `binaryMode`, `timeSavedMode`, `callerPolicy` (Gateway gọi sub-workflow; Reader & Ảnh đang KHÔNG có callerPolicy → dùng mặc định, không được thêm/đổi).
+3. **ERR-05 (chưa test — WP2 bị chặn):** lỗi trong sub-workflow (Reader `9JJRrh36…`, Ảnh `6I4MnJiJ…`, gọi qua executeWorkflow từ Gateway) kích hoạt errorWorkflow của sub, của cha, hay cả hai (→ 2 cảnh báo trùng, phụ thuộc throttle v2)? Hiện sub chưa có errorWorkflow nên chỉ cha báo; sau WP5 có thể báo đôi. Câu hỏi mở, cần test ERR-05 sau khi có bảng throttle.
+4. Full Reconcile `G1R0okF0rUziySu9` active nhưng `triggerCount: 0`, `triggerInfo` rỗng — kiểm lại nó được kích hoạt thế nào (có thể chỉ được gọi như sub-workflow); không chặn WP5.
+5. WP1 chưa READY FOR CUTOVER (ERR-01/02/04/05/07 PENDING) → WP5 chỉ được thực hiện khi WP1 đạt; nếu không, giữ nguyên `34ccboHpyoY2r691`.
+6. Interview Evaluation/Admin/Reader/Ảnh: xác nhận `MaoEB8w8Un6UA01n` dùng credential Telegram hợp lệ cho topic lỗi (`-1003647848349`/thread 4) — đã PASS ở audit WP1 #2, không đọc lại ở đây.
