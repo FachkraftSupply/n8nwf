@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 (5 chờ WP2) | 🟨 | CN 27/09 |
-| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⛔ | ⛔ | chạy lúc 2h (chỉ additive) |
+| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | 🟨 MIG-02 ✅ (user chạy tay) | 🟨 | đã chạy 25/09 16:32 |
 | WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 | ✅ READY FOR CUTOVER | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⏭ dời đêm 2 (quá time-box 06:00) | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⬜ | 🟨 | CN 27/09 |
@@ -504,6 +504,29 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   có lệnh. Đây có phải hành vi mong muốn không? (parity giữ nguyên; bản chat riêng GW-13b PASS.)
 - **Xác nhận cuối lượt:** workflow migration `8XLg2q34VQq6IDx7` có 0 execution (không có gì chạm
   production DB). Production mục 3 không đổi version (kiểm bởi auditor WP5 + tester WP3).
+
+### Trả lời của user — 25/09/2026 ~16:40 (Architect đã kiểm chứng những gì kiểm được)
+
+1. **WP2 migration** — user tự chạy tay trong n8n UI.
+   > Trả lời: đã chạy, báo success.
+   Kiểm chứng: exec `9795` (manual, 25/09 16:32:54 VN), status `success`, node `Chạy Toàn Bộ DDL
+   Migrations` trả `{"success":true}` sau 129ms. **Mới chạy 1 lần** → MIG-02 ✅; MIG-03 (chạy lần 2,
+   idempotent) và MIG-04 (kiểm schema) còn lại cho đêm 2. ERR-01/02/04/05/07 của WP1 hết bị chặn.
+2. **GW-13** — > Trả lời: đúng ý. Upload chỉ khi được phép; tin nhắn thường trong nhóm chỉ lưu lại cho
+   chức năng chat summary có sẵn. → Hành vi v1 = v2 là ĐÚNG. Sửa kỳ vọng GW-13 thành "tin nhóm không
+   lệnh không tới Router; chỉ ghi log"; GW-13b (chat riêng + pending) là test pending-upload chính.
+3. **TTLock / seed `ttlock_auth`** — > Trả lời: không đụng TTLock (đang ổn định), giữ nguyên như hiện
+   tại, đảm bảo sau refactor vẫn hoạt động tốt. → Không bỏ `Ensure Schema (Lock)`, không làm TTLock v2.
+   Điều kiện "vẫn chạy tốt" sau cutover Gateway: GW-04/GW-05/GW-10 (route `lock_bot`, quyền lock,
+   callback `lockap:`/`lockdn:`/`lockgrant:`) đã PASS parity v1↔v2; smoke CN thêm 1 lệnh `/mokhoa`.
+4. **Task runner (mục 10.1)** — > Trả lời: đã chạy sáng nay.
+   Kiểm chứng gián tiếp (không SSH được): từ 00:00 VN 25/09 tới 16:36 **0 execution error/crashed** trên
+   toàn instance; Live Update ≥100 execution, tất cả success (trước đây 16% lỗi do runner). Giá trị
+   `N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=0` chưa đọc trực tiếp được.
+5. **D3 (mục 10.2)** — trạng thái hiện tại: chỉ TTLock còn bản nháp chưa publish (versionId
+   `84e951d2-…`, tên "TẠM THỜI tắt giới hạn khung giờ mở khóa"); Blacklist + Rule Engine không còn nháp.
+   Refactor không publish/đổi settings 3 workflow này. Không cần user làm gì cho cutover.
+6. **binaryMode/timeSavedMode** — việc tuỳ chọn trước cutover (không ảnh hưởng hành vi Gateway).
 
 #### Tóm tắt đêm 1
 
