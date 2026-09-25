@@ -488,6 +488,9 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   (b) cấp quyền cho lượt đêm 2 chạy migration (thêm rule cho phép trong settings Claude Code); hoặc
   (c) dời migration vào khung cutover CN có người trực.
   Nên chạy ngoài giờ cao điểm (auditor: batch giữ khoá ACCESS EXCLUSIVE tới cuối transaction).
+- **~13:30 WP1 test phần 1** — 5 PASS / 0 FAIL: ERR-03, ERR-04 (tĩnh), ERR-06 (exec 9507 — DB lỗi vẫn
+  báo), ERR-06b/06c (gộp đúng). 5 PENDING chờ WP2: ERR-01, ERR-02, ERR-04 runtime, ERR-05, ERR-07.
+  WP1 **chưa** READY FOR CUTOVER.
 - **09:30–13:20 tạm dừng** — hết hạn mức phiên Claude (rate limit); tester WP3 lượt 1 bị ngắt giữa chừng,
   chưa ghi báo cáo → chạy lại từ đầu lúc 13:21.
 - **13:22 WP2 test ⛔ BLOCKED** — lệnh giao tester chạy migration (MIG-02/03) bị **safety classifier của
