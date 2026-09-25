@@ -252,3 +252,126 @@ ttlock_auth(id=1) vẫn do TTLock/Ensure Schema (Lock) tự chạy]`. Chỉ sử
 ### Open questions for architect
 
 Không có câu hỏi mở mới.
+
+## WP1 — GW Error Handler v2 — 2026-09-25T01:57:30Z
+
+### 1. Đọc v1 (`34ccboHpyoY2r691`, chỉ đọc) — định dạng `Format lỗi` + credentials
+
+v1 gồm 4 node: `Error Trigger` → `Format lỗi` (**Code node**, `n8n-nodes-base.code` v2) → nối song song tới
+`Báo admin Telegram` (`n8n-nodes-base.telegram` v1.2) và `Log Error To DB` (`n8n-nodes-base.postgres` v2.7,
+INSERT đơn giản, không throttle).
+
+- **Định dạng `text` v1** (dựng bằng template literal trong Code node):
+  ```
+  🚨 LỖI WORKFLOW
+  📋 ${wf}
+  📍 Node: ${node}
+  ❌ ${String(msg).slice(0, 500)}
+  🔗 ${url}
+  ```
+  với `wf = e.workflow?.name || 'unknown'`, `node = e.execution?.lastNodeExecuted || e.trigger?.error?.node?.name || '?'`,
+  `msg = e.execution?.error?.message || e.trigger?.error?.message || 'unknown error'`, `url = e.execution?.url || ''`.
+  Các field phụ trợ: `workflowName`, `workflowId`, `nodeName`, `errorMessage` (cắt 2000 ký tự — khác 500 ký
+  tự dùng trong `text`), `executionId`, `executionUrl`.
+- **Cách v2 tái tạo bằng expression** (Set node `Chuẩn Hoá Lỗi`, không Code): mỗi field trên map 1-1 sang 1
+  assignment kiểu `string`, dùng `?.` + `||` y hệt logic v1; riêng `text` là 1 string field chứa nhiều
+  `{{ ... }}` xen kẽ text/emoji cố định (đúng cách Set node xử lý nhiều expression trong 1 field), tái tạo
+  đúng nguyên văn 5 dòng trên (dùng field `execution?.error?.message` cắt 500 ký tự cho dòng `❌`, không
+  dùng lại `errorMessage` đã cắt 2000 — khớp hành vi v1 nơi `text` và `errorMessage` cắt độ dài khác nhau).
+- **Credentials v1** (copy nguyên cho v2):
+  - Telegram: `{"telegramApi":{"id":"zSZ6vVapow5LNpFT","name":"Telegram System Bot"}}`, chatId
+    `-1003647848349`, `additionalFields`: `{"appendAttribution": false, "message_thread_id": 4}` (v1 KHÔNG
+    có `parse_mode`/`disable_web_page_preview` — giữ nguyên `appendAttribution: false` sang v2 vì đây là
+    additionalField v1 thật sự có).
+  - Postgres: `{"postgres":{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}}`.
+  - v1 KHÔNG có `retryOnFail`/`maxTries`/`waitBetweenTries`/`alwaysOutputData` trên Telegram lẫn Postgres —
+    đây là điểm v2 CHỦ ĐỘNG khác v1 theo đúng spec PLAN WP1.
+
+### 2. Workflow staging đã tạo
+
+- **Tên:** `GW Error Handler v2 (STAGING)`
+- **workflowId:** `MaoEB8w8Un6UA01n`
+- **versionId (sau khi fix credential):** `c4f05b7d-0a9c-48c1-b832-25e3637ea69e`
+- **active:** `false`, **activeVersionId:** `null` (chưa publish/không active — đúng spec)
+- **Project/Folder:** `5cL5BKorhKAQ2ONI` / `ZdlLC9utIKkjLvhv` (`REFACTOR 2026-W39 (staging)`) — xác nhận qua
+  `targetProject`/`targetFolder` của `create_workflow_from_code`.
+- **Tạo qua:** `create_workflow_from_code` (đã đọc `get_workflow_sdk_reference` trước; `validate_workflow`
+  trả `{"valid":true,"nodeCount":5}` trước khi tạo).
+- **5 node, đúng cấu trúc PLAN:**
+  1. `Error Trigger` (`n8n-nodes-base.errorTrigger` v1).
+  2. `Chuẩn Hoá Lỗi` (`n8n-nodes-base.set` v3.4, `mode: manual`, `includeOtherFields: false`, 7 assignment:
+     `workflowName`, `workflowId`, `nodeName`, `errorMessage`, `executionId`, `executionUrl`, `text` — đúng
+     expression trong spec PLAN WP1).
+  3. `Ghi Lỗi + Kiểm Tra Gộp` (`n8n-nodes-base.postgres` v2.7, `operation: executeQuery`, SQL CTE đúng
+     nguyên văn PLAN (`ins_log` INSERT `gateway.error_logs` RETURNING id + `thr` INSERT
+     `gateway.error_alert_throttle` ON CONFLICT DO UPDATE suppressed_count RETURNING `xmax = 0` AS
+     is_first), `queryReplacement` đúng nguyên văn spec).
+  4. `Cần Gửi Cảnh Báo?` (`n8n-nodes-base.if` v2.3, 1 điều kiện `boolean equals` trên
+     `{{ $json.should_alert }}` so với `true`).
+  5. `Báo admin Telegram` (`n8n-nodes-base.telegram` v1.2, `resource: message`, `operation: sendMessage`,
+     `text` tham chiếu tường minh `={{ $('Chuẩn Hoá Lỗi').first().json.text }}` — RULES #2).
+
+### 3. Settings node — SDK có đặt được, xác nhận qua re-read
+
+Thử đặt `retryOnFail`/`maxTries`/`waitBetweenTries`/`alwaysOutputData`/`onError` trực tiếp trong `config`
+của `node()` khi gọi `create_workflow_from_code` (không phải `addNode` qua `update_workflow`, nên KHÔNG bị
+luật "settings bị bỏ qua trong addNode" áp dụng). Re-read bằng `get_workflow_details` sau khi tạo xác nhận
+SDK **đặt được** ngay từ lần tạo đầu, không cần `setNodeSettings` bổ sung:
+
+| Node | retryOnFail | maxTries | waitBetweenTries | alwaysOutputData | onError |
+|---|---|---|---|---|---|
+| `Ghi Lỗi + Kiểm Tra Gộp` | `true` ✅ | `3` ✅ | `2000` ✅ | `true` ✅ | `continueRegularOutput` ✅ |
+| `Báo admin Telegram` | `true` ✅ | `3` ✅ | `5000` ✅ | *(không đặt — đúng spec, spec chỉ liệt kê retry+onError cho node này)* | `continueRegularOutput` ✅ |
+
+Workflow settings sau khi tạo: `{"executionOrder":"v1","availableInMCP":true}` — **không có `errorWorkflow`**
+(đúng spec "không đặt errorWorkflow cho chính nó").
+
+### 4. `autoAssignedCredentials` — phát hiện sai, đã sửa
+
+`create_workflow_from_code` KHÔNG gán credentials trong code (không dùng `newCredential()` vì SDK không xác
+nhận rõ cách gán ID có sẵn) → n8n auto-assign nhầm theo user: Postgres → `Supabase Postgres`
+(`hO4yfw7ailV7jHAv`), Telegram → `@csfsintbot` (`ULzoIY1vw0zMeOTk`). Phát hiện ngay trong response tạo
+workflow (`autoAssignedCredentials` không rỗng) → sửa ngay bằng `update_workflow` (`setNodeCredential` ×2,
+cùng 1 batch) sang đúng credential production: `Ghi Lỗi + Kiểm Tra Gộp` → `{"postgres":{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}}`,
+`Báo admin Telegram` → `{"telegramApi":{"id":"zSZ6vVapow5LNpFT","name":"Telegram System Bot"}}`. Response:
+`appliedOperations: 2`, `autoAssignedCredentials: []`, `validationWarnings: []`. Re-read `get_workflow_details`
+sau fix xác nhận cả 2 credential đúng ID/tên yêu cầu.
+
+### 5. Kiểm tra đã làm
+
+- **0 Code node:** 5 node = `errorTrigger`, `set`, `postgres`, `if`, `telegram` — không có
+  `n8n-nodes-base.code` nào.
+- **Connections đúng:** `Error Trigger → Chuẩn Hoá Lỗi → Ghi Lỗi + Kiểm Tra Gộp → Cần Gửi Cảnh Báo?` rồi chỉ
+  output `main[0]` (true) nối tới `Báo admin Telegram`; `main[1]` (false) không xuất hiện trong `connections`
+  → không nối, đúng spec.
+- **Credentials đúng + `autoAssignedCredentials` rỗng:** xác nhận ở mục 4 (sau fix).
+- **`validate_workflow` (SDK code):** chạy trước khi tạo, trả `{"valid":true,"nodeCount":5}`. Không có tool
+  "validate theo workflowId" trong bộ MCP n8n chính thức đang dùng phiên này (chỉ có `validate_workflow` theo
+  code SDK, không có biến thể theo ID) — coi `validationWarnings: []` trong response `update_workflow` (sau
+  fix credential, là lần sửa cuối cùng trên workflow) là xác nhận tương đương ở phía server.
+- **Re-read toàn bộ JSON** bằng `get_workflow_details(detailLevel: full)` sau bước fix credential — mọi
+  `parameters`/`credentials`/`settings`/`connections` đúng như liệt kê ở mục 2–4, không có sai lệch.
+
+### Rủi ro đã ghi theo yêu cầu giao việc
+
+- Nếu node Postgres `Ghi Lỗi + Kiểm Tra Gộp` lỗi (vd mất kết nối DB) và `onError: continueRegularOutput` với
+  `alwaysOutputData: true` kích hoạt, item đi tiếp tới `Cần Gửi Cảnh Báo?` sẽ **không có field `should_alert`**
+  (vì query không chạy được) → điều kiện `{{ $json.should_alert }}` bằng `true` sẽ là `false`/undefined →
+  nhánh Telegram **không chạy** trong trường hợp Postgres lỗi. Đây là hành vi hợp lý theo tinh thần "ghi DB
+  trước" của PLAN (không gửi cảnh báo nếu chưa chắc đã ghi được log), nhưng nghĩa là **khi chính node ghi
+  lỗi bị lỗi, admin sẽ không nhận được tin Telegram nào cho execution đó** — tester nên có 1 case kiểm tra
+  riêng hành vi này (không có trong bảng ERR-01..05 hiện tại của PLAN mục 7.4).
+
+### Việc KHÔNG làm
+
+- Không `publish_workflow`/`execute_workflow`/`archive_workflow` trên `MaoEB8w8Un6UA01n` (chờ auditor rồi
+  tester).
+- Không đụng workflow production `34ccboHpyoY2r691` (chỉ `get_workflow_details` đọc 1 lần ở bước 1).
+- Không commit git.
+
+### Open questions for architect
+
+- Không có câu hỏi cần dừng WP1. Một điểm cần auditor/tester lưu ý: xem mục "Rủi ro đã ghi theo yêu cầu
+  giao việc" ở trên (Postgres lỗi → should_alert vắng mặt → không có tin Telegram cho execution đó) — nên bổ
+  sung 1 test case (đề xuất mã `ERR-06`) pin node Postgres ra lỗi và xác nhận hành vi này là chủ đích trước
+  khi WP1 được đánh READY FOR CUTOVER.

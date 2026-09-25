@@ -14,7 +14,7 @@
 | WP3 | GW Gateway v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ⬜ | ⬜ | ⬜ | CN 27/09 |
-| REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ⬜ | ⬜ | — |
+| REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ | ✅ | — |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ PASS · ❌ FAIL · ⛔ BLOCKED (ghi lý do ở mục 9).
 
@@ -457,6 +457,11 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   và kiểm tra `pg_stat_activity` trước khi chạy.
   ❓ **Câu hỏi cho user:** khi bỏ node `Ensure Schema (Lock)` khỏi TTLock sau này, seed
   `ttlock_auth(id=1)` nên chuyển đi đâu (migration riêng có INSERT, hay giữ trong TTLock)?
+- **~09:20 REG ✅** — 12/12 PASS, 1 PENDING (REG-VPS-06 MANUAL, CN). Vòng 1 (haiku) không dựng được
+  harness → vòng 2 giao tester chạy bằng model sonnet (quyết định Architect). REG-OCR-01 REAL: `data`
+  100.840 ký tự (exec 9248). 3 TEMP đã archive. Production không đổi. Bài học cho các test sau:
+  **pin data không chọn được output index** của node nhiều output → nhánh lỗi phải test bằng TEMP tái
+  hiện connection (như REG-OCR-04). Chi tiết: [TEST_REPORT.md](./TEST_REPORT.md).
 
 ## 10. Việc user cần làm trước cutover
 
