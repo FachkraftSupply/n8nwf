@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 (5 chờ WP2) | 🟨 | CN 27/09 |
-| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | 🟨 MIG-02 ✅ (user chạy tay) | 🟨 | đã chạy 25/09 16:32 |
+| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | 🟨 MIG-02 ✅ MIG-03 ✅ (user chạy tay), MIG-04 đêm 2 | 🟨 | đã chạy 25/09 16:32 + 17:34 |
 | WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 | ✅ READY FOR CUTOVER | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⏭ dời đêm 2 (quá time-box 06:00) | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⬜ | 🟨 | CN 27/09 |
@@ -557,6 +557,19 @@ Gateway v2 trong UI giống v1.
   song** vào PLAN.md và commit (240e820, b7707ce, 90f5d5b — không phải phiên này), gây trùng mục nhật ký
   và chạy test WP1 hai lần. Phiên này dừng giao việc mới từ 13:27 để tránh xung đột. User nên kiểm tra
   Scheduled tasks xem task có chạy 2 lần không.
+
+### Trả lời của user — 25/09/2026 ~17:40
+
+1. Máy + app Claude desktop để bật cho lượt đêm 2.
+2. **MIG-03** — user chạy lần 2. Kiểm chứng: exec `9880` (manual, 25/09 17:34:14 VN), `success`, 100ms
+   → idempotent ✅. Đêm 2 chỉ còn MIG-04 (kiểm `information_schema`, chỉ đọc).
+3. **Scheduled tasks** — chỉ có 2 task còn lại (đêm 2 + CN); không có bản trùng của night-build. Phiên
+   Architect ghi song song lúc 13:23–13:43 vì vậy không phải task chạy 2 lần (nhiều khả năng là phiên
+   bị nối lại sau rate limit). Đêm 2: pull trước mỗi lần ghi PLAN.md, dừng nếu thấy commit lạ < 5 phút.
+4. **binaryMode/timeSavedMode** — BỎ khỏi checklist. Giá trị v1 là `binaryMode:"separate"` (mặc định
+   của n8n, không có ô chỉnh trong UI) và `timeSavedMode:"fixed"` (chỉ dùng cho thống kê Insights "thời
+   gian tiết kiệm"). Gateway không có node binary → không ảnh hưởng gì. Không cần user làm.
+5. Cutover để CN làm, đúng mục 8.
 
 ## 10. Việc user cần làm trước cutover
 
