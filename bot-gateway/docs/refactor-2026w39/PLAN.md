@@ -8,7 +8,7 @@
 
 | WP | Nội dung | Build | Audit | Test | Trạng thái | Cutover |
 |---|---|---|---|---|---|---|
-| WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ⬜ | — |
+| WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ⬜ | ⬜ | ⬜ | ⬜ | chạy lúc 2h (chỉ additive) |
 | WP3 | GW Gateway v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
@@ -436,6 +436,19 @@ Cuối báo cáo: tổng số PASS/FAIL/PENDING theo WP; danh sách workflow TEM
 
 _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUDIT_REPORT/TEST_REPORT, và mọi
 ⛔ kèm câu hỏi cần user trả lời.)_
+
+### Đêm 1 — T6 25/09/2026
+
+- **Ghi chú khởi động:** lượt chạy `refactor-w39-night-build` bắt đầu muộn lúc **08:24** (không phải
+  02:05 — có thể máy ngủ/app đóng). Hệ quả: WP4 đã quá time-box 06:00 → không làm (dời sang đêm 2).
+  WP2 (DDL additive) chạy trong giờ có traffic: chấp nhận vì mọi câu DDL copy nguyên văn đang chạy ở
+  MỖI request production (F6) + 1 bảng mới — rủi ro khoá bằng hành vi hiện tại.
+- **08:35 WP0 ✅** — folder staging `ZdlLC9utIKkjLvhv`. 8 workflow production khớp mốc rollback mục 3
+  (không có bản nháp). Bổ sung: Full Reconcile `92611b33-57df-463c-910e-b00c24144dd9`, Interview
+  Evaluation `7199e254-a3ab-4b8a-a523-768a7b51e468`. TTLock có bản nháp (versionId ≠ activeVersionId) —
+  đúng D3. Corpus: 19 gateway (9 thật / 10 synthetic), 7 admin (5 thật / 2 synthetic), đã gitignore.
+  Lưu ý: toàn bộ test callback GW-07..11, GW-18 chạy trên dữ liệu synthetic (không có callback thật
+  cho các prefix này). Chi tiết: [BUILD_LOG.md](./BUILD_LOG.md).
 
 ## 10. Việc user cần làm trước cutover
 
