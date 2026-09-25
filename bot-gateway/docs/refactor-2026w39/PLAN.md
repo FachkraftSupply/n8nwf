@@ -11,8 +11,8 @@
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 (5 chờ WP2) | 🟨 | CN 27/09 |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⛔ | ⛔ | chạy lúc 2h (chỉ additive) |
-| WP3 | GW Gateway v2 | ✅ | ✅ | 🟨 (19/20 + GW-13 chạy lại) | 🟨 | CN 27/09 |
-| WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ (quá time-box, dời đêm 2) | tuần sau |
+| WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 | ✅ READY FOR CUTOVER | CN 27/09 |
+| WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⏭ dời đêm 2 (quá time-box 06:00) | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⬜ | 🟨 | CN 27/09 |
 | REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ | ✅ | — |
 
