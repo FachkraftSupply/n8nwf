@@ -477,6 +477,17 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   Audit #1 PASS (mô phỏng Router cũ/mới 25 case giống hệt). Việc cho user trước cutover: vào UI đặt
   `binaryMode`/`timeSavedMode` của v2 giống v1 (MCP không set được; không ảnh hưởng hành vi Gateway).
   Test DIFF đang chạy.
+- **09:2x–13:20 gián đoạn** — phiên hết quota (rate limit), tester WP3 bị ngắt giữa chừng, chưa ghi gì.
+  Tiếp tục lúc 13:21; tester WP3 được giao lại từ đầu.
+- **13:22 WP2 ⛔ BLOCKED (chạy migration)** — lệnh giao tester chạy `8XLg2q34VQq6IDx7` bị safety
+  classifier của Claude Code chặn (lý do: "Production Deploy"). Không lách. Hệ quả: WP1 chỉ test được
+  phần STATIC/PIN (ERR-03, ERR-04 tĩnh, ERR-06); ERR-01/02/04/05/07 PENDING vì cần bảng throttle.
+  ❓ **Câu hỏi cho user (cần trước đêm 2 / trước CN):** chọn 1 —
+  (a) tự bấm "Execute workflow" `DB Migrations (chạy tay) (STAGING)` trong n8n UI 2 lần (MIG-02/03),
+      rồi để đêm 2 kiểm MIG-04 + chạy test WP1; hoặc
+  (b) cấp quyền cho lượt đêm 2 chạy migration (thêm rule cho phép trong settings Claude Code); hoặc
+  (c) dời migration vào khung cutover CN có người trực.
+  Nên chạy ngoài giờ cao điểm (auditor: batch giữ khoá ACCESS EXCLUSIVE tới cuối transaction).
 - **09:30–13:20 tạm dừng** — hết hạn mức phiên Claude (rate limit); tester WP3 lượt 1 bị ngắt giữa chừng,
   chưa ghi báo cáo → chạy lại từ đầu lúc 13:21.
 - **13:22 WP2 test ⛔ BLOCKED** — lệnh giao tester chạy migration (MIG-02/03) bị **safety classifier của
