@@ -113,3 +113,36 @@ Risk notes (còn hiệu lực từ audit #1, không chặn):
 - DB lỗi + burst → mỗi lỗi 1 tin (fail-open, không throttle) → có thể 429 như v1; chấp nhận là chế độ suy giảm.
 - Dấu phẩy trong `queryReplacement` mảng: đúng về code path nhưng chỉ được xác nhận thực nghiệm qua ERR-07 — WP1 chưa được READY FOR CUTOVER nếu ERR-07 chưa PASS.
 - ERR-01..07 cần bảng `gateway.error_alert_throttle` (WP2) tồn tại trước.
+
+## WP3 — GW Gateway v2 — audit #1 — 2026-09-25T02:45:00Z
+VERDICT: PASS
+
+Nguồn: `get_workflow_details` live `hn0YZ85sXtfGACJ4` (versionId `dbc644d4-7c8a-44e5-90dd-ec18b9aab157`, `active:false`, 44 node) và `get_workflow_version` v1 `xmEKeIUnzxm2F7dF@180005b7-…` (48 node; trùng khớp 100% với bản live của v1). Diff bằng script riêng của auditor (python edge-set + node/key diff; node `vm` để evaluate jsCode v1 và mô phỏng Router), không dựa vào BUILD_LOG.
+
+| Check | Result | Evidence |
+|---|---|---|
+| S1 Clone parity (GW-S1) | ✅ | Chỉ v1 có: `Audit Log (Supabase)`, `Tạo pending user (Supabase)` (C1), `Ensure Pending Uploads Table` (C2), `GW-04b Merge Pending` (C4); chỉ v2 có: không. 40 node chung: type/typeVersion/parameters/credentials/onError/alwaysOutputData/retry giống hệt, trừ `⚙️ Config` (C3) và `GW-03 Router` jsCode (C4). Khác biệt ngoài C1–C4 chỉ là `webhookId` (12 node Telegram, chấp nhận) và `disabled:false` (v1, 2 node `Là Tin Nhắn Nhóm?`/`Ghi Log Tin Nhắn Nhóm`) → vắng mặt ở v2 = tương đương. Position không đổi. Edge chỉ-v1: 6 cạnh đều thuộc 4 node bị xoá; edge chỉ-v2: đúng 2 cạnh `Trạng thái user?[3]→GW-04 Check Pending Upload`, `GW-04 Check Pending Upload[0]→GW-03 Router`. Không có edge treo. |
+| S1 Webhook trigger | ✅ | `Telegram Trigger Gateway` v1 `webhookId 9e5cefc0-af9b-4e9f-87f1-c94a1a353073` → v2 `bc2ca2ac-cb2a-4925-aef9-ef115ee9903a`; 0/12 webhookId v2 trùng với v1 → không xung đột path khi cutover. Lưu ý: Telegram chỉ giữ 1 webhook/bot → runbook mục 8 đúng thứ tự (unpublish v1 TRƯỚC, publish v2 SAU); đảo thứ tự sẽ làm deleteWebhook của v1 xoá luôn webhook v2. |
+| C1 | ✅ | v1: `Audit Log (Supabase) | GwUFREmcXzXXj5mZ Postgres account`, `Tạo pending user (Supabase) | GwUFREmcXzXXj5mZ Postgres account` (Docker, không phải Supabase); cả 2 không có key trong `connections` (0 output) → nhánh cụt song song với `Audit Log (Docker)` / `Tạo pending user`. D4: `Approve/Deny … (Supabase)` vẫn còn với `hO4yfw7ailV7jHAv Supabase Postgres`. |
+| C2 | ✅ | v1 `Trạng thái user?` rules theo thứ tự `new,pending,denied,active` → output 3 = `outputKey:"active"` → `Ensure Pending Uploads Table`. v2 output 3 → `GW-04 Check Pending Upload`. JSON live: `{"alwaysOutputData": true, "onError": null}` (onError null giống v1). Query GW-04 dùng `$('GW-02b Merge Auth').first()` nên việc đổi node upstream không ảnh hưởng. |
+| C3 | ✅ | Set `n8n-nodes-base.set` v3.5, `mode:manual`, `includeOtherFields:false`, retry `[true,5,5000]` = v1. Evaluate jsCode v1 vs 4 assignment v2: `DEEP EQUAL: true`; kiểu thực tế `ADMIN_CHAT_ID string/string, AVAILABLE_BOTS array/array, COMMAND_MAP object/object, DEFAULT_BOT string/string` (GW-20 tĩnh PASS). Tham chiếu downstream: `Báo admin duyệt user`, `Báo Admin Cấp Quyền Lock` (`.ADMIN_CHAT_ID`), `GW-03 Router` (`cfg.COMMAND_MAP[...]`, `cfg.DEFAULT_BOT`); không có `JSON.parse` ở node nào. v3.5 = version mới nhất theo `get_node_types`; spec WP3 không ghim version (3.4 là của WP1) → chấp nhận. `validate_node_config` → `valid:true`. |
+| C4 | ✅ | jsCode diff đúng 1 hunk: `-const env = $input.first().json;` → +3 dòng spec, phần còn lại byte-identical. Đường tới Router duy nhất: `GW-02b → Trạng thái user?[3] → GW-04 → Router` ⇒ `GW-02b Merge Auth` luôn đã chạy. Logic v1 GW-04b (`filter(r => r && r.task_id)`, `rows[0]`/null, base từ GW-02b) giống hệt 3 dòng mới. Mô phỏng v1(GW-04b→Router) vs v2(Router) trên 5 envelope × 5 rowset (`[{}]` từ alwaysOutputData, 1 dòng, dòng thiếu task_id, 2 dòng, rỗng) → `equivalent cases: 25` (deepStrictEqual). Router chạy runOnceForAllItems → 1 item ra như v1. |
+| Workflow settings | ✅ | v2 `executionOrder:v1, errorWorkflow:34ccboHpyoY2r691, callerPolicy:workflowsFromSameOwner`. Thiếu `binaryMode:"separate"`, `timeSavedMode:"fixed"`: không có node nào tạo/tiêu thụ binary trong Gateway (Trigger không download, không node file) → không ảnh hưởng hành vi; `timeSavedMode` chỉ dùng cho Insights. Không blocking (xem risk note). |
+| R2 | ✅ | Node có upstream đổi: `GW-01 Envelope` đọc `$('Telegram Trigger Gateway').first()`, `GW-04` đọc `$('GW-02b Merge Auth').first()`, Router đọc `$('GW-02b…')` + `$input.all()` có chủ đích. |
+| R13 | ✅ | Switch output index 3 = rule thứ 4 `active`; các Switch/IF khác không đổi (edge-set). |
+| R18 | ✅ | GW-04 `alwaysOutputData:true` trên JSON live; `GW-02 Auth Lookup`, `Check admin`, `Tạo pending user` giữ `alwaysOutputData:true` như v1. |
+| R21/R23 | ✅ | `replyMarkup:"inlineKeyboard"` literal; credential Telegram không đổi so với v1 (`Báo admin duyệt user`=System Bot, `Báo Admin Cấp Quyền Lock`=Elite Clickupbot, như v1). |
+| R25 | ✅ | Credentials v2: `postgres GwUFREmcXzXXj5mZ ×8`, `postgres hO4yfw7ailV7jHAv ×2`, `telegramApi BHVAx8GV38yQEn1I ×10`, `telegramApi zSZ6vVapow5LNpFT ×2` — đều khớp PLAN §3, đều trùng node-by-node với v1. |
+| R14/R16/R24/R30/SQL | — / ✅ | Không có xoá tin, không `parameters.parameters`, không binary path, không LangChain; không SQL mới (chỉ bớt 1 DDL). |
+| V1 | ✅ | Không có validate theo workflowId; `validate_node_config` cho `⚙️ Config` (set 3.5), `GW-04` (postgres 2.7), Router head (code 2) → `{"valid":true}`; kiểm tĩnh edge/tên node không treo. |
+| V2 | ✅ | Disabled `→ Sub: Help Bot`/`→ Sub: Crawl Bot` và `REPLACE_HELP_BOT_ID`/`REPLACE_CRAWL_BOT_ID` có sẵn từ v1 — không do WP3 thêm. |
+| S2 | ✅ | `get_workflow_details` 25/09: Gateway `180005b7…`, Admin `53d44baa…`, Ảnh `435af575…`, Live Update `42cfa99b…`, Reader `4437fece…`, Error Handler `1a6b1d2a…`, Reconcile `92611b33…`, Interview `7199e254…` — `versionId==activeVersionId`, khớp WP0. D3: Blacklist `72efa72b…`, TTLock `84e951d2…`/active `f3062458…`, Rule Engine `9905e164…` — khớp WP0. |
+
+Blocking issues: không có.
+
+Risk notes:
+1. `binaryMode`/`timeSavedMode` vắng trên v2 — vô hại cho Gateway hiện tại, nhưng nên bật lại qua UI trước cutover để settings giống v1 100% (tránh khác biệt nếu sau này thêm node binary).
+2. Cutover: bắt buộc giữ thứ tự unpublish v1 → publish v2 (và ngược lại khi rollback); không bao giờ để 2 workflow cùng active trên bot Elite Clickupbot.
+3. `GW-04` không có `onError` (giống v1): DB lỗi → execution fail → errorWorkflow; parity, không đổi.
+4. Sticky note `📘 Ghi chú kiến trúc` vẫn nhắc `Audit Log (Supabase)` — cosmetic, cập nhật sau cutover.
+5. Tester vẫn phải chạy DIFF GW-01…GW-19 bằng pin data; audit này chỉ chứng minh tĩnh + mô phỏng logic Code.
