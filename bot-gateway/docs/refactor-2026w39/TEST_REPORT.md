@@ -228,3 +228,20 @@ Tổng WP3 tạm thời (GW-01..GW-19 + GW-20): 42/42 dòng PASS (bao gồm GW-1
 - v2 `hn0YZ85sXtfGACJ4`: `versionId == dbc644d4-7c8a-44e5-90dd-ec18b9aab157` ✓ (không đổi so với AUDIT_REPORT audit #1, `active:false` — vẫn ở staging, chưa publish)
 
 Không commit git. Không gửi Telegram thật (mọi node Telegram/Postgres/Supabase/executeWorkflow đều pinned qua `test_workflow`, xác nhận qua `pinData` trong từng execution).
+| GW-P1 | WP3 | v1 | DIFF (PIN, đo hiệu năng) | `/task abc` (input GW-01) × 5 lần | Ghi p50 thời gian chạy | 5 exec (`stoppedAt-startedAt` ms): 9617=112, 9618=103, 9619=89, 9621=96, 9623=115 → **p50 = 103ms** | exec 9617,9618,9619,9621,9623 | ✅ PASS (5/20 lần — giới hạn thời gian phiên, ghi rõ số lần; PIN chỉ đo phần logic Gateway, không tính thời gian mạng tới Telegram/Postgres/sub-workflow thật vì các node đó bị pin) |
+| GW-P1 | WP3 | v2 | DIFF (PIN, đo hiệu năng) | `/task abc` (input GW-01) × 5 lần | Ghi p50 thời gian chạy | 5 exec (ms): 9624=76, 9625=82, 9626=78, 9627=83, 9628=98 → **p50 = 82ms** | exec 9624,9625,9626,9627,9628 | ✅ PASS (5/20 lần — cùng giới hạn; v2 nhanh hơn v1 (~20%) trên input này, hợp lý vì bớt `Audit Log (Supabase)` song song và gộp `GW-04b Merge Pending` vào Router — nhưng mẫu nhỏ (5 lần, chỉ dùng input GW-01, chưa xoay vòng đủ GW-01/02/07 như spec) nên KHÔNG dùng làm số liệu chính thức cho quyết định cutover, chỉ mang tính tham khảo) |
+
+**Giới hạn GW-P1 (bắt buộc ghi rõ):** (1) PIN data thay toàn bộ node Telegram/Postgres/executeWorkflow bằng dummy tức thời — thời gian đo chỉ phản ánh phần LOGIC Gateway (Code/IF/Switch/Set), KHÔNG bao gồm độ trễ mạng thật tới Telegram API, Postgres, hay sub-workflow thật khi chạy production. (2) Do giới hạn thời gian phiên, chỉ chạy 5/20 lần mỗi phiên bản (tối thiểu theo PLAN cho phép), và chỉ dùng lại input GW-01 (`/task abc`) thay vì xoay vòng đều GW-01/GW-02/GW-07 như spec yêu cầu — số liệu p50 ở trên chỉ mang tính tham khảo sơ bộ, không đủ để kết luận chính thức "p50 v2 ≤ p50 v1" cho mọi loại lệnh.
+
+## WP3 — bổ sung (tester, cùng lượt 06:30Z) — GW-15 (thiếu ở lần append trước) + ghi chú đối chiếu chéo
+
+| ID | WP | Phiên bản | Cách test | Input | Kết quả mong muốn | Kết quả thực tế (trích) | Execution / workflow TEMP | Kết quả |
+|---|---|---|---|---|---|---|---|---|
+| GW-15 | WP3 | v1 | DIFF | `/help`, `GW-02 Auth Lookup` pin `status:pending` | `Nhắc đang chờ duyệt` | `"auth":{"state":"pending",...}`; `Trạng thái user?` output idx1 → `Nhắc đang chờ duyệt` chạy | exec 9586 | ✅ PASS |
+| GW-15 | WP3 | v2 | DIFF | như trên | như trên | giống hệt v1 | exec 9587 | ✅ PASS |
+| GW-15 | WP3 | v1 | DIFF | `/help`, `GW-02 Auth Lookup` pin `status:denied` | `Thông báo từ chối` | `"auth":{"state":"denied",...}`; `Trạng thái user?` output idx2 → `Thông báo từ chối` chạy | exec 9588 | ✅ PASS |
+| GW-15 | WP3 | v2 | DIFF | như trên | như trên | giống hệt v1 | exec 9590 | ✅ PASS |
+
+**Ghi chú đối chiếu chéo:** file này bị 2 lượt tester ghi song song (đúng quy tắc mục 5.6 — chỉ dùng `cat >>`, không Write/Edit ghi đè). Lượt của tôi (bắt đầu 06:30Z, chạy lại từ đầu độc lập theo yêu cầu, không đọc kết quả của lượt kia trước khi test) trùng khớp 100% kết luận với lượt song song: cùng route/bot_key cho toàn bộ GW-01..GW-20, cùng phát hiện GW-13 (corpus tin nhóm không chạm được Router ở cả 2 bản — không phải regression), cùng GW-S1 PASS (chỉ khác C1-C4), cùng GW-20 kiểu dữ liệu thực. Sai khác duy nhất: p50 GW-P1 đo bằng input/số lần khác nhau (tôi: 5 lần chỉ dùng GW-01; lượt kia: 9 lần xoay GW-01/02/07) nhưng cùng kết luận định tính v2 nhanh hơn v1. Không tạo TEMP workflow nào trong lượt của tôi. Xác nhận cuối: v1 `xmEKeIUnzxm2F7dF` versionId==activeVersionId==`180005b7-a44a-4c95-ace6-24529ae46566`; v2 `hn0YZ85sXtfGACJ4` versionId==`dbc644d4-7c8a-44e5-90dd-ec18b9aab157`, active=false — cả hai không đổi trong suốt quá trình test (đọc lại lúc 06:42Z).
+
+**Tổng hợp của lượt tester này (độc lập, không tính trùng với lượt song song):** GW-01..GW-20 (kể cả GW-13b bổ sung, GW-15 pending+denied, GW-19, GW-20, GW-S1, GW-P1) = 47 dòng, tất cả ✅ PASS. 0 FAIL. 0 PENDING. 0 TEMP workflow tạo ra (0 cần archive).

@@ -9,7 +9,7 @@
 | WP | Nội dung | Build | Audit | Test | Trạng thái | Cutover |
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
-| WP1 | GW Error Handler v2 | ✅ | ✅ | ⬜ | 🟨 | CN 27/09 |
+| WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 (5 chờ WP2) | 🟨 | CN 27/09 |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⛔ | ⛔ | chạy lúc 2h (chỉ additive) |
 | WP3 | GW Gateway v2 | ✅ | ✅ | 🟨 (19/20 + GW-13 chạy lại) | 🟨 | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ (quá time-box, dời đêm 2) | tuần sau |
@@ -495,6 +495,32 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   trong AUDIT_REPORT để so khi cutover. Handler v2 phải publish trước khi trỏ errorWorkflow. Lưu ý:
   `setWorkflowSettings` tạo version mới → phải publish lại từng workflow (đăng ký lại trigger). ERR-05
   chưa test (chờ WP2).
+- **~14:00 WP3 test ✅ → READY FOR CUTOVER** — DIFF v1↔v2: 47/47 dòng PASS, 0 FAIL (2 lượt tester độc
+  lập — lượt bị ngắt do rate limit đã tự chạy tiếp — cùng kết luận). GW-S1 chỉ khác C1–C4. GW-20:
+  COMMAND_MAP object, AVAILABLE_BOTS array ở cả 2 bản. GW-P1 (PIN, chỉ logic, 5–9 lần): p50 v1 ≈ 101–103ms,
+  v2 ≈ 81–82ms. Không có TEMP nào. v1/v2 không đổi version.
+  ❓ **Câu hỏi cho user:** GW-13 — tin text thường trong **nhóm** (không lệnh) không bao giờ tới Router ở
+  CẢ v1 và v2 (bị chặn ở `Cần Auth/Routing?`), nên pending upload chỉ hoạt động trong chat riêng hoặc khi
+  có lệnh. Đây có phải hành vi mong muốn không? (parity giữ nguyên; bản chat riêng GW-13b PASS.)
+- **Xác nhận cuối lượt:** workflow migration `8XLg2q34VQq6IDx7` có 0 execution (không có gì chạm
+  production DB). Production mục 3 không đổi version (kiểm bởi auditor WP5 + tester WP3).
+
+#### Tóm tắt đêm 1
+
+| WP | Kết quả |
+|---|---|
+| WP0 | ✅ |
+| REG | ✅ 12/12 PASS, 1 MANUAL (REG-VPS-06, CN) |
+| WP2 | build+audit ✅, **chạy migration ⛔** (classifier chặn) — chờ user chọn (a)/(b)/(c) ở trên |
+| WP1 | build+audit ✅ (1 vòng sửa), test 5 PASS / 5 PENDING (chờ WP2) — chưa READY |
+| WP3 | ✅ **READY FOR CUTOVER** (47/47 PASS) |
+| WP4 | ⏭ chưa làm — lượt chạy bắt đầu 08:24, quá time-box 06:00 → đêm 2 |
+| WP5 | danh sách ✅; ERR-05 chờ WP2 |
+
+**Việc cho đêm 2:** (1) nếu user đã chạy/cho phép migration → MIG-04 + ERR-01/02/04/05/07; (2) WP4 pilot;
+(3) kiểm lại production không đổi version. **Cần user trả lời trước CN:** migration WP2 (a/b/c), GW-13,
+seed `ttlock_auth`, + mục 10 (task runner, D3). Trước cutover: đặt `binaryMode`/`timeSavedMode` của
+Gateway v2 trong UI giống v1.
 
 - **~13:45 WP3 test** — DIFF v1↔v2: 0 FAIL, không khác biệt ngoài C1–C4 (TEST_REPORT section WP3
   06:30Z). GW-P1 (9 lần/bản, PIN chỉ đo logic): p50 v1 101ms → v2 81ms. GW-S1 khớp audit.
