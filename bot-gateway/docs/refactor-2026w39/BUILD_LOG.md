@@ -113,3 +113,142 @@ bắt buộc theo PLAN, chỉ liệt kê "nếu có").
      các test GW-07/08/09/10/11/18 ở WP3 sẽ chạy trên dữ liệu 100% synthetic, cấu trúc dựa theo 1 callback
      thật duy nhất tìm được (exec `3072`, workflow `xmEKeIUnzxm2F7dF`). Auditor nên xác nhận cấu trúc
      `callback_query` synthetic (đặc biệt `chat_instance`, `message.from` là bot) hợp lệ trước khi WP3 dùng.
+
+## WP2 — DB Migrations — 2026-09-25T01:47:06Z
+
+**CHỈ BUILD, KHÔNG CHẠY** — đúng yêu cầu giao việc. Không gọi `execute_workflow`/`publish_workflow` lần nào
+trên bất kỳ workflow nào (staging lẫn production) trong suốt WP này.
+
+### 1. Đọc nguyên văn 7 node DDL nguồn (chỉ đọc — `get_workflow_details`/`get_workflow_version`)
+
+Không có `update_workflow`/`publish_workflow`/... nào được gọi trên 4 workflow nguồn. Với TTLock
+(`vGgJ0XfTR3ltohPB`), đọc đúng **bản ACTIVE** (`get_workflow_version` với `versionId =
+f3062458-d905-421b-bf1b-82f4caab3255`, đúng `activeVersionId` ghi trong BUILD_LOG WP0) — KHÁC bản nháp
+hiện có `versionId = 84e951d2-bb41-43a9-a67e-3b0b0f42c38b` ("TẠM THỜI tắt giới hạn khung giờ mở khóa"),
+không đọc/đụng bản nháp đó, đúng D3.
+
+| # | Nguồn (workflow / node) | versionId đã đọc | sha256 query gốc |
+|---|---|---|---|
+| 1 | GW Gateway - Telegram (DEV) `xmEKeIUnzxm2F7dF` / `Ensure Pending Uploads Table` | `180005b7-a44a-4c95-ace6-24529ae46566` (active) | `09cf706ff723a0e10e06e154aea7550af004af4bcb8c94063453ff35922c53f` |
+| 2 | Telebot ClickUp Reader `9JJRrh36H2rLwtnu` / `Ensure Zalo Notify Column` | `4437fece-36da-4ccc-82fa-16e5330c7960` (active) | `acc263c4249c68ef58ab46fad139af4a6a0768fde4a4be80275bdb84ab70782` |
+| 3 | Telebot ClickUp Reader `9JJRrh36H2rLwtnu` / `Ensure Pending Upload Columns` | `4437fece-36da-4ccc-82fa-16e5330c7960` (active) | `0b3f224e80d3b29fc1769adb097879cf89f91b4e2ed1c1c3949451a62f59324` |
+| 4 | Telebot ClickUp Reader `9JJRrh36H2rLwtnu` / `Ensure Notify Queue Columns` | `4437fece-36da-4ccc-82fa-16e5330c7960` (active) | `820b656fdeadde7bff0f6ec34bd50d1d55b5e0da16dd6677b8eb54684f32887` |
+| 5 | Telebot Admin System `eWtu7Qs85Hes0HuP` / `Ensure Sync Table` | `53d44baa-8e4b-4dd4-8f78-fbcd970fe46f` (active) | `c9068d52c775848f2f4f4ac507028aaebb22e07d377c3cdbf30902174d08d73` |
+| 6 | Telebot Admin System `eWtu7Qs85Hes0HuP` / `Ensure Mention Tables (Admin)` | `53d44baa-8e4b-4dd4-8f78-fbcd970fe46f` (active) | `4ae413959a735652ccd5ddf1b11a5fec81d85b19c80796d6148addf7233e471` |
+| 7 | Telebot Lock (TTLock) `vGgJ0XfTR3ltohPB` / `Ensure Schema (Lock)` | `f3062458-d905-421b-bf1b-82f4caab3255` (**active**, KHÁC bản nháp `84e951d2-...`) | `94f9333b35f1670807d5308d508c643dbd827878105d75490c7a29aa6f56802` |
+
+Cả 4 workflow nguồn đều có `versionId == activeVersionId` (không có bản nháp mới phát sinh so với WP0),
+trừ TTLock vốn đã biết có bản nháp từ WP0 (đúng D3, không đụng). Toàn bộ 7 query gốc lưu nguyên văn trong
+scratchpad phiên này (`q1..q7_*.sql`), không commit vào repo.
+
+### 2. Workflow staging đã tạo
+
+- **Tên:** `DB Migrations (chạy tay) (STAGING)`
+- **workflowId:** `8XLg2q34VQq6IDx7`
+- **versionId (sau khi tạo):** `229467f0-d396-4aab-ae9b-83c3a3f0fd72`
+- **active:** `false`, **activeVersionId:** `null` (chưa publish — đúng yêu cầu "workflow không active")
+- **Project/Folder:** `5cL5BKorhKAQ2ONI` / `ZdlLC9utIKkjLvhv` (`REFACTOR 2026-W39 (staging)`) — xác nhận qua
+  `targetProject`/`targetFolder` trong response của `create_workflow_from_code`.
+- **Tạo qua:** `create_workflow_from_code` (đã đọc `get_workflow_sdk_reference` + `validate_workflow` trả
+  `{"valid":true,"nodeCount":2}` trước khi tạo).
+- **Cấu trúc:** `Manual Trigger` (`n8n-nodes-base.manualTrigger` v1) → `Chạy Toàn Bộ DDL Migrations`
+  (`n8n-nodes-base.postgres` v2.7, `operation: executeQuery`, `options: {}`, không dùng `queryReplacement`
+  vì cả 7 query gốc + khối mới đều không có tham số `$1`/expression n8n).
+- **Credential node Postgres:** `{"postgres":{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}}` — đúng
+  ID/tên yêu cầu, copy trực tiếp vào `addNode`/SDK (không dùng `newCredential()` để tránh rủi ro resolve
+  sai theo tên — RULES #25).
+- **`autoAssignedCredentials`:** `[]` (rỗng) trong response `create_workflow_from_code` — không có node nào
+  bị gán nhầm credential.
+- Query trong node gồm đúng 8 khối theo thứ tự PLAN: 7 khối copy nguyên văn (mỗi khối có comment
+  `-- [nguồn: <workflow> / <node>]` ngay phía trên, mỗi khối kết thúc bằng `;`) + 1 khối mới
+  `gateway.error_alert_throttle` (bảng + index, đúng nguyên văn SQL trong PLAN mục 6 WP2 mục 2).
+- **Không** `execute_workflow` workflow này ở bước nào.
+
+### 3. So khớp lại bằng script (đọc lại `get_workflow_details` sau khi tạo)
+
+Đọc lại `get_workflow_details(8XLg2q34VQq6IDx7)`, lưu `query` thực tế của node `Chạy Toàn Bộ DDL Migrations`
+ra file, chạy script Python so từng ký tự (bỏ qua đúng 1 dòng trắng ngăn cách giữa các khối mà builder chủ
+động thêm vào cho dễ đọc — không phải nội dung SQL) giữa mỗi khối trong workflow mới với file query gốc
+tương ứng (`q1..q7_*.sql`) đã lưu ở bước 1:
+
+| Khối | Khớp ký tự với nguồn? | Kết thúc bằng `;`? |
+|---|---|---|
+| 1. Gateway `Ensure Pending Uploads Table` | ✅ MATCH | ✅ |
+| 2. Reader `Ensure Zalo Notify Column` | ✅ MATCH | ✅ |
+| 3. Reader `Ensure Pending Upload Columns` | ✅ MATCH | ✅ |
+| 4. Reader `Ensure Notify Queue Columns` | ✅ MATCH | ✅ |
+| 5. Admin `Ensure Sync Table` | ✅ MATCH | ✅ |
+| 6. Admin `Ensure Mention Tables (Admin)` | ✅ MATCH | ✅ |
+| 7. TTLock `Ensure Schema (Lock)` (bản active) | ✅ MATCH | ✅ |
+
+Toàn bộ query field của node (bao gồm cả khối mới `gateway.error_alert_throttle`) cũng khớp 100% với bản
+dự định build cục bộ (`combined_ddl.sql`) — diff 0 dòng, sha256 hai bên giống hệt
+(`f4ff91a46286fd893e168a45f6a497437b0cd5ae9f520d02b9fb2491971bf6a5`).
+
+Credential đã xác nhận lại qua `get_workflow_details`: `{"postgres":{"id":"GwUFREmcXzXXj5mZ","name":"Postgres account"}}`
+— đúng như tạo, không bị ghi đè/auto-assign sai.
+
+### 4. Đối chiếu whitelist lệnh cho phép (PLAN mục 5.2, auditor sẽ xác nhận lại độc lập)
+
+- Khối 1, 5: `CREATE TABLE IF NOT EXISTS` — cho phép.
+- Khối 2, 3, 4: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` — cho phép.
+- Khối 6: 2× `CREATE TABLE IF NOT EXISTS` (viết trên 1 dòng, phân tách bằng `;` + khoảng trắng) — cho phép.
+- Khối mới (error_alert_throttle): `CREATE TABLE IF NOT EXISTS` + `CREATE INDEX IF NOT EXISTS` — cho phép.
+- **Khối 7 (TTLock `Ensure Schema (Lock)`) VI PHẠM whitelist**: ngoài 2 câu `CREATE TABLE IF NOT EXISTS`
+  hợp lệ, còn có 1 câu `INSERT INTO gateway.ttlock_auth (id) VALUES (1) ON CONFLICT (id) DO NOTHING;` —
+  **INSERT không nằm trong danh sách cho phép** (chỉ CREATE TABLE/ADD COLUMN/CREATE INDEX/CREATE SCHEMA
+  IF NOT EXISTS). Theo đúng chỉ đạo "KHÔNG tự sửa, ghi Open question và vẫn đưa vào nhưng đánh dấu" — đã
+  giữ nguyên văn 100%, đánh dấu tại đây và ở mục Open questions bên dưới. Không có tham số `$1`/expression
+  n8n nào trong bất kỳ khối nào trong số 7 khối (toàn bộ là SQL tĩnh) — không phát sinh trường hợp cần đánh
+  dấu "tham số/expression".
+
+### Việc KHÔNG làm (đúng luật an toàn mục 5 + chỉ đạo giao việc)
+
+- Không `execute_workflow` workflow staging vừa tạo (chờ auditor PASS trước, do Architect giao riêng).
+- Không `update_workflow`/`publish_workflow`/`unpublish_workflow`/`archive_workflow` trên bất kỳ workflow
+  production nào (Gateway, Reader, Admin, TTLock) — chỉ đọc.
+- Không sửa/viết lại bất kỳ câu SQL nào kể cả câu INSERT sai whitelist trong khối TTLock.
+- Không commit git.
+
+### Open questions for architect
+
+1. **Khối TTLock (`Ensure Schema (Lock)`) chứa 1 câu `INSERT` ngoài whitelist PLAN mục 5.2** (xem mục 4).
+   Câu INSERT này dùng `ON CONFLICT (id) DO NOTHING` nên về hành vi là idempotent/an toàn để chạy lại nhiều
+   lần, nhưng đây vẫn là **INSERT**, không phải 1 trong 4 loại lệnh được liệt kê rõ trong PLAN mục 5.2
+   (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `CREATE SCHEMA
+   IF NOT EXISTS`). Builder đã copy nguyên văn theo đúng chỉ đạo "copy NGUYÊN VĂN, không viết lại", KHÔNG
+   tự xoá dòng INSERT này. Architect/auditor cần quyết định: (a) chấp nhận chạy nguyên văn (rủi ro thấp vì
+   `ON CONFLICT DO NOTHING` + chỉ ghi 1 dòng cấu hình mặc định, không đụng dữ liệu người dùng), hay (b) yêu
+   cầu builder xoá dòng INSERT khỏi bản STAGING trước khi audit PASS.
+2. Không có câu hỏi mở nào khác — 4 workflow nguồn đều đọc được, không workflow nào phát sinh bản nháp mới
+   ngoài TTLock (đã biết từ WP0, đúng D3).
+
+## WP2 fix #1 — bỏ INSERT khỏi khối TTLock — 2026-09-25T01:49:20Z
+
+Architect quyết định Open question 1 (b): xoá câu `INSERT INTO gateway.ttlock_auth (id) VALUES (1) ON
+CONFLICT (id) DO NOTHING;` khỏi khối 7, thay bằng comment `-- [bỏ theo PLAN 5.2: INSERT seed
+ttlock_auth(id=1) vẫn do TTLock/Ensure Schema (Lock) tự chạy]`. Chỉ sửa workflow staging `8XLg2q34VQq6IDx7`
+— không đụng workflow TTLock production.
+
+- **Cách áp dụng:** theo RULES #16 — `removeNode` + `addNode` (cùng `id`
+  `09a700fa-9ac5-48ed-af0c-9634826ab025`, copy nguyên `parameters`/`credentials`/`position`, chỉ thay 1
+  dòng trong `query`) + `addConnection` lại `Manual Trigger → Chạy Toàn Bộ DDL Migrations`, cả 3 op trong
+  1 batch `update_workflow`. Response: `appliedOperations: 3`, `autoAssignedCredentials: []`,
+  `validationWarnings: []`.
+- **versionId mới:** `76f2cb7e-22d8-4a29-81da-e234b69a7825` (active vẫn `false`, `activeVersionId: null`).
+- **Re-read + so khớp bằng script** (`get_workflow_details` → so ký tự):
+  - Khối 1–6 (Gateway, Reader×3, Admin×2) và khối mới `gateway.error_alert_throttle`: **MATCH**, không đổi
+    1 ký tự nào so với BUILD_LOG gốc.
+  - Khối 7 (TTLock): **MATCH** với "bản gốc trừ đúng 1 dòng INSERT, thay bằng dòng comment" — không có sai
+    khác nào khác ngoài đúng thay đổi được yêu cầu (kiểm bằng diff toàn văn: chỉ 1 dòng khác giữa bản
+    trước/sau fix).
+  - sha256 toàn bộ `query` sau fix: `8aadb699e199e69bf0f10eb0651f8e9f3fdc8d18250e1e0e429f8954f0e5461e`.
+- **Credential:** đọc lại `get_workflow_details` — vẫn `{"postgres":{"id":"GwUFREmcXzXXj5mZ","name":"Postgres
+  account"}}`, `autoAssignedCredentials: []` (không có node nào bị gán nhầm).
+- **Connection:** `Manual Trigger → Chạy Toàn Bộ DDL Migrations` (index 0/0) — còn nguyên sau
+  `removeNode`+`addNode`.
+- **Không** `execute_workflow` workflow này ở bước nào của fix.
+
+### Open questions for architect
+
+Không có câu hỏi mở mới.

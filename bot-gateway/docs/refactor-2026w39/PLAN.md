@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
 | WP1 | GW Error Handler v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
-| WP2 | Workflow "DB Migrations (chạy tay)" | ⬜ | ⬜ | ⬜ | ⬜ | chạy lúc 2h (chỉ additive) |
+| WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ⬜ | 🟨 | chạy lúc 2h (chỉ additive) |
 | WP3 | GW Gateway v2 | ⬜ | ⬜ | ⬜ | ⬜ | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ⬜ | ⬜ | ⬜ | ⬜ | tuần sau |
 | WP5 | Gắn error workflow cho workflow còn thiếu | — | ⬜ | ⬜ | ⬜ | CN 27/09 |
@@ -449,6 +449,14 @@ _(Architect ghi sau mỗi WP: thời gian, kết quả, link tới BUILD_LOG/AUD
   đúng D3. Corpus: 19 gateway (9 thật / 10 synthetic), 7 admin (5 thật / 2 synthetic), đã gitignore.
   Lưu ý: toàn bộ test callback GW-07..11, GW-18 chạy trên dữ liệu synthetic (không có callback thật
   cho các prefix này). Chi tiết: [BUILD_LOG.md](./BUILD_LOG.md).
+- **08:53 WP2 build + audit ✅** — `DB Migrations (chạy tay) (STAGING)` `8XLg2q34VQq6IDx7`
+  (versionId `76f2cb7e-22d8-4a29-81da-e234b69a7825`). Quyết định Architect: bỏ câu
+  `INSERT INTO gateway.ttlock_auth ... ON CONFLICT DO NOTHING` của khối TTLock (không thuộc whitelist 5.2;
+  TTLock production vẫn tự seed). Audit #1 PASS: 22 câu, toàn bộ IF NOT EXISTS. Risk note auditor: cả
+  batch chạy trong 1 transaction → giữ khoá ACCESS EXCLUSIVE tới cuối → **dời MIG-02/03 ra sau 10:00**
+  và kiểm tra `pg_stat_activity` trước khi chạy.
+  ❓ **Câu hỏi cho user:** khi bỏ node `Ensure Schema (Lock)` khỏi TTLock sau này, seed
+  `ttlock_auth(id=1)` nên chuyển đi đâu (migration riêng có INSERT, hay giữ trong TTLock)?
 
 ## 10. Việc user cần làm trước cutover
 
