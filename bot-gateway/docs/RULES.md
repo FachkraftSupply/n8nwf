@@ -647,3 +647,70 @@ Việc audit `get_workflow_details` (kiểm connections/`onError`/credentials) v
 Thứ tự: Architect → builder → auditor → tester; FAIL → quay lại builder, tối đa 2 vòng. Mẫu áp dụng
 đầy đủ: `bot-gateway/docs/refactor-2026w39/PLAN.md`. Các sự cố đã gặp được giữ làm bộ test hồi quy
 (PLAN mục 7.2) — mỗi lần sửa workflow liên quan phải chạy lại.
+
+## 32. 🔴 n8n từ chối `errorWorkflow` trỏ tới 1 workflow CHƯA publish — thứ tự bắt buộc: publish handler trước, gắn `errorWorkflow` sau
+
+Xảy ra thật 26/09/2026 (refactor W39, WP1/WP5): định gắn `settings.errorWorkflow` của 7 workflow sang
+`GW Error Handler v2` trong khi handler v2 còn `active:false` (chưa publish lần nào) — n8n báo lỗi rõ
+ràng "has no published version", không cho lưu. Khác các lỗi khác trong file này (thường ÂM THẦM sai),
+đây là lỗi CÓ thông báo — nhưng vẫn đáng ghi vì dễ quên thứ tự khi làm nhiều workflow liên tiếp.
+
+**Quy tắc bắt buộc**: khi cutover 1 error handler mới, LUÔN `publish_workflow` chính handler đó TRƯỚC,
+rồi mới lần lượt gắn `errorWorkflow` cho các workflow dùng nó. Đưa bước "publish handler" thành bước 1
+tường minh trong mọi runbook cutover có gắn error workflow mới, không gộp chung với "gắn errorWorkflow"
+thành 1 bước.
+
+## 33. 🔴 Safety classifier của Claude Code chặn thao tác "chạm production thật" khi không có người trực — kể cả khi đã nằm trong kế hoạch được duyệt trước
+
+Xảy ra thật nhiều lần trong refactor W39 (đêm 1 + đêm 2, chạy tự động qua lịch): lệnh chạy 1 workflow
+migration DDL additive (đã audit PASS, đúng whitelist an toàn đã viết sẵn trong kế hoạch) bị chặn với lý
+do "Production Deploy"; lệnh publish 1 workflow TEMP có webhook để test error handler bị chặn với lý do
+"Modify Shared Resources". Cả 2 lần đều đúng theo kế hoạch đã viết, không phải agent tự ý làm — nhưng
+classifier vẫn chặn vì đang chạy không người trực (lịch tự động lúc 2h sáng).
+
+**Quy tắc bắt buộc**: khi lên kế hoạch cho 1 lượt chạy tự động (lịch/cron) có bất kỳ bước nào đụng tới
+dữ liệu production thật (chạy migration, publish workflow có webhook/trigger thật, gửi tin nhắn thật) —
+PHẢI giả định bước đó sẽ bị classifier chặn, và thiết kế sẵn phương án dự phòng: (a) để bước đó cho
+CHÍNH USER tự bấm trong n8n UI (không qua agent), hoặc (b) dời bước đó vào 1 lượt chạy CÓ người trực
+theo dõi (user xác nhận "tôi đang xem" trong chat), hoặc (c) chấp nhận dừng lại và ghi câu hỏi chờ user
+quyết định — không tự tìm cách lách. Việc bị chặn không phải lỗi kế hoạch, là giới hạn cố ý của công cụ.
+
+## 34. ⚠️ Nhiều phiên Claude Code (Architect) ghi cùng lúc vào 1 file kế hoạch dùng chung → mất/trùng nội dung, không có cảnh báo git
+
+Xảy ra thật 25/09/2026 (refactor W39, đêm 1): 1 phiên bị ngắt giữa chừng vì hết quota (rate limit),
+tưởng đã dừng hẳn nhưng thực ra tự nối lại sau đó — trong lúc đó 1 phiên KHÁC (do lịch tự động khởi
+động lại, hoặc user mở tay) cũng đang ghi vào CÙNG file `PLAN.md` và commit. Kết quả: mục nhật ký (mục 9)
+bị ghi trùng lặp, 1 số test (WP1) bị chạy 2 lần bởi 2 phiên khác nhau mà không phiên nào biết phiên kia
+tồn tại — chỉ phát hiện nhờ đọc lại lịch sử git thấy commit "lạ" không phải của phiên mình.
+
+**Quy tắc bắt buộc**: bất kỳ workflow nhiều-phiên (nhiều lượt chạy lịch tự động, hoặc 1 kế hoạch có thể
+được tiếp tục bởi phiên khác) nào dùng chung 1 file kế hoạch qua git — LUÔN `git pull` NGAY TRƯỚC mỗi
+lần ghi vào file đó (không chỉ 1 lần đầu phiên), và LUÔN kiểm tra commit gần nhất có phải do chính phiên
+mình tạo ra không (theo thời gian/nội dung) trước khi tiếp tục ghi đè. Thấy commit lạ xuất hiện trong
+vài phút gần đây mà không phải của mình → dừng giao việc mới, ghi rõ nghi ngờ có phiên khác đang chạy
+song song vào nhật ký, để user tự kiểm tra (vd xem danh sách lịch tự động có bị tạo trùng không) trước
+khi tiếp tục.
+
+## 35. ⚠️ `test_workflow`/pin data không mô phỏng được việc chọn OUTPUT INDEX của 1 node nhiều output — không test được nhánh lỗi bằng cách "pin ra lỗi"
+
+Xảy ra thật 25/09/2026 khi tester cố test nhánh lỗi của `Call Qwen OCR` (REG-OCR-04, node có
+`onError: continueErrorOutput` nên có 2 output) bằng cách pin dữ liệu "trông giống lỗi" cho node đó —
+`test_workflow` vẫn chạy node thật (không dùng được pin để ép 1 node rẽ sang output index khác), nên
+cách này không kiểm được nhánh lỗi.
+
+**Quy tắc bắt buộc**: muốn test hành vi của MỘT nhánh cụ thể trong số nhiều output của 1 node (lỗi vs
+thành công, hay bất kỳ IF/Switch nào không thể ép qua pin input), phải dựng 1 workflow TEMP tái hiện lại
+đúng đoạn kết nối đó (node giả lập đứng trước, nối đúng vào output index cần test), chạy `execute_workflow`
+thật, rồi archive — không cố dùng pin data để "giả lập lỗi" cho 1 node bình thường.
+
+## 36. ⚠️ Node Telegram trong workflow TEMP mới tạo bằng `create_workflow_from_code` có thể bị auto-assign nhầm credential khác bot — luôn xác nhận trước khi chạy, kể cả TEMP dùng 1 lần
+
+Xảy ra thật 26/09/2026 (refactor W39): tester tạo 1 workflow TEMP có node Telegram, dù đã truyền
+`credentials` tường minh trong lúc build, node vẫn bị gán nhầm sang bot `@csfsintbot` không liên quan —
+tương tự lỗi đã ghi ở RULES.md #25 nhưng lần này xảy ra với workflow TEMP (thường bị bỏ qua bước kiểm
+credential vì nghĩ "chỉ chạy 1 lần, không quan trọng"). Nếu không phát hiện trước khi chạy, hậu quả là
+gửi tin thật tới bot/chat sai.
+
+**Quy tắc bắt buộc**: kể cả với workflow TEMP dùng 1 lần rồi archive ngay, PHẢI đọc field
+`autoAssignedCredentials` trong response của lệnh tạo/sửa, VÀ gọi `get_workflow_details` xác nhận đúng
+credential trên node trước khi `execute_workflow` — không bỏ qua bước này chỉ vì workflow là tạm thời.

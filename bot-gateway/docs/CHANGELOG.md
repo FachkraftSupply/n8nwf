@@ -4,6 +4,83 @@ Ghi theo ngày, mới nhất lên trên. Chỉ ghi thay đổi có ý nghĩa (wo
 không ghi từng lần sửa lỗi vặt trong 1 phiên debug — xem chi tiết trong PROJECT_STATUS.md
 nếu cần.
 
+## 2026-09-25 → 26 — Refactor tuần 39: Gateway v2 + Error Handler v2 đã CUTOVER; Admin System pilot (staging)
+
+**Bối cảnh**: sau [`AUDIT_2026-09-24.md`](./refactor-2026w39/AUDIT_2026-09-24.md) (workflow báo lỗi hỏng
+43%, 5 workflow production không có error workflow, Gateway p50 1.54s, ghi log trùng 100%, DDL chạy mỗi
+request...), lên [`PLAN.md`](./refactor-2026w39/PLAN.md) theo mô hình Blue/Green: build bản `v2` trong
+staging, test song song với v1 bằng pin data (không đụng production), cutover thủ công có người trực.
+Quy trình 4 vai trò: **Architect** (lên kế hoạch/điều phối) → **builder** (Sonnet, build) → **auditor**
+(Opus + skill n8n, audit tĩnh) → **tester** (Haiku, chạy test thật). Chạy qua 2 lượt lịch tự động (đêm
+25/09 và 26/09) + 1 lượt cutover có user trực. Toàn bộ nhật ký, câu hỏi/trả lời, số liệu: xem
+[`PLAN.md`](./refactor-2026w39/PLAN.md) mục 9, [`BASELINE.md`](./refactor-2026w39/BASELINE.md)
+(số liệu trước/sau 7 ngày), `BUILD_LOG.md`/`AUDIT_REPORT.md`/`TEST_REPORT.md` (chi tiết build/audit/test).
+
+**✅ Đã CUTOVER thật (26/09/2026 ~20:26–21:11, sớm hơn kế hoạch — user quyết định làm luôn tối T7 thay vì
+đợi CN, vì WP1/WP3/WP5 đã READY và user có mặt):**
+
+- **`GW Error Handler v2`** (`MaoEB8w8Un6UA01n`) — thay `GW Error Handler` (`34ccboHpyoY2r691`, F1: hỏng
+  43% do burst lỗi làm Telegram 429 → mất luôn bước ghi DB). v2: không còn Code node (Set node thay
+  `Format lỗi`); ghi DB TRƯỚC bằng 1 câu SQL `INSERT ... ON CONFLICT` gộp cảnh báo trùng (cùng
+  workflow+node trong 1 phút chỉ gửi 1 tin, đếm dư vào `suppressed_count`); nếu chính bước ghi DB lỗi
+  (DB sập) vẫn gửi cảnh báo như v1 (không bị nuốt mất — sửa sau audit vòng 1). Test PROD-FAIL thật (Webhook
+  → cố ý lỗi → publish → gọi production thật): 10/10 PASS, kể cả burst 20 lỗi liên tiếp (đúng 2 tin trong
+  2 phút, 17 lỗi bị gộp) và lỗi có dấu phẩy/nháy trong message. **Gắn errorWorkflow (WP5)** cho 6 workflow
+  trước đó không có/dùng bản cũ: GW Gateway, SQL Full Reconcile, Interview Evaluation, Telebot ClickUp
+  Reader, Bot Xử Lý Ảnh, SQL Live Update, Telebot Admin System.
+- **`GW Gateway - Telegram v2 (STAGING)`** (`hn0YZ85sXtfGACJ4`) thay `GW Gateway - Telegram (DEV)`
+  (`xmEKeIUnzxm2F7dF`, nay `active:false`, giữ 14 ngày làm mốc rollback rồi archive). Build bằng cách
+  clone 100% JSON v1 (xác nhận bằng script diff) rồi áp đúng 4 thay đổi:
+  1. Bỏ `Audit Log (Supabase)` + `Tạo pending user (Supabase)` — cả 2 thực ra ghi trùng vào DB Docker
+     (F5, log bị đúp 100%: 2230 dòng / 1115 request thật).
+  2. Bỏ `Ensure Pending Uploads Table` (DDL chạy mỗi request — F6) — chuyển 1 lần vào workflow migration
+     mới (xem dưới).
+  3. `⚙️ Config` đổi từ Code node sang **Set node** (bớt 1 lượt qua task runner mỗi request).
+  4. Gộp `GW-04b Merge Pending` vào code của `GW-03 Router` (bớt 1 Code node).
+  Test DIFF (chạy song song v1/v2 cùng input, so từng node) 2 lượt: **47/47 PASS, 0 FAIL** cả 2 lượt
+  (25/09 và test lại 26/09) — hành vi định tuyến giống hệt v1 với 20 loại input (COMMAND_MAP, callback
+  prefix `odhelp_`/`odfwd_`/`imgai_`/`lockap:`/..., deep-link TTLock, quyền lock_bot, pending-upload,
+  audit log, tin nhóm+mention...). p50 đo qua PIN (chỉ đo phần logic, không đại diện latency mạng thật):
+  v1 ≈101-107ms → v2 ≈74-82ms.
+  **Cutover**: unpublish v1 → publish v2 (<10s). Smoke thật qua Telegram: `/tomtat`+ảnh (12.5s, ra đúng
+  bản tóm tắt), `/task`, `/start chitiet_...`, `/mokhoa` — 4/4 thành công. Theo dõi 30 phút: 0 lỗi.
+- **`DB Migrations (chạy tay)`** (`8XLg2q34VQq6IDx7`, staging, giữ lại vĩnh viễn) — gom TOÀN BỘ DDL
+  (copy nguyên văn, không viết lại) từ các node `Ensure ...` rải rác trong Gateway/Reader/Admin + 1 bảng
+  mới `gateway.error_alert_throttle` cho Error Handler v2. User tự bấm chạy tay trong n8n UI 2 lần (agent
+  bị safety classifier chặn chạy hộ, coi là "Production Deploy") — lần 2 xác nhận idempotent. Từ nay:
+  node `Ensure ...` chỉ bị xoá khỏi workflow nào có bản v2 (mới xong Gateway); các workflow khác vẫn giữ
+  nguyên cho tới khi có v2 riêng.
+
+**⏸ Chưa cutover, chỉ dừng ở staging (D6 — cố ý, đây là bản pilot, không phải bản đầy đủ):**
+
+- **`Admin v2 - Hệ thống (STAGING)`** (`bauK573MU18oRzKP`) — tách thử 1 domain của
+  `Telebot Admin System` (167 node, F10/F11: 15 node trùng với ClickUp Reader, 7 node `Check Admin (...)`
+  giống hệt nhau) thành sub-workflow riêng cho `/error_logs`, `/error_log_now`, `/version`, `/token`,
+  `/vps` (+ container). Mục đích: chứng minh contract "router → `Execute Workflow Trigger` (passthrough)"
+  hoạt động đúng trước khi tách toàn bộ. 15 tham chiếu `$('Phân tích lệnh')`/`$('⚙️ Config')` đã đổi sang
+  `$('Execute Workflow Trigger')` tương ứng (RULES #5/#10 — sub-workflow không thấy được node của
+  workflow cha). Test PIN 23/23 PASS, text/nút khớp v1 từng ký tự, 0 lần gọi Docker restart thật. **Chưa
+  có router v2 gọi tới sub-workflow này** — việc của tuần sau nếu quyết định tách toàn bộ.
+
+**Bài học mới, ghi vào RULES.md #32–#36** (xem file đó để đọc đầy đủ):
+- n8n **từ chối** đặt `errorWorkflow` trỏ tới 1 workflow chưa publish — phải publish handler trước.
+- Safety classifier của Claude Code chặn thao tác "chạy hộ 1 workflow production/staging tác động tới
+  DB thật" và "publish workflow có `errorWorkflow`/webhook trong lúc không có người trực" ngay cả khi
+  nằm trong kế hoạch đã duyệt trước — cần người thật bấm hoặc có mặt theo dõi.
+- 2 phiên Architect chạy song song (rate-limit khiến phiên bị nối lại, tưởng là phiên mới) từng ghi đè
+  nhau lên `PLAN.md` cùng lúc — luôn `git pull` trước mỗi lần ghi, dừng nếu thấy commit lạ.
+- `test_workflow`/pin data không chọn được output index của node nhiều output (không mô phỏng được
+  nhánh lỗi của 1 node) — phải dựng workflow TEMP tái hiện đúng connection để test nhánh đó.
+- Node Telegram trong workflow TEMP mới tạo có thể bị auto-assign nhầm credential (`@csfsintbot`) — luôn
+  kiểm `autoAssignedCredentials` + `get_workflow_details` trước khi chạy, kể cả với workflow TEMP dùng
+  1 lần.
+
+**Còn treo lại, chưa quyết định** (không nằm trong phạm vi cuối tuần này — D2): F7 (`DEFAULT_BOT` trỏ
+bot đã tắt, tin nhắn tự do bị im lặng), F8 (giữ hay bỏ Supabase mirror 9 node), F13 (dọn node chết/help
+text lỗi thời), F16 (không lưu execution thành công cho workflow poll tần suất cao), tách toàn bộ Admin
+System (chỉ mới pilot 1 domain), ERR-05 với `waitForSubWorkflow:true` (chưa test — có thể ra 2 cảnh báo
+cho 1 lỗi sub-workflow sau khi WP5 gắn errorWorkflow cho cả cha lẫn con).
+
 ## 2026-09-24 (tiếp x2) — Bug THỨ 2 từ đợt fix 23/09: mất text tóm tắt (không phải chỉ mất ảnh)
 
 **Bối cảnh**: user báo "vẫn chưa thấy gửi" sau khi tôi báo đã fix + redeliver xong (mục dưới). Kiểm

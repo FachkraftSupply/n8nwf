@@ -4,7 +4,34 @@
 > không cần đọc lại lịch sử debug dài của các phiên trước — file này chỉ giữ TRẠNG THÁI HIỆN TẠI,
 > không giữ tường thuật quá trình (tường thuật đầy đủ nằm ở `docs/CHANGELOG.md`, mới nhất lên trên).
 
-## 🔴 CẦN USER CHẠY 1 LỆNH ĐỂ HOÀN TẤT (23/09/2026) — Fix lỗi hàng loạt "Task runner unresponsive"
+## ✅ ĐÃ CUTOVER THẬT (26/09/2026 ~20:26-21:11) — Refactor tuần 39: Gateway v2 + Error Handler v2 đang chạy production
+
+**Đang live ngay bây giờ**: `GW Gateway - Telegram v2 (STAGING)` (`hn0YZ85sXtfGACJ4`) đã thay
+`GW Gateway - Telegram (DEV)` (`xmEKeIUnzxm2F7dF`, nay `active:false`, giữ làm mốc rollback). Đừng để
+tên "(STAGING)" làm nhầm — đây LÀ bản production hiện tại của Gateway, chỉ chưa kịp đổi tên (việc cần
+làm ở dưới). `GW Error Handler v2 (STAGING)` (`MaoEB8w8Un6UA01n`) đang là error handler thật cho: Gateway
+v2, SQL Full Reconcile, Interview Evaluation, Telebot ClickUp Reader, Bot Xử Lý Ảnh, SQL Live Update,
+Telebot Admin System (7 workflow, thay `GW Error Handler` `34ccboHpyoY2r691` cũ — cũ vẫn còn, không xoá).
+
+**Chi tiết đầy đủ** (bối cảnh, brainstorm, quyết định, build/audit/test, số liệu trước/sau, câu hỏi đã
+hỏi user): `CHANGELOG.md` mục 25→26/09/2026, và toàn bộ `bot-gateway/docs/refactor-2026w39/` (`PLAN.md`
+mục 0/8/9, `BASELINE.md`, `BUILD_LOG.md`, `AUDIT_REPORT.md`, `TEST_REPORT.md`). Bài học mới:
+`RULES.md` #32–#36.
+
+**Việc còn lại (không khẩn, dọn sau cutover)**:
+1. Đổi tên `xmEKeIUnzxm2F7dF` → `GW Gateway - Telegram (DEV) (v1 - RETIRED 26/09)`, giữ 14 ngày (tới
+   ~10/10/2026) rồi `archive_workflow`.
+2. Đổi tên `GW Gateway - Telegram v2 (STAGING)` bỏ chữ `(STAGING)` (nó đã là bản chính, không còn ở
+   staging nữa).
+3. Tắt task lịch `refactor-w39-cutover-prep` (CN 27/09 18:00) — không còn cần vì đã cutover sớm tối T7.
+4. Theo dõi `ERR-05` với `waitForSubWorkflow:true` — chưa test (chỉ test `false`); có thể 1 lỗi ở
+   sub-workflow (Reader/Ảnh) ra 2 cảnh báo (từ sub + từ Gateway cha) vì khác `workflowId` nên
+   throttle không gộp. Không chặn gì, chỉ cần biết nếu thấy cảnh báo trùng.
+5. Quyết định các việc đã hoãn lại lúc audit 24/09 (F7 DEFAULT_BOT im lặng, F8 Supabase mirror, F13 dọn
+   node chết/help text, F16 execution history) và có làm tiếp Admin System (mới pilot 1 domain
+   `Admin v2 - Hệ thống (STAGING)` `bauK573MU18oRzKP`, CHƯA có router v2, chưa cutover) hay không.
+
+## ✅ ĐÃ XONG (23/09/2026, xác nhận lại 25/09) — Fix lỗi hàng loạt "Task runner unresponsive"
 
 **Nguyên nhân đã xác nhận thật** (đọc log + source n8n đang chạy, không đoán): VPS đặt
 `N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: "15"` trong `/docker/n8n_stack/docker-compose.yml` (mặc định n8n
@@ -26,6 +53,10 @@ cd /docker/n8n_stack && docker compose up -d task-runners
 Lệnh này chỉ recreate riêng container `task-runners` (không đụng n8n/postgres), để nó đọc biến môi
 trường mới. Trước khi file `docker-compose.yml` được áp dụng lại bằng lệnh này, VPS vẫn đang chạy
 với timeout 15s cũ (retry ở mục trên vẫn có tác dụng giảm nhẹ, nhưng chưa hết gốc).
+
+**Cập nhật 25/09/2026**: user xác nhận đã chạy. Kiểm chứng gián tiếp (không SSH đọc trực tiếp được):
+từ 00:00 giờ VN 25/09 tới nay 0 execution error/crashed do "runner unresponsive" trên toàn instance,
+Live Update (trước đó lỗi 16%) chạy toàn `success`. Coi như đã xong.
 
 ## ⏳ ĐÃ BUILD + PUBLISH, CHỜ USER TEST THẬT (23/09/2026) — `/vps` xem chi tiết container + nút khởi động lại
 
