@@ -9,11 +9,11 @@
 | WP | Nội dung | Build | Audit | Test | Trạng thái | Cutover |
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
-| WP1 | GW Error Handler v2 | ✅ | ✅ | ✅ 10/10 (PROD-FAIL chạy 26/09 09:3x có user trực) | ✅ READY FOR CUTOVER | CN 27/09 |
+| WP1 | GW Error Handler v2 | ✅ | ✅ | ✅ 10/10 (PROD-FAIL chạy 26/09 09:3x có user trực) | ✅ ĐÃ CUTOVER 26/09 20:26 | T7 26/09 (dời sớm) |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ✅ MIG-01..04 (MIG-04 đêm 2: 26/26 object) | ✅ | đã chạy 25/09 16:32 + 17:34 |
-| WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 (đêm 2 test lại: 47/47) | ✅ READY FOR CUTOVER | CN 27/09 |
+| WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 (đêm 2 test lại: 47/47) | ✅ ĐÃ CUTOVER 26/09 ~20:33, smoke 4/4 | T7 26/09 (dời sớm) |
 | WP4 | Admin System v2 — pilot 1 domain | ✅ | ✅ | ✅ 23/23 (ADM-01..09) | ✅ pilot đạt (chỉ staging, không cutover) | tuần sau |
-| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ✅ ERR-05 | ✅ READY FOR CUTOVER (sau WP1 8.1.1) | CN 27/09 |
+| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ✅ ERR-05 | ✅ ĐÃ CUTOVER 26/09 20:31 | T7 26/09 (dời sớm) |
 | REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ (đêm 2: 11/11, VPS-06 MANUAL) | ✅ | — |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ PASS · ❌ FAIL · ⛔ BLOCKED (ghi lý do ở mục 9).
@@ -647,6 +647,33 @@ Gateway v2 trong UI giống v1.
 | WP1 | ✅ 10/10 READY FOR CUTOVER (PROD-FAIL chạy sáng 26/09, user trực) | ✅ theo mục 8.1 |
 | WP5 | ✅ READY (ERR-05 PASS) | ✅ theo mục 8.1.2 |
 | REG | ✅ 11/11 + VPS-06 MANUAL (CN) | smoke VPS-06 nếu muốn |
+
+### Cutover — T7 26/09/2026 (user quyết định làm sớm, user trực; user bấm UI, Architect kiểm)
+
+- **Pre-check 20:30** (chỉ đọc): 8 production đúng mốc rollback WP0; v2 staging đúng bản đã test; 0 execution
+  lỗi từ 00:00 26/09; Gateway 2 request/60 phút. Task runner: không đọc trực tiếp được (classifier chặn SSH
+  đọc) — gián tiếp OK (0 lỗi ~2 ngày).
+- **A1** Publish `GW Error Handler v2 (STAGING)` `MaoEB8w8Un6UA01n` → active, activeVersionId `4f7d5a4b…` ✅.
+- **A2** errorWorkflow = `MaoEB8w8Un6UA01n`, Publish, không có bản nháp trước khi đổi: Full Reconcile,
+  Interview Evaluation, ClickUp Reader, Bot Xử Lý Ảnh, Live Update, Admin System (Admin phải làm lại lần 2 —
+  lần 1 chưa lưu). activeVersionId cả 6 KHÔNG đổi (đổi settings không tạo version). UI tự thêm
+  `timeSavedMode:"fixed"` + `callerPolicy:"workflowsFromSameOwner"` cho Reader/Ảnh/Admin (giá trị mặc định,
+  không đổi hành vi).
+- **A3** Gateway v2 errorWorkflow → `MaoEB8w8Un6UA01n` (Save, versionId vẫn `dbc644d4…`); UI tự điền
+  `binaryMode:"separate"`, `timeSavedMode:"fixed"` → settings v2 giờ khớp v1.
+- **B** ~20:33: Unpublish v1 `xmEKeIUnzxm2F7dF` (mốc rollback `180005b7…`) → Publish v2 `hn0YZ85sXtfGACJ4`
+  (activeVersionId `dbc644d4…`) ✅.
+- **Smoke 4/4 ✅** (tất cả qua v2, success, 0 lỗi):
+  `/tomtat`+ảnh (user tự gửi trong nhóm 20:34 — Gateway v2 exec 11449 → Ảnh 11450, 12,5s, bản tóm tắt gửi đủ);
+  `/task Nguyen` (Architect, chat riêng qua Telegram Web — v2 11455 → Reader 11456, trả 10 kết quả);
+  `/start chitiet_z9088250du` (v2 11457 → Reader 11458, ra chi tiết task); `/mokhoa` (v2 11459 → TTLock 11460).
+  Ghi chú: 1 lần `/start` thừa lúc mở chat (v2 11453, success); 1 reaction ❤️ vô tình trên tin bot (vô hại).
+  Quan sát (có từ trước, không phải do refactor): chi tiết task hiển thị thô thẻ `<b>` trong phần Mô tả.
+- **Rollback nếu cần:** Unpublish v2 → Publish v1 (Gateway); errorWorkflow về `34ccboHpyoY2r691` cho Full
+  Reconcile/Interview/Live Update, để trống cho Reader/Ảnh/Admin.
+- Còn lại: theo dõi 30 phút (tới ~21:05); sau đó đổi tên v1 → `GW Gateway - Telegram (DEV) (v1 - RETIRED
+  26/09)`, giữ 14 ngày; điền BASELINE.md cột "Sau 30 phút"; task `refactor-w39-cutover-prep` CN 18:00 giờ
+  không còn cần (có thể tắt).
 
 ## 10. Việc user cần làm trước cutover
 
