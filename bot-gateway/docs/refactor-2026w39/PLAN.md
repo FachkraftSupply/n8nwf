@@ -671,7 +671,11 @@ Gateway v2 trong UI giống v1.
   Quan sát (có từ trước, không phải do refactor): chi tiết task hiển thị thô thẻ `<b>` trong phần Mô tả.
 - **Rollback nếu cần:** Unpublish v2 → Publish v1 (Gateway); errorWorkflow về `34ccboHpyoY2r691` cho Full
   Reconcile/Interview/Live Update, để trống cho Reader/Ảnh/Admin.
-- Còn lại: theo dõi 30 phút (tới ~21:05); sau đó đổi tên v1 → `GW Gateway - Telegram (DEV) (v1 - RETIRED
+- **21:11 Theo dõi 30 phút ✅ GO (không rollback):** Gateway v2 5 execution (11449, 11453, 11455, 11457,
+  11459), 5/5 success, thời gian 147–178 ms (p50 ≈ 154 ms, chỉ 5 mẫu, phần lớn là smoke); 0 execution
+  error/crashed trên toàn instance từ 20:00; handler v2 `MaoEB8w8Un6UA01n` 0 execution (không có lỗi nào
+  để bắt — đúng kỳ vọng). v2 vẫn active @ `dbc644d4…`, errorWorkflow = handler v2.
+- Còn lại (sau 30 phút): sau đó đổi tên v1 → `GW Gateway - Telegram (DEV) (v1 - RETIRED
   26/09)`, giữ 14 ngày; điền BASELINE.md cột "Sau 30 phút"; task `refactor-w39-cutover-prep` CN 18:00 giờ
   không còn cần (có thể tắt).
 
