@@ -417,24 +417,38 @@ Cuối báo cáo: tổng số PASS/FAIL/PENDING theo WP; danh sách workflow TEM
 
 ## 8. Runbook cutover — Chủ nhật 27/09/2026, 19:00–22:00 giờ VN (có người trực)
 
-**Điều kiện:** WP tương ứng "READY FOR CUTOVER"; user đã chạy lệnh ở mục 10 (task runner).
+**Điều kiện:** WP tương ứng "READY FOR CUTOVER"; user đã chạy lệnh ở mục 10 (task runner — user xác nhận
+26/09). **Cập nhật 26/09 (chốt với user):** user bấm trên n8n UI (agent bị classifier chặn publish production);
+Architect kiểm `versionId == activeVersionId` TRƯỚC mỗi bước và đọc lại settings SAU mỗi bước; Architect làm
+smoke Telegram qua Claude in Chrome (Telegram Web đã đăng nhập, CHỈ chat riêng với bot, không gửi vào nhóm).
+Số liệu so sánh: [BASELINE.md](./BASELINE.md).
 
-1. **WP1 + WP5 (error handler):**
-   1. Publish `GW Error Handler v2`.
-   2. Lần lượt đổi `errorWorkflow` các workflow ở WP5 → v2 (mỗi workflow: kiểm `versionId ==
-      activeVersionId` → `setWorkflowSettings` → `publish_workflow`).
-   3. Smoke: chạy lại ERR-01 bằng harness → thấy 1 tin ở topic lỗi.
-   4. **Rollback:** đổi `errorWorkflow` về `34ccboHpyoY2r691`, publish.
-2. **WP3 (Gateway):**
-   1. Ghi `activeVersionId` hiện tại của v1.
-   2. `unpublish_workflow` v1 → `publish_workflow` v2 (Telegram trigger đăng ký lại webhook cho bot
-      Elite Clickupbot). Khoảng trống giữa 2 bước < 10 giây.
-   3. Smoke (admin tự gõ từ tài khoản của mình): `/task <từ khoá>`, `/tomtat` + ảnh, bấm 1 nút có sẵn
-      từ tin cũ (vd `chitiet_`), `/mokhoa` ở chat riêng (mong đợi: báo chưa có quyền hoặc danh sách).
-   4. Theo dõi 30 phút: `search_workflow_executions` cho v2 — 0 lỗi; p50 ≤ p50 v1.
-   5. **Rollback (bất kỳ lỗi nào trong 30 phút / người dùng báo):** `unpublish_workflow` v2 →
-      `publish_workflow` v1. Không cần sửa gì khác (sub-workflow không đổi).
-3. Sau cutover: đổi tên v1 thành `... (v1 - RETIRED 27/09)`, giữ 14 ngày rồi mới archive.
+1. **Phần A — WP1 + WP5 (error handler):**
+   1. UI: mở `GW Error Handler v2 (STAGING)` `MaoEB8w8Un6UA01n` → **Publish**. Kiểm `activeVersionId ==
+      4f7d5a4b…`. **BẮT BUỘC trước bước 2** — n8n từ chối errorWorkflow trỏ tới workflow chưa publish (ERR-01 đêm 2).
+   2. Lần lượt (ít rủi ro trước): Full Reconcile `G1R0okF0rUziySu9` → Interview Evaluation `oF4IWJf6Yad2wF5G`
+      → Reader `9JJRrh36H2rLwtnu` → Bot Ảnh `6I4MnJiJCiv2JOIr` → Live Update `uqTqjtHYieotPZuc` → Admin
+      `eWtu7Qs85Hes0HuP`. Mỗi workflow: Architect kiểm không có bản nháp → UI **⋯ → Settings → Error workflow =
+      GW Error Handler v2 (STAGING)** → Save → **Publish** → Architect đọc lại: settings khác (`binaryMode`,
+      `timeSavedMode`, `callerPolicy`) không đổi so với bảng AUDIT_REPORT WP5; ghi activeVersionId mới vào BUILD_LOG.
+   3. **Gateway: KHÔNG sửa v1.** Đặt Error workflow = v2 trên **Gateway v2** `hn0YZ85sXtfGACJ4` (Save, CHƯA
+      publish); Architect diff version để chắc chỉ đổi settings.
+   4. Smoke: không bắt buộc (ERR-01/02/05/07 đã PASS sáng 26/09). Lỗi thật đầu tiên sau cutover phải hiện ở
+      topic lỗi + `gateway.error_logs`.
+   5. **Rollback:** Error workflow về `GW Error Handler` cho Full Reconcile, Interview, Live Update; để trống cho
+      Reader, Ảnh, Admin; Publish từng cái.
+2. **Phần B — WP3 (Gateway):**
+   1. Architect ghi `activeVersionId` hiện tại của v1 (mốc `180005b7…`).
+   2. Mở sẵn 2 tab UI: v1 `GW Gateway - Telegram (DEV)` và v2 `GW Gateway - Telegram v2 (STAGING)`.
+   3. Tab v1 **Unpublish** → NGAY SAU tab v2 **Publish** (< 10 giây). Thứ tự bắt buộc: đảo lại thì
+      deleteWebhook của v1 xoá luôn webhook v2.
+   4. Smoke (Architect qua Telegram Web, chat riêng với bot Elite Clickupbot): `/task <từ khoá>`, `/tomtat` +
+      ảnh, bấm 1 nút `chitiet_` ở tin cũ, `/mokhoa`. Mỗi lệnh: kiểm execution v2 `success` + bot trả lời đúng.
+   5. Theo dõi 30 phút: 0 execution lỗi v2 + smoke 4/4. (p50 trong 30 phút gần như không có mẫu vì khung 0
+      traffic — so p50 ở mốc 24h/7 ngày theo BASELINE.md.)
+   6. **Rollback (bất kỳ lỗi nào / người dùng báo):** Unpublish v2 → Publish v1. Không cần sửa gì khác.
+3. Sau cutover: đổi tên v1 thành `... (v1 - RETIRED 27/09)`, giữ 14 ngày rồi mới archive. Điền cột "Sau 30
+   phút" trong BASELINE.md ngay; "Sau 24 giờ" tối 28/09; "Sau 7 ngày" 04/10.
 
 ## 9. Nhật ký lượt chạy + câu hỏi chờ user
 
