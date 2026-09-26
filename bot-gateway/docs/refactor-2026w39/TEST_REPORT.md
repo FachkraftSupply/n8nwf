@@ -502,3 +502,89 @@ ADM-09a/b=`token`/`error_logs` từ chat không phải admin (bổ sung theo yê
   v1 `eWtu7Qs85Hes0HuP` `versionId==activeVersionId` không đổi = `53d44baa-8e4b-4dd4-8f78-fbcd970fe46f`.
   Không có bước nào bị safety/permission classifier từ chối trong lượt test này.
 - Không commit git (theo yêu cầu).
+
+## Đêm 2 — WP1 PROD-FAIL + ERR-05 (user có mặt) — 2026-09-26T02:45:35Z
+
+Bối cảnh: user trả lời trong chat ~02:55 26/09 (ghi ở PLAN.md mục 9 đêm 2) "A chạy luôn để tôi xem" →
+cho phép chạy ngay các test PROD-FAIL của WP1 + ERR-05 với user đang trực, không đợi CN. Trước khi bắt
+đầu: xác nhận `MaoEB8w8Un6UA01n` (`GW Error Handler v2 (STAGING)`) `versionId=4f7d5a4b-c6e3-436a-be87-b85793b039bf`
+khớp mốc yêu cầu, `active:false, activeVersionId:null` (CHƯA publish) — đúng như đặc tả. Xác nhận production
+`34ccboHpyoY2r691` (`GW Error Handler` v1) `versionId==activeVersionId==1a6b1d2a-2ff8-4cf0-ae59-9ae3e978a183`
+không đổi trước khi bắt đầu.
+
+**Handler v2 chưa publish có chạy không: KHÔNG — và không thể thử theo cách gián tiếp (search_workflow_executions)
+vì n8n chặn NGAY TỪ BƯỚC WIRE.** Khi gọi `update_workflow` để đặt `settings.errorWorkflow=MaoEB8w8Un6UA01n`
+trên harness TEMP lúc handler v2 còn `active:false`, n8n trả lỗi cứng và KHÔNG áp dụng thay đổi:
+`"Error workflow 'GW Error Handler v2 (STAGING)' (MaoEB8w8Un6UA01n) has no published version, so n8n
+cannot run it when this workflow fails. Publish that workflow first (publish_workflow), then set it as
+the error workflow."` → không có cách nào tạo liên kết `errorWorkflow` tới một workflow chưa publish, nên
+không có execution nào để tìm. Đã `publish_workflow(MaoEB8w8Un6UA01n)` → `activeVersionId` trả về đúng
+`4f7d5a4b-c6e3-436a-be87-b85793b039bf` (staging, không workflow production nào trỏ tới → 0 tác động
+production, đúng mục 5 luật an toàn) → sau đó set `errorWorkflow` thành công.
+
+**Harness 1** (PLAN 7.4): `TEMP - Cố Ý Lỗi (xoá sau khi dùng)` (`NugEDgI1jRfhRXYi`, folder `ZdlLC9utIKkjLvhv`,
+project `5cL5BKorhKAQ2ONI`) — Webhook (POST `temp-wp1-coy-loi`) → Code `Cố Ý Lỗi`
+(`throw new Error('TEST WP1 ' + $json.body.n)`), `settings.errorWorkflow=MaoEB8w8Un6UA01n`, published
+(`activeVersionId=92bdc009-1528-49c7-be07-978c95893deb`). Gọi bằng `execute_workflow` mode `production`.
+
+| ID | WP | Phiên bản | Cách test | Input | Kết quả mong muốn | Kết quả thực tế (trích) | Execution / workflow TEMP | Kết quả |
+|---|---|---|---|---|---|---|---|---|
+| ERR-01 | WP1 | v2 staging | PROD-FAIL | `n="ERR-01"` qua harness Webhook | 1 execution handler `success`; `error_logs` +1 dòng; đúng 1 tin topic lỗi admin | exec cha `10860` status `error` (đúng, cố ý lỗi) → exec handler `10861` status `success`; node `Ghi Lỗi + Kiểm Tra Gộp` = `{"log_id":57,"should_alert":true}`; node `Báo admin Telegram` = `{"ok":true,"result":{"message_id":10794,"chat":{"id":-1003647848349},"message_thread_id":4,...}}` | harness `NugEDgI1jRfhRXYi` exec `10860`; handler `MaoEB8w8Un6UA01n` exec `10861` | ✅ PASS |
+| ERR-04 (runtime) | WP1 | v2 staging | PROD-FAIL | (cùng lần chạy ERR-01, execution thật) | Node Postgres chạy trước node Telegram trong runData thật | exec `10861`: `Ghi Lỗi + Kiểm Tra Gộp.startTime=1790390008850` (`executionIndex:2`) **<** `Báo admin Telegram.startTime=1790390009095` (`executionIndex:4`) | handler exec `10861` | ✅ PASS |
+| ERR-07 | WP1 | v2 staging | PROD-FAIL | `n = a, b 'c' "d"` qua harness Webhook | Dòng `error_logs` có `error_message` nguyên vẹn, 6 cột đúng vị trí | exec cha `10862` error → exec handler `10863` success, `Ghi Lỗi + Kiểm Tra Gộp`=`{"log_id":58,"should_alert":false}` (đúng — cùng bucket phút `202609260233` với ERR-01, KHÔNG phải fail, xem ERR-02). SELECT chỉ-đọc (TEMP `FruIeLld7FbC9DKD`, exec `10907`) hàng `id=58`: `workflow_name="TEMP - Cố Ý Lỗi (xoá sau khi dùng)"`, `workflow_id="NugEDgI1jRfhRXYi"`, `node_name="Cố Ý Lỗi"`, `error_message="TEST WP1 a, b 'c' \"d\" [line 1]"` (dấu phẩy + 2 loại nháy giữ nguyên vẹn), `execution_id="10862"` — 6 cột đúng thứ tự, đúng vị trí | harness exec `10862`; handler exec `10863`; SELECT qua TEMP `FruIeLld7FbC9DKD` exec `10907` | ✅ PASS |
+| ERR-02 | WP1 | v2 staging | PROD-FAIL (burst 20 lần) | 20 lệnh gọi liên tiếp `n=ERR02-01..20` (thực tế cách nhau ~2s do tool tuần tự hoá, tổng 02:35:21.153Z → 02:36:02.413Z = 41s, băng qua ranh giới phút 02:35→02:36) | 20 dòng `error_logs`; ≤1 tin Telegram/phút; 0 execution handler lỗi; `suppressed_count`=số lần bị gộp | 20/20 harness exec `error` (cố ý) → 20/20 handler exec `success` (0 lỗi). `log_id` 59–78 (20 dòng, xác nhận bằng SELECT). `should_alert:true` đúng 2 lần: `log_id=59` (exec handler `10866`, phút `202609260235`, Telegram `message_id:10795`) và `log_id=77` (exec handler `10903`, phút `202609260236`, Telegram `message_id:10796`) — **đúng 2 tin, mỗi phút 1 tin**; 18 lần còn lại (`log_id` 60-76, 78) `should_alert:false`, KHÔNG có node `Báo admin Telegram` trong runData. SELECT chỉ-đọc bảng `gateway.error_alert_throttle` (TEMP `FruIeLld7FbC9DKD` exec `10907`): bucket `NugEDgI1jRfhRXYi\|Cố Ý Lỗi\|202609260233` (từ ERR-01/07) `suppressed_count=1`; bucket `...\|202609260235` `suppressed_count=17` (khớp đúng 17 lần `should_alert:false` trong phút 02:35: log 60-76); bucket `...\|202609260236` `suppressed_count=1` (khớp đúng 1 lần `should_alert:false` trong phút 02:36: log 78) | harness exec `10865,10868,10870,...,10904` (20 exec); handler exec `10866,10869,10871,...,10905` (20 exec, tất cả `success`); SELECT qua TEMP `FruIeLld7FbC9DKD` exec `10907` | ✅ PASS |
+
+**Harness 2 (ERR-05)**: cha `TEMP - ERR-05 Parent (xoa sau khi dung)` (`xhQRyn2Rq0aXFQVh`) = Webhook (POST
+`temp-err05-parent`) → `Execute Sub (ERR-05)` (Execute Sub-workflow, `source:"database"`, `workflowId=7bP8YZLy3l8JPd6G`,
+`options.waitForSubWorkflow:false`); sub `TEMP - ERR-05 Sub (xoa sau khi dung)` (`7bP8YZLy3l8JPd6G`) =
+Execute Workflow Trigger (`inputSource:"passthrough"`) → Code `Sub Co Y Loi` (`throw new Error('TEST ERR-05 SUB')`).
+**Cả cha và sub đều có `settings.errorWorkflow=MaoEB8w8Un6UA01n`** (publish sub trước vì n8n chặn publish cha
+khi sub tham chiếu chưa publish: `"Cannot publish workflow: Node \"Execute Sub (ERR-05)\" references
+workflow 7bP8YZLy3l8JPd6G ... which is not published"`).
+
+| ID | WP | Phiên bản | Cách test | Input | Kết quả mong muốn | Kết quả thực tế (trích) | Execution / workflow TEMP | Kết quả |
+|---|---|---|---|---|---|---|---|---|
+| ERR-05 | WP1+WP5 | v2 staging | PROD-FAIL (harness 2 tầng) | Webhook cha (`n="ERR-05"`) → Execute Sub-workflow (`waitForSubWorkflow:false`) → sub cố ý lỗi | Ghi rõ CÓ/KHÔNG: handler nhận lỗi của sub? của cha? → có báo đôi không? | **Handler nhận lỗi của SUB: CÓ.** Đúng 1 execution handler (`10914`, `status:success`), `parentExecution.workflowId=7bP8YZLy3l8JPd6G` (sub); `Chuẩn Hoá Lỗi.workflowName="TEMP - ERR-05 Sub (xoa sau khi dung)"`, `workflowId="7bP8YZLy3l8JPd6G"`; `Ghi Lỗi + Kiểm Tra Gộp`=`{"log_id":79,"should_alert":true}`; `Báo admin Telegram`=`{"ok":true,"result":{"message_id":10797,...}}`. **Handler nhận lỗi của CHA: KHÔNG** — exec cha `10912` (`xhQRyn2Rq0aXFQVh`) có `status:"success"` (KHÔNG lỗi), vì `waitForSubWorkflow:false` khiến node `Execute Sub (ERR-05)` không chờ và không nhận lỗi của sub, nên workflow cha tự nó không bao giờ fail → `errorWorkflow` của CHA không bị kích hoạt. **Không có báo đôi**: chỉ 1 tin Telegram duy nhất (`message_id:10797`) cho toàn bộ chuỗi. **Mode wait của Execute Workflow: `waitForSubWorkflow:false`** (đúng đặc tả PLAN 7.4). → Trả lời câu hỏi mở của AUDIT_REPORT WP5 rủi ro #3: với `wait=false`, KHÔNG báo đôi vì cha không lỗi; nếu WP5 muốn cha CŨNG phát hiện lỗi sub thì phải đặt `waitForSubWorkflow:true` (chưa test — nằm ngoài phạm vi PLAN 7.4, có thể cần thêm 1 test PENDING nếu Architect muốn kiểm case wait=true) | harness cha exec `10912`; sub exec `10913`; handler exec `10914` | ✅ PASS |
+
+### Xác nhận bổ sung
+
+- **Telegram thật**: toàn bộ 4 tin gửi trong lượt này (`message_id` 10794, 10795, 10796, 10797) đều tới
+  `chat_id=-1003647848349`, `message_thread_id=4` (topic lỗi admin) qua bot `Telegram System Bot`
+  (`elite_n8n_system_bot`) — đúng nơi nhận duy nhất cho phép, không nơi nào khác nhận tin.
+- **Không DELETE** — id các dòng `gateway.error_logs` được tạo trong lượt test này (KHÔNG xoá, chỉ để lọc
+  khi xem báo cáo): `57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79`
+  (23 dòng — 57/58 = ERR-01/ERR-07 harness 1, 59-78 = ERR-02 burst 20 lần, 79 = ERR-05 harness 2).
+- **Dọn dẹp TEMP** (mục 5.6 luật an toàn — archive ngay khi test xong):
+  - `NugEDgI1jRfhRXYi` (`TEMP - Cố Ý Lỗi (xoá sau khi dùng)`) — `unpublish_workflow` ✅ → `archive_workflow` ✅ (`archived:true`).
+  - `FruIeLld7FbC9DKD` (`TEMP - Kiem Tra ERR-01/02/07 (xoa sau khi dung)`) — chưa từng publish (chỉ `test_workflow` qua Manual Trigger) → `archive_workflow` ✅ (`archived:true`).
+  - `7bP8YZLy3l8JPd6G` (`TEMP - ERR-05 Sub (xoa sau khi dung)`) — `unpublish_workflow` ✅ → `archive_workflow` ✅ (`archived:true`).
+  - `xhQRyn2Rq0aXFQVh` (`TEMP - ERR-05 Parent (xoa sau khi dung)`) — `unpublish_workflow` ✅ → `archive_workflow` ✅ (`archived:true`).
+- **Handler v2 (`MaoEB8w8Un6UA01n`)**: đã `unpublish_workflow` lại sau khi xong toàn bộ test →
+  xác nhận cuối `active:false, activeVersionId:null`, `versionId=4f7d5a4b-c6e3-436a-be87-b85793b039bf`
+  KHÔNG đổi (đúng mốc audit #2) — trả về đúng trạng thái staging ban đầu, đúng như runbook CN yêu cầu
+  publish lại lúc cutover mục 8.1.1.
+- **Production không đổi**: `GW Error Handler` v1 (`34ccboHpyoY2r691`) `versionId==activeVersionId==
+  1a6b1d2a-2ff8-4cf0-ae59-9ae3e978a183`, `active:true` — khớp mốc rollback mục 3, không đổi trước/sau
+  lượt test. Không có `update_workflow`/`publish_workflow`/`unpublish_workflow`/`archive_workflow` nào
+  được gọi trên workflow production nào, và không đụng `34ccboHpyoY2r691`.
+- **Không có bước nào bị safety/permission classifier từ chối trong lượt này** (khác 2 lần trước đêm
+  1/đêm 2 sớm) — user đã xác nhận có mặt cho phép chạy ngay (PLAN.md mục 9 đêm 2, ghi lúc ~02:55).
+
+### Tóm tắt WP1 + WP5 (đêm 2, phần PROD-FAIL)
+
+- ✅ PASS: 5/5 (ERR-01, ERR-04 runtime, ERR-07, ERR-02, ERR-05). ❌ FAIL: 0. ⏳ PENDING: 0.
+- Cộng với 5 PASS đã có từ "WP1 (phần 1: STATIC + PIN)" (ERR-03, ERR-04 STATIC, ERR-06, ERR-06b, ERR-06c)
+  → **WP1 tổng: 10/10 PASS, 0 FAIL, 0 PENDING** → **WP1 READY FOR CUTOVER** (theo mục 4.6 PLAN — audit
+  PASS + mọi test PASS).
+- **WP5**: ERR-05 PASS, câu hỏi mở "báo đôi?" đã trả lời (KHÔNG báo đôi với `wait=false`) → WP5 không còn
+  bị chặn bởi WP1; danh sách cutover (AUDIT_REPORT WP5) có thể tiến hành theo mục 8.1 runbook CN 27/09.
+  Ghi chú cho Architect: PLAN 7.4 chỉ định `waitForSubWorkflow` mặc định của Execute Workflow trong
+  Gateway/sub thật (Reader, Bot Ảnh) chưa được xác nhận là `true` hay `false` — nên kiểm lại giá trị đó
+  trong workflow production thật trước khi kết luận "không báo đôi" áp dụng cho toàn bộ WP5 (kết quả ERR-05
+  ở đây chỉ chứng minh cho case `wait=false`).
+- TEMP workflow đã tạo (4): `NugEDgI1jRfhRXYi`, `FruIeLld7FbC9DKD`, `7bP8YZLy3l8JPd6G`, `xhQRyn2Rq0aXFQVh`
+  — **cả 4 đã archive**, 3/4 đã unpublish trước khi archive.
+- Handler v2 `MaoEB8w8Un6UA01n`: publish tạm để test → **đã unpublish lại**, trạng thái cuối = staging
+  (không active), versionId không đổi.
+- Production: không đổi (xác nhận `34ccboHpyoY2r691` và không workflow production nào khác bị chạm).
+- Không commit git (theo yêu cầu).

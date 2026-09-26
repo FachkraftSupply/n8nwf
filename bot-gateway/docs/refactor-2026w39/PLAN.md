@@ -9,11 +9,11 @@
 | WP | Nội dung | Build | Audit | Test | Trạng thái | Cutover |
 |---|---|---|---|---|---|---|
 | WP0 | Chuẩn bị: folder staging, ghi mốc rollback, bộ dữ liệu test | — | — | — | ✅ | — |
-| WP1 | GW Error Handler v2 | ✅ | ✅ | 🟨 5/10 PASS; ERR-01/02/04rt/05/07 ⛔ (classifier chặn PROD-FAIL, đêm 2) | ⛔ chờ user (mục 9 đêm 2) | CN 27/09 (nếu user chọn) |
+| WP1 | GW Error Handler v2 | ✅ | ✅ | ✅ 10/10 (PROD-FAIL chạy 26/09 09:3x có user trực) | ✅ READY FOR CUTOVER | CN 27/09 |
 | WP2 | Workflow "DB Migrations (chạy tay)" | ✅ | ✅ | ✅ MIG-01..04 (MIG-04 đêm 2: 26/26 object) | ✅ | đã chạy 25/09 16:32 + 17:34 |
 | WP3 | GW Gateway v2 | ✅ | ✅ | ✅ 47/47 (đêm 2 test lại: 47/47) | ✅ READY FOR CUTOVER | CN 27/09 |
 | WP4 | Admin System v2 — pilot 1 domain | ✅ | ✅ | ✅ 23/23 (ADM-01..09) | ✅ pilot đạt (chỉ staging, không cutover) | tuần sau |
-| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ⛔ ERR-05 (như WP1) | ⛔ phụ thuộc WP1 | CN 27/09 (nếu WP1 đạt) |
+| WP5 | Gắn error workflow cho workflow còn thiếu | — | ✅ (danh sách) | ✅ ERR-05 | ✅ READY FOR CUTOVER (sau WP1 8.1.1) | CN 27/09 |
 | REG | Bộ test hồi quy trên production hiện tại (chỉ đọc) | — | — | ✅ (đêm 2: 11/11, VPS-06 MANUAL) | ✅ | — |
 
 Ký hiệu: ⬜ chưa làm · 🟨 đang làm · ✅ PASS · ❌ FAIL · ⛔ BLOCKED (ghi lý do ở mục 9).
@@ -589,7 +589,8 @@ Gateway v2 trong UI giống v1.
   (b) Thêm rule cho phép trong settings Claude Code để task `refactor-w39-cutover-prep` (CN 18:00) chạy
       PROD-FAIL trước giờ cutover.
   (c) Không cutover WP1/WP5 tuần này; chỉ cutover WP3.
-  > Trả lời:
+  > Trả lời (user, trong chat ~09:30 26/09, có mặt theo dõi): "A chạy luôn để tôi xem" → chạy ERR-01/02/04rt/05/07
+  > ngay bây giờ với user đang trực (không đợi CN).
 - **02:17 WP2 ✅** — MIG-04 PASS: 26/26 object tồn tại (7 bảng, 17 cột, index throttle; bảng throttle
   đúng 3 cột). TEMP `0eLYv0f67eziX8R7` đã archive. WP2 hoàn tất.
 - **02:30 WP4 build ✅** — `Admin v2 - Hệ thống (STAGING)` `bauK573MU18oRzKP` (versionId
@@ -609,6 +610,19 @@ Gateway v2 trong UI giống v1.
 - Ghi chú: 2 tester ghi nhầm ngày UTC trong tiêu đề TEST_REPORT (26/09 thay vì 25/09) — Architect đã sửa.
   Bài học lặp lại: tạo TEMP có node Telegram bị auto-assign nhầm `@csfsintbot` — tester đã sửa trước khi chạy.
 
+- **~09:33–09:45 (26/09) WP1 PROD-FAIL + ERR-05 ✅ 5/5** — chạy theo trả lời (a) của user, user có mặt.
+  ERR-01 (handler exec 10861, log_id 57, Telegram ok msg 10794), ERR-04 runtime (Postgres trước Telegram),
+  ERR-07 (log_id 58, `a, b 'c' "d"` nguyên vẹn, 6 cột đúng), ERR-02 (burst 20: 20 dòng id 59–78, 20 handler
+  success, đúng 2 tin ở 2 phút khác nhau, suppressed_count 17+1), ERR-05 (xem dưới). Dòng test
+  `gateway.error_logs` id **57–79** (không xoá — lọc khi xem báo cáo). 4 TEMP đã unpublish + archive. Handler v2
+  đã unpublish lại (`active:false`, versionId `4f7d5a4b…` không đổi); v1 `34ccboHpyoY2r691` không đổi.
+  → **WP1 10/10 READY FOR CUTOVER; WP5 READY.**
+  - **Phát hiện quan trọng cho runbook:** n8n TỪ CHỐI đặt `errorWorkflow` trỏ tới workflow chưa publish ("has
+    no published version"). → Bước 8.1.1 (publish handler v2) là BẮT BUỘC trước 8.1.2, không phải tuỳ chọn.
+  - **ERR-05:** chỉ test `waitForSubWorkflow:false` → lỗi sub báo 1 lần (từ sub), cha không lỗi, không báo đôi.
+    Chưa test `wait=true`: nếu Gateway gọi Reader/Ảnh với wait=true thì sau WP5 một lỗi sub có thể ra 2 cảnh
+    báo (sub + Gateway, khác workflowId nên throttle không gộp). Không chặn cutover; theo dõi sau CN.
+
 #### Tóm tắt đêm 2
 
 | WP | Kết quả | Cutover CN 27/09 |
@@ -616,8 +630,8 @@ Gateway v2 trong UI giống v1.
 | WP2 | ✅ xong (MIG-01..04) | — (đã chạy) |
 | WP3 | ✅ READY FOR CUTOVER (test lại 47/47) | ✅ theo mục 8.2 |
 | WP4 | ✅ pilot đạt 23/23 (staging) | Không (tuần sau: router v2) |
-| WP1 | ⛔ 5/10, PROD-FAIL bị classifier chặn | Chỉ nếu user chọn (a)/(b) và ERR PASS |
-| WP5 | ⛔ phụ thuộc WP1 + ERR-05 | như WP1 |
+| WP1 | ✅ 10/10 READY FOR CUTOVER (PROD-FAIL chạy sáng 26/09, user trực) | ✅ theo mục 8.1 |
+| WP5 | ✅ READY (ERR-05 PASS) | ✅ theo mục 8.1.2 |
 | REG | ✅ 11/11 + VPS-06 MANUAL (CN) | smoke VPS-06 nếu muốn |
 
 ## 10. Việc user cần làm trước cutover
