@@ -14,7 +14,7 @@ Kho lưu trữ các workflow n8n nội bộ của FS International (Elite Educat
 
 | Folder | Workflow | Mô tả | Trạng thái |
 |---|---|---|---|
-| [`bot-gateway/`](./bot-gateway/) | Bot Gateway System | Gateway tập trung cho bot Telegram đa chức năng, đồng bộ ClickUp ↔ Postgres, backup hệ thống | ✅ Production (đã cutover toàn bộ 08/09, phát triển tính năng liên tục — mới nhất: `/mokhoa` mở khóa TTLock) |
+| [`bot-gateway/`](./bot-gateway/) | Bot Gateway System | Gateway tập trung cho bot Telegram đa chức năng, đồng bộ ClickUp ↔ Postgres, backup hệ thống, giám sát VPS (`/vps`) | ✅ Production — Gateway v2 + Error Handler v2 vừa cutover (26/09/2026, refactor tuần 39) |
 | [`interview-evaluation/`](./interview-evaluation/) | Interview Evaluation | Form đánh giá phỏng vấn tiếng Đức → 1 LLM call → Telegram + ClickUp + Supabase (có debug branch) | ✅ Production — 🔄 đang thiết kế lại cách chấm điểm |
 | [`interview-result-lookup/`](./interview-result-lookup/) | Interview Result Lookup | Bot Telegram `/ketqua` tra cứu kết quả phỏng vấn từ Supabase, fuzzy-match tên bằng AI Agent, chọn qua inline keyboard khi có nhiều kết quả trùng | ✅ Production |
 | [`elite-interview-bot/`](./elite-interview-bot/) | Elite Interview Bot | Bot Telegram luyện phỏng vấn tiếng Đức cho học sinh (tự luyện với AI) + tự động tạo hồ sơ Ausbildung (Anschreiben/CV/scan giấy tờ) qua ClickUp/OneDrive | 📝 Thiết kế (chưa build) |
